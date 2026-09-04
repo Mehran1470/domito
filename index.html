@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دومیتو | سالن بازی</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">🁢</div>
+      <h1>دومیتو</h1>
+      <p>سالن مینی‌گیم‌های آنلاین</p>
+    </div>
+
+    <div class="card">
+      <h2>اسمتو بنویس و وارد سالن شو</h2>
+      <input type="text" id="nameInput" placeholder="مثلاً: مهران" maxlength="20" />
+      <button id="joinBtn" class="btn-full">ورود به سالن</button>
+      <p class="status-line" id="statusLine"></p>
+    </div>
+
+    <a href="profile.html" class="link-back">مشاهده پروفایل من ←</a>
+  </div>
+
+<script type="module">
+  import { joinLobby, getSavedName } from "./js/app.js";
+
+  const nameInput = document.getElementById("nameInput");
+  const joinBtn = document.getElementById("joinBtn");
+  const statusLine = document.getElementById("statusLine");
+
+  nameInput.value = getSavedName();
+
+  joinBtn.addEventListener("click", async () => {
+    const name = nameInput.value.trim();
+    if (!name) {
+      statusLine.textContent = "لطفاً اسمتو بنویس";
+      return;
+    }
+    joinBtn.disabled = true;
+    statusLine.textContent = "در حال ورود...";
+    try {
+      await joinLobby(name);
+      window.location.href = "lobby.html";
+    } catch (e) {
+      console.error(e);
+      statusLine.textContent = "خطا در اتصال. اطلاعات Firebase رو توی firebase-config.js چک کن.";
+      joinBtn.disabled = false;
+    }
+  });
+
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") joinBtn.click();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>کوییز | دومیتو</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">❓</div>
+      <h1>کوییز اطلاعات عمومی</h1>
+    </div>
+
+    <div class="card" id="playArea">
+      <h2 id="qCounter">سوال ۱ از ۵</h2>
+      <p id="qText" style="font-size:16px; margin-bottom:16px;"></p>
+      <div id="options"></div>
+    </div>
+
+    <div class="card" id="waitArea" style="display:none">
+      <h2>نتیجه تو ثبت شد</h2>
+      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
+    </div>
+
+    <div class="card" id="scoreArea" style="display:none">
+      <h2>نتیجه این دور</h2>
+      <div class="score-board" id="scoreBoard"></div>
+      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
+    </div>
+  </div>
+
+<script type="module">
+  import {
+    sessionRef, onValue, ensureAuth, getSavedName,
+    submitResult, resetSessionForNextRound, recordRoundResult
+  } from "../js/app.js";
+
+  const QUESTION_POOL = [
+    { q: "بزرگترین کشور جهان از نظر مساحت کدومه؟", options: ["چین", "روسیه", "کانادا", "آمریکا"], correct: 1 },
+    { q: "آب از چند اتم تشکیل شده؟", options: ["۲", "۳", "۴", "۵"], correct: 1 },
+    { q: "سریع‌ترین حیوان خشکی کدومه؟", options: ["شیر", "یوزپلنگ", "اسب", "گورخر"], correct: 1 },
+    { q: "پایتخت استرالیا کدومه؟", options: ["سیدنی", "ملبورن", "کانبرا", "بریزبن"], correct: 2 },
+    { q: "قلب انسان چند حفره داره؟", options: ["۲", "۳", "۴", "۵"], correct: 2 },
+    { q: "نزدیک‌ترین سیاره به خورشید؟", options: ["زهره", "زمین", "مریخ", "عطارد"], correct: 3 },
+    { q: "طولانی‌ترین رودخانه جهان؟", options: ["نیل", "آمازون", "یانگ‌تسه", "میسیسیپی"], correct: 0 },
+    { q: "چند تا استخوان توی بدن بالغ انسانه؟", options: ["186", "206", "226", "246"], correct: 1 },
+  ];
+
+  function pickQuestions(n) {
+    const shuffled = [...QUESTION_POOL].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, n);
+  }
+
+  const questions = pickQuestions(5);
+  let idx = 0;
+  let correctCount = 0;
+  let myUid, myName;
+  let players = {};
+
+  const qCounter = document.getElementById("qCounter");
+  const qText = document.getElementById("qText");
+  const optionsEl = document.getElementById("options");
+
+  function renderQuestion() {
+    const q = questions[idx];
+    qCounter.textContent = `سوال ${idx + 1} از ${questions.length}`;
+    qText.textContent = q.q;
+    optionsEl.innerHTML = "";
+    q.options.forEach((opt, i) => {
+      const btn = document.createElement("button");
+      btn.className = "quiz-option";
+      btn.textContent = opt;
+      btn.addEventListener("click", () => answer(i));
+      optionsEl.appendChild(btn);
+    });
+  }
+
+  function answer(i) {
+    const q = questions[idx];
+    const buttons = optionsEl.querySelectorAll(".quiz-option");
+    buttons.forEach(b => b.disabled = true);
+    buttons[q.correct].classList.add("correct");
+    if (i !== q.correct) buttons[i].classList.add("wrong");
+    if (i === q.correct) correctCount++;
+
+    setTimeout(() => {
+      idx++;
+      if (idx < questions.length) {
+        buttons.forEach(b => { b.disabled = false; b.classList.remove("correct","wrong"); });
+        renderQuestion();
+      } else {
+        finish();
+      }
+    }, 700);
+  }
+
+  async function finish() {
+    document.getElementById("playArea").style.display = "none";
+    document.getElementById("waitArea").style.display = "block";
+    const score = correctCount * 10;
+    await submitResult("quiz", myUid, myName, score);
+  }
+
+  async function init() {
+    myUid = await ensureAuth();
+    myName = getSavedName();
+    if (!myName) { window.location.href = "../index.html"; return; }
+
+    onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
+
+    renderQuestion();
+
+    let handled = false;
+    onValue(sessionRef("results"), async (snap) => {
+      const results = snap.val() || {};
+      const totalPlayers = Object.keys(players).length;
+      const totalResults = Object.keys(results).length;
+      document.getElementById("waitStatus").textContent =
+        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+
+      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
+      handled = true;
+
+      const maxScore = Math.max(...Object.values(results).map(r => r.score));
+      const won = results[myUid]?.score === maxScore;
+      await recordRoundResult(myName, "quiz", { won });
+
+      document.getElementById("waitArea").style.display = "none";
+      const scoreArea = document.getElementById("scoreArea");
+      scoreArea.style.display = "block";
+      const board = document.getElementById("scoreBoard");
+      board.innerHTML = "";
+      Object.entries(results)
+        .sort((a, b) => b[1].score - a[1].score)
+        .forEach(([uid, r]) => {
+          const row = document.createElement("div");
+          row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+          row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+          board.appendChild(row);
+        });
+
+      setTimeout(async () => {
+        await resetSessionForNextRound();
+        window.location.href = "../lobby.html";
+      }, 4000);
+    });
+  }
+  init();
+</script>
+</body>
+</html>

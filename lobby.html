@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سالن انتظار | دومیتو</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">🁢</div>
+      <h1>سالن انتظار</h1>
+    </div>
+
+    <div class="card">
+      <h2>بازیکن‌های حاضر (<span id="playerCount">0</span>)</h2>
+      <div class="player-list" id="playerList"></div>
+    </div>
+
+    <div class="card">
+      <h2>رای بده به بازی بعدی</h2>
+      <div id="gameOptions"></div>
+      <p class="status-line" id="voteStatus">در انتظار رای‌ها...</p>
+    </div>
+
+    <button id="leaveBtn" class="btn-full btn-ghost">خروج از سالن</button>
+  </div>
+
+<script type="module">
+  import {
+    GAMES, sessionRef, onValue, set, ensureAuth,
+    getSavedName, leaveLobby, runTransaction, serverTimestamp
+  } from "./js/app.js";
+
+  const myName = getSavedName();
+  if (!myName) window.location.href = "index.html";
+
+  let myUid = null;
+  let players = {};
+  let votes = {};
+  let started = false;
+
+  const playerList = document.getElementById("playerList");
+  const playerCount = document.getElementById("playerCount");
+  const gameOptions = document.getElementById("gameOptions");
+  const voteStatus = document.getElementById("voteStatus");
+
+  function renderPlayers() {
+    playerCount.textContent = Object.keys(players).length;
+    playerList.innerHTML = "";
+    Object.entries(players).forEach(([uid, p]) => {
+      const chip = document.createElement("div");
+      chip.className = "chip" + (uid === myUid ? " me" : "");
+      chip.textContent = p.name;
+      playerList.appendChild(chip);
+    });
+  }
+
+  function tally() {
+    const counts = {};
+    GAMES.forEach(g => counts[g.id] = 0);
+    Object.values(votes).forEach(v => {
+      if (counts[v.gameId] !== undefined) counts[v.gameId]++;
+    });
+    return counts;
+  }
+
+  function renderGames() {
+    const counts = tally();
+    gameOptions.innerHTML = "";
+    GAMES.forEach(g => {
+      const el = document.createElement("div");
+      const myVote = votes[myUid]?.gameId === g.id;
+      el.className = "game-option" + (myVote ? " voted" : "");
+      el.innerHTML = `
+        <div>
+          <div class="name">${g.name}</div>
+          <div class="desc">${g.desc}</div>
+        </div>
+        <div class="votes">${counts[g.id]}</div>
+      `;
+      el.addEventListener("click", async () => {
+        await set(sessionRef(`votes/${myUid}`), { gameId: g.id, name: myName });
+      });
+      gameOptions.appendChild(el);
+    });
+    const totalVotes = Object.keys(votes).length;
+    const totalPlayers = Object.keys(players).length;
+    voteStatus.textContent = `${totalVotes} از ${totalPlayers} نفر رای دادند`;
+  }
+
+  async function maybeStartGame() {
+    const totalVotes = Object.keys(votes).length;
+    const totalPlayers = Object.keys(players).length;
+    if (started || totalPlayers === 0 || totalVotes < totalPlayers) return;
+
+    const counts = tally();
+    let winner = GAMES[0].id;
+    let best = -1;
+    GAMES.forEach(g => {
+      if (counts[g.id] > best) { best = counts[g.id]; winner = g.id; }
+    });
+
+    // فقط اولین کلاینتی که این تراکنش رو اجرا می‌کنه برنده‌ست تا race condition پیش نیاد
+    await runTransaction(sessionRef("currentGame"), (curr) => {
+      if (curr && curr.gameId) return curr; // قبلاً یکی دیگه ست کرده
+      return { gameId: winner, roundId: Date.now() };
+    });
+  }
+
+  async function init() {
+    myUid = await ensureAuth();
+    renderPlayers();
+    renderGames();
+
+    onValue(sessionRef("players"), (snap) => {
+      players = snap.val() || {};
+      renderPlayers();
+      renderGames();
+    });
+
+    onValue(sessionRef("votes"), (snap) => {
+      votes = snap.val() || {};
+      renderGames();
+      maybeStartGame();
+    });
+
+    onValue(sessionRef("currentGame"), (snap) => {
+      const cg = snap.val();
+      if (cg && cg.gameId) {
+        started = true;
+        window.location.href = `games/${cg.gameId}.html?round=${cg.roundId}`;
+      }
+    });
+  }
+  init();
+
+  document.getElementById("leaveBtn").addEventListener("click", async () => {
+    await leaveLobby();
+    window.location.href = "index.html";
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بازی حافظه | دومیتو</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">🧠</div>
+      <h1>بازی حافظه</h1>
+    </div>
+
+    <div class="card" id="playArea">
+      <h2 id="levelText">مرحله ۱</h2>
+      <p class="status-line" id="stateText">دنباله رو نگاه کن...</p>
+      <div class="memory-pad">
+        <div class="memory-cell c0" data-i="0"></div>
+        <div class="memory-cell c1" data-i="1"></div>
+        <div class="memory-cell c2" data-i="2"></div>
+        <div class="memory-cell c3" data-i="3"></div>
+      </div>
+    </div>
+
+    <div class="card" id="waitArea" style="display:none">
+      <h2>نتیجه تو ثبت شد</h2>
+      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
+    </div>
+
+    <div class="card" id="scoreArea" style="display:none">
+      <h2>نتیجه این دور</h2>
+      <div class="score-board" id="scoreBoard"></div>
+      <p class="status-line">به زودی برمی‌گردیم به سالن...</p>
+    </div>
+  </div>
+
+<script type="module">
+  import {
+    sessionRef, onValue, ensureAuth, getSavedName,
+    submitResult, resetSessionForNextRound, recordRoundResult
+  } from "../js/app.js";
+
+  let myUid, myName;
+  let players = {};
+  const cells = [...document.querySelectorAll(".memory-cell")];
+  const levelText = document.getElementById("levelText");
+  const stateText = document.getElementById("stateText");
+
+  let sequence = [];
+  let userStep = 0;
+  let accepting = false;
+  let done = false;
+
+  function addStep() {
+    sequence.push(Math.floor(Math.random() * 4));
+  }
+
+  async function playSequence() {
+    accepting = false;
+    stateText.textContent = "دنباله رو نگاه کن...";
+    for (const i of sequence) {
+      await flash(i);
+      await sleep(220);
+    }
+    userStep = 0;
+    accepting = true;
+    stateText.textContent = "حالا تو تکرارش کن";
+  }
+
+  function flash(i) {
+    return new Promise((resolve) => {
+      cells[i].classList.add("active");
+      setTimeout(() => {
+        cells[i].classList.remove("active");
+        resolve();
+      }, 420);
+    });
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  cells.forEach(cell => {
+    cell.addEventListener("click", async () => {
+      if (!accepting || done) return;
+      const i = parseInt(cell.dataset.i);
+      cell.classList.add("active");
+      setTimeout(() => cell.classList.remove("active"), 180);
+
+      if (i === sequence[userStep]) {
+        userStep++;
+        if (userStep === sequence.length) {
+          accepting = false;
+          levelText.textContent = `مرحله ${sequence.length + 1}`;
+          await sleep(500);
+          addStep();
+          await playSequence();
+        }
+      } else {
+        done = true;
+        accepting = false;
+        const score = sequence.length - 1; // آخرین مرحله‌ای که کامل رد کرد
+        stateText.textContent = `اشتباه زدی! امتیاز: ${Math.max(0, score)}`;
+        await finish(Math.max(0, score));
+      }
+    });
+  });
+
+  async function finish(score) {
+    setTimeout(() => {
+      document.getElementById("playArea").style.display = "none";
+      document.getElementById("waitArea").style.display = "block";
+    }, 1200);
+    await submitResult("memory", myUid, myName, score);
+  }
+
+  async function init() {
+    myUid = await ensureAuth();
+    myName = getSavedName();
+    if (!myName) { window.location.href = "../index.html"; return; }
+
+    onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
+
+    addStep();
+    await playSequence();
+
+    let handled = false;
+    onValue(sessionRef("results"), async (snap) => {
+      const results = snap.val() || {};
+      const totalPlayers = Object.keys(players).length;
+      const totalResults = Object.keys(results).length;
+      document.getElementById("waitStatus").textContent =
+        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+
+      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
+      handled = true;
+
+      const maxScore = Math.max(...Object.values(results).map(r => r.score));
+      const won = results[myUid]?.score === maxScore;
+      await recordRoundResult(myName, "memory", { won });
+
+      document.getElementById("waitArea").style.display = "none";
+      const scoreArea = document.getElementById("scoreArea");
+      scoreArea.style.display = "block";
+      const board = document.getElementById("scoreBoard");
+      board.innerHTML = "";
+      Object.entries(results)
+        .sort((a, b) => b[1].score - a[1].score)
+        .forEach(([uid, r]) => {
+          const row = document.createElement("div");
+          row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+          row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+          board.appendChild(row);
+        });
+
+      setTimeout(async () => {
+        await resetSessionForNextRound();
+        window.location.href = "../lobby.html";
+      }, 4000);
+    });
+  }
+  init();
+</script>
+</body>
+</html>
