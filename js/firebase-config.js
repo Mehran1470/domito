@@ -1,13 +1,13 @@
 // این فایل رو با اطلاعات پروژه‌ی Firebase خودت پر کن.
-// راهنما توی README.md هست: چطور یه پروژه‌ی Firebase رایگان بسازی
-// و Realtime Database فعال کنی.
+
+import { firebaseConfig as _fc } from "./_unused.js";
 
 export const firebaseConfig = {
-  apiKey: "PUT_YOUR_API_KEY_HERE",
-  authDomain: "PUT_YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://PUT_YOUR_PROJECT-default-rtdb.firebaseio.com",
-  projectId: "PUT_YOUR_PROJECT",
-  storageBucket: "PUT_YOUR_PROJECT.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "PUT_YOUR_APP_ID"
+  apiKey: "AIzaSyCADXSHZ2qjX1Cu5ut-GU9JaDH0btk1Vng",
+  authDomain: "domito-f36fe.firebaseapp.com",
+  databaseURL: "https://domito-f36fe-default-rtdb.firebaseio.com",
+  projectId: "domito-f36fe",
+  storageBucket: "domito-f36fe.firebasestorage.app",
+  messagingSenderId: "854801624537",
+  appId: "1:854801624537:web:700366a8a34a3907013dc8"
 };
