@@ -36,6 +36,7 @@
     sessionRef, onValue, ensureAuth, getSavedName,
     submitResult, resetSessionForNextRound, recordRoundResult
   } from "../js/app.js";
+  import { mountChat } from "../js/chat.js";
 
   let myUid, myName;
   let players = {};
@@ -72,7 +73,7 @@
   });
 
   async function finish(score) {
-    document.getElementById("playArea").querySelector("#box").style.pointerEvents = "none";
+    box.style.pointerEvents = "none";
     setTimeout(() => {
       document.getElementById("playArea").style.display = "none";
       document.getElementById("waitArea").style.display = "block";
@@ -84,6 +85,7 @@
     myUid = await ensureAuth();
     myName = getSavedName();
     if (!myName) { window.location.href = "../index.html"; return; }
+    mountChat(myName);
 
     onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
 
@@ -94,13 +96,12 @@
       const results = snap.val() || {};
       const totalPlayers = Object.keys(players).length;
       const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent =
-        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
 
       if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
       handled = true;
 
-      const maxScore = Math.max(...Object.values(results).map(r => r.score));
+      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
       const won = results[myUid]?.score === maxScore;
       await recordRoundResult(myName, "reaction", { won });
 
