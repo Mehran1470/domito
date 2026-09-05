@@ -35,10 +35,7 @@
 
   joinBtn.addEventListener("click", async () => {
     const name = nameInput.value.trim();
-    if (!name) {
-      statusLine.textContent = "لطفاً اسمتو بنویس";
-      return;
-    }
+    if (!name) { statusLine.textContent = "لطفاً اسمتو بنویس"; return; }
     joinBtn.disabled = true;
     statusLine.textContent = "در حال ورود...";
     try {
@@ -46,14 +43,12 @@
       window.location.href = "lobby.html";
     } catch (e) {
       console.error(e);
-      statusLine.textContent = "خطا در اتصال. اطلاعات Firebase رو توی firebase-config.js چک کن.";
+      statusLine.textContent = "خطا در اتصال به سرور. دوباره امتحان کن.";
       joinBtn.disabled = false;
     }
   });
 
-  nameInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") joinBtn.click();
-  });
+  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") joinBtn.click(); });
 </script>
 </body>
 </html>
