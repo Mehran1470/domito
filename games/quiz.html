@@ -27,7 +27,7 @@
     <div class="card" id="scoreArea" style="display:none">
       <h2>نتیجه این دور</h2>
       <div class="score-board" id="scoreBoard"></div>
-      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
+      <p class="status-line">به زودی برمی‌گردیم به سالن...</p>
     </div>
   </div>
 
@@ -36,6 +36,7 @@
     sessionRef, onValue, ensureAuth, getSavedName,
     submitResult, resetSessionForNextRound, recordRoundResult
   } from "../js/app.js";
+  import { mountChat } from "../js/chat.js";
 
   const QUESTION_POOL = [
     { q: "بزرگترین کشور جهان از نظر مساحت کدومه؟", options: ["چین", "روسیه", "کانادا", "آمریکا"], correct: 1 },
@@ -46,6 +47,20 @@
     { q: "نزدیک‌ترین سیاره به خورشید؟", options: ["زهره", "زمین", "مریخ", "عطارد"], correct: 3 },
     { q: "طولانی‌ترین رودخانه جهان؟", options: ["نیل", "آمازون", "یانگ‌تسه", "میسیسیپی"], correct: 0 },
     { q: "چند تا استخوان توی بدن بالغ انسانه؟", options: ["186", "206", "226", "246"], correct: 1 },
+    { q: "بزرگترین اقیانوس جهان؟", options: ["اطلس", "هند", "آرام", "منجمد شمالی"], correct: 2 },
+    { q: "کدوم سیاره حلقه‌های معروف داره؟", options: ["مشتری", "زحل", "مریخ", "نپتون"], correct: 1 },
+    { q: "واحد پول ژاپن چیه؟", options: ["وون", "یوان", "ین", "روپیه"], correct: 2 },
+    { q: "بلندترین کوه جهان؟", options: ["کی‌تو", "اورست", "کلیمانجارو", "دنالی"], correct: 1 },
+    { q: "کدوم حیوان بزرگترین پستاندار جهانه؟", options: ["فیل آفریقایی", "نهنگ آبی", "کوسه نهنگی", "زرافه"], correct: 1 },
+    { q: "پایتخت کانادا؟", options: ["تورنتو", "مونترال", "اتاوا", "ونکوور"], correct: 2 },
+    { q: "چند قاره در جهان وجود داره؟", options: ["۵", "۶", "۷", "۸"], correct: 2 },
+    { q: "سریع‌ترین پرنده در پرواز شیرجه‌ای؟", options: ["عقاب طلایی", "شاهین دره‌ای", "کرکس", "جغد"], correct: 1 },
+    { q: "کدوم عنصر فراوان‌ترین عنصر در جو زمینه؟", options: ["اکسیژن", "کربن", "نیتروژن", "هیدروژن"], correct: 2 },
+    { q: "معروف‌ترین برج کج جهان کجاست؟", options: ["پاریس", "پیزا", "لندن", "رم"], correct: 1 },
+    { q: "بزرگترین صحرای جهان (غیر قطبی)؟", options: ["صحرای آفریقا", "کویر گبی", "کویر لوت", "کالاهاری"], correct: 0 },
+    { q: "کدوم کشور بیشترین جمعیت جهان رو داره؟", options: ["چین", "هند", "آمریکا", "اندونزی"], correct: 1 },
+    { q: "چند رنگ در رنگین‌کمان دیده می‌شه؟", options: ["۵", "۶", "۷", "۸"], correct: 2 },
+    { q: "ماه چند روز طول می‌کشه دور زمین بچرخه؟", options: ["۱۴ روز", "۲۱ روز", "۲۷ روز", "۴۵ روز"], correct: 2 },
   ];
 
   function pickQuestions(n) {
@@ -80,7 +95,7 @@
   function answer(i) {
     const q = questions[idx];
     const buttons = optionsEl.querySelectorAll(".quiz-option");
-    buttons.forEach(b => b.disabled = true);
+    buttons.forEach((b) => (b.disabled = true));
     buttons[q.correct].classList.add("correct");
     if (i !== q.correct) buttons[i].classList.add("wrong");
     if (i === q.correct) correctCount++;
@@ -88,7 +103,7 @@
     setTimeout(() => {
       idx++;
       if (idx < questions.length) {
-        buttons.forEach(b => { b.disabled = false; b.classList.remove("correct","wrong"); });
+        buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); });
         renderQuestion();
       } else {
         finish();
@@ -107,6 +122,7 @@
     myUid = await ensureAuth();
     myName = getSavedName();
     if (!myName) { window.location.href = "../index.html"; return; }
+    mountChat(myName);
 
     onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
 
@@ -117,13 +133,12 @@
       const results = snap.val() || {};
       const totalPlayers = Object.keys(players).length;
       const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent =
-        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
 
       if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
       handled = true;
 
-      const maxScore = Math.max(...Object.values(results).map(r => r.score));
+      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
       const won = results[myUid]?.score === maxScore;
       await recordRoundResult(myName, "quiz", { won });
 
