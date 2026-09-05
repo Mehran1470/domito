@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سرعت واکنش | دومیتو</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">⚡</div>
+      <h1>سرعت واکنش</h1>
+    </div>
+
+    <div class="card" id="playArea">
+      <h2>صبر کن سبز بشه، بعد سریع بزن</h2>
+      <div class="reaction-box wait" id="box">صبر کن...</div>
+      <p class="status-line" id="resultLine"></p>
+    </div>
+
+    <div class="card" id="waitArea" style="display:none">
+      <h2>نتیجه تو ثبت شد</h2>
+      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
+    </div>
+
+    <div class="card" id="scoreArea" style="display:none">
+      <h2>نتیجه این دور</h2>
+      <div class="score-board" id="scoreBoard"></div>
+      <p class="status-line">به زودی برمی‌گردیم به سالن...</p>
+    </div>
+  </div>
+
+<script type="module">
+  import {
+    sessionRef, onValue, ensureAuth, getSavedName,
+    submitResult, resetSessionForNextRound, recordRoundResult
+  } from "../js/app.js";
+
+  let myUid, myName;
+  let players = {};
+  let box = document.getElementById("box");
+  let resultLine = document.getElementById("resultLine");
+  let goTime = null;
+  let done = false;
+
+  function startRound() {
+    box.className = "reaction-box wait";
+    box.textContent = "صبر کن...";
+    const delay = 1500 + Math.random() * 2500;
+    setTimeout(() => {
+      if (done) return;
+      box.className = "reaction-box go";
+      box.textContent = "بزن!";
+      goTime = performance.now();
+    }, delay);
+  }
+
+  box.addEventListener("click", async () => {
+    if (done) return;
+    if (goTime === null) {
+      done = true;
+      resultLine.textContent = "زودتر زدی! امتیاز صفر";
+      await finish(0);
+      return;
+    }
+    const ms = performance.now() - goTime;
+    done = true;
+    const score = Math.max(0, Math.round(1000 - ms));
+    resultLine.textContent = `زمان تو: ${Math.round(ms)} میلی‌ثانیه`;
+    await finish(score);
+  });
+
+  async function finish(score) {
+    document.getElementById("playArea").querySelector("#box").style.pointerEvents = "none";
+    setTimeout(() => {
+      document.getElementById("playArea").style.display = "none";
+      document.getElementById("waitArea").style.display = "block";
+    }, 900);
+    await submitResult("reaction", myUid, myName, score);
+  }
+
+  async function init() {
+    myUid = await ensureAuth();
+    myName = getSavedName();
+    if (!myName) { window.location.href = "../index.html"; return; }
+
+    onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
+
+    startRound();
+
+    let handled = false;
+    onValue(sessionRef("results"), async (snap) => {
+      const results = snap.val() || {};
+      const totalPlayers = Object.keys(players).length;
+      const totalResults = Object.keys(results).length;
+      document.getElementById("waitStatus").textContent =
+        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+
+      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
+      handled = true;
+
+      const maxScore = Math.max(...Object.values(results).map(r => r.score));
+      const won = results[myUid]?.score === maxScore;
+      await recordRoundResult(myName, "reaction", { won });
+
+      document.getElementById("waitArea").style.display = "none";
+      const scoreArea = document.getElementById("scoreArea");
+      scoreArea.style.display = "block";
+      const board = document.getElementById("scoreBoard");
+      board.innerHTML = "";
+      Object.entries(results)
+        .sort((a, b) => b[1].score - a[1].score)
+        .forEach(([uid, r]) => {
+          const row = document.createElement("div");
+          row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+          row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+          board.appendChild(row);
+        });
+
+      setTimeout(async () => {
+        await resetSessionForNextRound();
+        window.location.href = "../lobby.html";
+      }, 4000);
+    });
+  }
+  init();
+</script>
+</body>
+</html>
