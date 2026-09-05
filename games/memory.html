@@ -41,6 +41,7 @@
     sessionRef, onValue, ensureAuth, getSavedName,
     submitResult, resetSessionForNextRound, recordRoundResult
   } from "../js/app.js";
+  import { mountChat } from "../js/chat.js";
 
   let myUid, myName;
   let players = {};
@@ -53,17 +54,12 @@
   let accepting = false;
   let done = false;
 
-  function addStep() {
-    sequence.push(Math.floor(Math.random() * 4));
-  }
+  function addStep() { sequence.push(Math.floor(Math.random() * 4)); }
 
   async function playSequence() {
     accepting = false;
     stateText.textContent = "دنباله رو نگاه کن...";
-    for (const i of sequence) {
-      await flash(i);
-      await sleep(220);
-    }
+    for (const i of sequence) { await flash(i); await sleep(220); }
     userStep = 0;
     accepting = true;
     stateText.textContent = "حالا تو تکرارش کن";
@@ -72,16 +68,13 @@
   function flash(i) {
     return new Promise((resolve) => {
       cells[i].classList.add("active");
-      setTimeout(() => {
-        cells[i].classList.remove("active");
-        resolve();
-      }, 420);
+      setTimeout(() => { cells[i].classList.remove("active"); resolve(); }, 420);
     });
   }
 
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-  cells.forEach(cell => {
+  cells.forEach((cell) => {
     cell.addEventListener("click", async () => {
       if (!accepting || done) return;
       const i = parseInt(cell.dataset.i);
@@ -119,6 +112,7 @@
     myUid = await ensureAuth();
     myName = getSavedName();
     if (!myName) { window.location.href = "../index.html"; return; }
+    mountChat(myName);
 
     onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
 
@@ -130,13 +124,12 @@
       const results = snap.val() || {};
       const totalPlayers = Object.keys(players).length;
       const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent =
-        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
 
       if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
       handled = true;
 
-      const maxScore = Math.max(...Object.values(results).map(r => r.score));
+      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
       const won = results[myUid]?.score === maxScore;
       await recordRoundResult(myName, "memory", { won });
 
