@@ -30,8 +30,9 @@
 <script type="module">
   import {
     GAMES, sessionRef, onValue, set, ensureAuth,
-    getSavedName, leaveLobby, runTransaction, serverTimestamp
+    getSavedName, leaveLobby, runTransaction
   } from "./js/app.js";
+  import { mountChat } from "./js/chat.js";
 
   const myName = getSavedName();
   if (!myName) window.location.href = "index.html";
@@ -59,9 +60,9 @@
 
   function tally() {
     const counts = {};
-    GAMES.forEach(g => counts[g.id] = 0);
-    Object.values(votes).forEach(v => {
-      if (counts[v.gameId] !== undefined) counts[v.gameId]++;
+    GAMES.forEach((g) => (counts[g.id] = 0));
+    Object.entries(votes).forEach(([uid, v]) => {
+      if (players[uid] && counts[v.gameId] !== undefined) counts[v.gameId]++;
     });
     return counts;
   }
@@ -69,7 +70,7 @@
   function renderGames() {
     const counts = tally();
     gameOptions.innerHTML = "";
-    GAMES.forEach(g => {
+    GAMES.forEach((g) => {
       const el = document.createElement("div");
       const myVote = votes[myUid]?.gameId === g.id;
       el.className = "game-option" + (myVote ? " voted" : "");
@@ -85,32 +86,30 @@
       });
       gameOptions.appendChild(el);
     });
-    const totalVotes = Object.keys(votes).length;
+    const validVotes = Object.keys(votes).filter((uid) => players[uid]).length;
     const totalPlayers = Object.keys(players).length;
-    voteStatus.textContent = `${totalVotes} از ${totalPlayers} نفر رای دادند`;
+    voteStatus.textContent = `${validVotes} از ${totalPlayers} نفر رای دادند`;
   }
 
   async function maybeStartGame() {
-    const totalVotes = Object.keys(votes).length;
+    const validVotes = Object.keys(votes).filter((uid) => players[uid]).length;
     const totalPlayers = Object.keys(players).length;
-    if (started || totalPlayers === 0 || totalVotes < totalPlayers) return;
+    if (started || totalPlayers === 0 || validVotes < totalPlayers) return;
 
     const counts = tally();
     let winner = GAMES[0].id;
     let best = -1;
-    GAMES.forEach(g => {
-      if (counts[g.id] > best) { best = counts[g.id]; winner = g.id; }
-    });
+    GAMES.forEach((g) => { if (counts[g.id] > best) { best = counts[g.id]; winner = g.id; } });
 
-    // فقط اولین کلاینتی که این تراکنش رو اجرا می‌کنه برنده‌ست تا race condition پیش نیاد
     await runTransaction(sessionRef("currentGame"), (curr) => {
-      if (curr && curr.gameId) return curr; // قبلاً یکی دیگه ست کرده
+      if (curr && curr.gameId) return curr;
       return { gameId: winner, roundId: Date.now() };
     });
   }
 
   async function init() {
     myUid = await ensureAuth();
+    mountChat(myName);
     renderPlayers();
     renderGames();
 
@@ -118,6 +117,7 @@
       players = snap.val() || {};
       renderPlayers();
       renderGames();
+      maybeStartGame();
     });
 
     onValue(sessionRef("votes"), (snap) => {
