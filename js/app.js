@@ -174,6 +174,7 @@ export async function buyItem(name, itemId) {
     result = { ok: true };
     return curr;
   });
+  if (result.ok) await logTransaction(name, { type: "purchase", amount: -item.price, note: `خرید ${item.name}` });
   return result;
 }
 
