@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>سالن انتظار | دومیتو</title>
+<title>اتاق بازی | دومیتو</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="wrap">
     <div class="brand">
       <div class="brand-mark">🁢</div>
-      <h1>سالن انتظار</h1>
-      <p>کد اتاق: <span id="roomCodeText" style="color:var(--gold); font-weight:900;"></span></p>
+      <h1>اتاق بازی</h1>
+      <div class="room-code-badge" id="roomCodeText" style="margin-top:8px;"></div>
     </div>
 
     <div class="card">
-      <h2>بازیکن‌های حاضر (<span id="playerCount">0</span>)</h2>
-      <div class="player-list" id="playerList"></div>
+      <h2>👥 بازیکنان (<span id="playerCount">0</span>)</h2>
+      <div class="room-players" id="playerGrid"></div>
     </div>
 
     <div class="card">
@@ -38,7 +38,7 @@
   const myName = getSavedName();
   const code = getSavedRoom();
   if (!myName || !code) window.location.href = "index.html";
-  document.getElementById("roomCodeText").textContent = code;
+  document.getElementById("roomCodeText").textContent = `کد: ${code}`;
 
   const R = (p) => roomRef(code, p);
 
@@ -47,19 +47,24 @@
   let votes = {};
   let started = false;
 
-  const playerList = document.getElementById("playerList");
+  const playerGrid = document.getElementById("playerGrid");
   const playerCount = document.getElementById("playerCount");
   const gameOptions = document.getElementById("gameOptions");
   const voteStatus = document.getElementById("voteStatus");
 
   function renderPlayers() {
     playerCount.textContent = Object.keys(players).length;
-    playerList.innerHTML = "";
+    playerGrid.innerHTML = "";
     Object.entries(players).forEach(([uid, p]) => {
-      const chip = document.createElement("div");
-      chip.className = "chip" + (uid === myUid ? " me" : "");
-      chip.textContent = p.name;
-      playerList.appendChild(chip);
+      const voted = !!votes[uid];
+      const el = document.createElement("div");
+      el.className = "room-player";
+      el.innerHTML = `
+        ${voted ? '<span class="ready-badge">رای داد</span>' : ""}
+        <div class="room-avatar">${(p.name.trim()[0] || "?").toUpperCase()}</div>
+        <div class="pname">${p.name}${uid === myUid ? " (تو)" : ""}</div>
+      `;
+      playerGrid.appendChild(el);
     });
   }
 
@@ -116,7 +121,7 @@
     renderGames();
 
     onValue(R("players"), (snap) => { players = snap.val() || {}; renderPlayers(); renderGames(); maybeStartGame(); });
-    onValue(R("votes"), (snap) => { votes = snap.val() || {}; renderGames(); maybeStartGame(); });
+    onValue(R("votes"), (snap) => { votes = snap.val() || {}; renderPlayers(); renderGames(); maybeStartGame(); });
     onValue(R("currentGame"), (snap) => {
       const cg = snap.val();
       if (cg && cg.gameId) { started = true; window.location.href = `games/${cg.gameId}.html?round=${cg.roundId}`; }
