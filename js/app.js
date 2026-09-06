@@ -234,21 +234,24 @@ export async function getTransactions(name, limitN = 20) {
   return list.slice(0, limitN);
 }
 
-export async function claimMission(name, missionId) {
-  const mission = MISSIONS.find((m) => m.id === missionId);
-  if (!mission) return { ok: false };
-  let result = { ok: false };
+export async function recordRoundResult(name, gameId, { won }) {
   await runTransaction(profileRef(name), (curr) => {
-    curr = curr || { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [] };
-    curr.claimedMissions = curr.claimedMissions || [];
-    if (curr.claimedMissions.includes(missionId)) { result = { ok: false, reason: "claimed" }; return curr; }
-    const progressVal = curr[mission.statKey] || 0;
-    if (progressVal < mission.target) { result = { ok: false, reason: "incomplete" }; return curr; }
-    curr.coins = (curr.coins || 0) + mission.reward;
-    curr.claimedMissions.push(missionId);
-    result = { ok: true, reward: mission.reward };
+    curr = curr || blankProfile();
+    curr.gamesPlayed = (curr.gamesPlayed || 0) + 1;
+    curr.byGame = curr.byGame || {};
+    curr.purchased = curr.purchased || [];
+    curr.equippedTheme = curr.equippedTheme || "default";
+    curr.coins = curr.coins || 0;
+    if (won) { curr.wins = (curr.wins || 0) + 1; curr.coins += COIN_WIN; }
+    else { curr.losses = (curr.losses || 0) + 1; curr.coins += COIN_PLAY; }
+    const g = curr.byGame[gameId] || { wins: 0, plays: 0 };
+    g.plays = (g.plays || 0) + 1;
+    if (won) g.wins = (g.wins || 0) + 1;
+    curr.byGame[gameId] = g;
     return curr;
   });
+  await logTransaction(name, { type: won ? "win" : "play", amount: won ? COIN_WIN : COIN_PLAY, note: won ? "برد در بازی" : "شرکت در بازی" });
+}
   if (result.ok) await logTransaction(name, { type: "mission", amount: result.reward, note: mission.label });
   return result;
 }
