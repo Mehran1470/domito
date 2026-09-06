@@ -26,6 +26,20 @@
     </div>
 
     <div id="homeContent" style="display:none">
+
+      <div class="top-wallet-bar">
+        <a href="wallet.html" class="coin-badge">🪙 <span id="coinCount">0</span> سکه ←</a>
+        <a href="profile.html" class="btn-ghost" style="text-decoration:none; padding:8px 14px; font-size:12.5px;">پروفایل من</a>
+      </div>
+
+      <div class="card">
+        <h2>👥 دوستان آنلاین</h2>
+        <div id="requestList"></div>
+        <div id="onlineFriendsList"></div>
+        <p class="muted" id="noFriendsMsg" style="display:none;">هنوز دوستی اضافه نکردی</p>
+        <a href="friends.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">مدیریت دوستان ←</a>
+      </div>
+
       <div class="hero">
         <div class="hero-emojis">🎮🕹️👾</div>
         <h1>بازی کن. رقابت کن. لذت ببر.</h1>
@@ -37,7 +51,7 @@
       </div>
 
       <div class="card" id="invitesCard" style="display:none;">
-        <h2>📩 دعوت‌های تو</h2>
+        <h2>📩 دعوت‌های اتاق</h2>
         <div id="inviteList"></div>
       </div>
 
@@ -56,18 +70,16 @@
         <p class="status-line" id="roomStatus"></p>
       </div>
 
-      <a href="friends.html" class="btn-full btn-ghost" style="display:block; text-align:center; text-decoration:none; margin-top:14px;">👥 دوستان من</a>
       <button id="logoutBtn" class="btn-full btn-ghost">خروج از حساب</button>
     </div>
-
-    <a href="profile.html" class="link-back">مشاهده پروفایل من ←</a>
   </div>
 
 <script type="module">
   import {
     registerUser, loginUser, waitForUser, getSavedName,
     createRoom, joinRoomByCode, logoutUser, getLeaderboard, GAMES,
-    listenInvites, dismissInvite
+    listenInvites, dismissInvite, listenProfile,
+    listenFriendRequests, acceptFriendRequest, rejectFriendRequest, listenFriends
   } from "./js/app.js";
 
   const authCard = document.getElementById("authCard");
@@ -134,6 +146,49 @@
     renderGameCards();
     renderLeaderboard();
 
+    listenProfile(myName, (p) => {
+      document.getElementById("coinCount").textContent = (p && p.coins) || 0;
+    });
+
+    listenFriendRequests(myName, (requesters) => {
+      const list = document.getElementById("requestList");
+      list.innerHTML = "";
+      requesters.forEach((fromName) => {
+        const row = document.createElement("div");
+        row.className = "request-row";
+        row.innerHTML = `<span class="txt">${fromName} درخواست دوستی داد</span>`;
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const acceptBtn = document.createElement("button");
+        acceptBtn.textContent = "قبول";
+        acceptBtn.addEventListener("click", async () => { await acceptFriendRequest(myName, fromName); });
+        const rejectBtn = document.createElement("button");
+        rejectBtn.textContent = "رد";
+        rejectBtn.className = "btn-ghost";
+        rejectBtn.addEventListener("click", async () => { await rejectFriendRequest(myName, fromName); });
+        actions.appendChild(acceptBtn);
+        actions.appendChild(rejectBtn);
+        row.appendChild(actions);
+        list.appendChild(row);
+      });
+    });
+
+    listenFriends(myName, (friends) => {
+      const listEl = document.getElementById("onlineFriendsList");
+      const noMsg = document.getElementById("noFriendsMsg");
+      const online = friends.filter((f) => f.online);
+      if (friends.length === 0) { noMsg.style.display = "block"; listEl.innerHTML = ""; return; }
+      noMsg.style.display = "none";
+      if (online.length === 0) { listEl.innerHTML = '<p class="muted">الان هیچ‌کدوم از دوستات آنلاین نیستن</p>'; return; }
+      listEl.innerHTML = "";
+      online.forEach((f) => {
+        const row = document.createElement("div");
+        row.className = "friend-row";
+        row.innerHTML = `<a href="profile.html?user=${encodeURIComponent(f.name)}" class="friend-name-link">${f.name}</a><span class="fdot"></span>`;
+        listEl.appendChild(row);
+      });
+    });
+
     listenInvites(myName, (list) => {
       const card = document.getElementById("invitesCard");
       const listEl = document.getElementById("inviteList");
@@ -174,7 +229,7 @@
       leaderCard.innerHTML = list.map((p, i) => `
         <div class="leader-row">
           <span class="rank">${medals[i] || i + 1}</span>
-          <span class="who">${p.name}</span>
+          <a href="profile.html?user=${encodeURIComponent(p.name)}" class="who friend-name-link">${p.name}</a>
           <span class="score">${p.wins} برد</span>
         </div>
       `).join("");
