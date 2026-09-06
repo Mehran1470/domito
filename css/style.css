@@ -201,3 +201,20 @@ button:disabled{opacity:.4; cursor:not-allowed; box-shadow:none;}
 .progress-bar{background:rgba(255,255,255,.08); border-radius:100px; height:8px; overflow:hidden; margin-bottom:8px;}
 .progress-fill{background:linear-gradient(90deg, var(--accent), var(--violet)); height:100%; border-radius:100px; transition:width .3s ease;}
 .mission-row button{width:100%; padding:8px; font-size:12px;}
+.game-scroll .game-card{cursor:pointer;}
+.solo-badge{position:absolute; top:6px; left:6px; background:var(--violet); color:#fff; font-size:9px; font-weight:900; padding:2px 7px; border-radius:100px;}
+.game-thumb{position:relative;}
+
+.friend-row{display:flex; align-items:center; gap:10px; background:var(--panel-2); border-radius:14px; padding:11px 14px; margin-bottom:8px;}
+.friend-row .fdot{width:9px; height:9px; border-radius:50%; background:var(--success); margin-inline-start:auto;}
+.friend-row .fdot.off{background:#555;}
+.friend-row .fname{font-weight:700; font-size:13.5px;}
+.friend-row button{padding:7px 12px; font-size:11.5px;}
+.invite-row{background:var(--panel-2); border-radius:14px; padding:12px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;}
+.invite-row .txt{font-size:12.5px;}
+.invite-row .actions{display:flex; gap:6px;}
+.invite-row button{padding:7px 12px; font-size:11.5px;}
+
+.solo-result{text-align:center; padding:10px 0;}
+.solo-result .big-emoji{font-size:44px; margin-bottom:10px;}
+.solo-result .score-big{font-size:32px; font-weight:900; color:var(--gold); margin:8px 0;}
