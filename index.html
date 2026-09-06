@@ -25,13 +25,48 @@
       <p class="status-line" id="authStatus"></p>
     </div>
 
-    <div class="card" id="roomCard" style="display:none">
-      <h2>خوش اومدی، <span id="helloName"></span>!</h2>
-      <button id="createRoomBtn" class="btn-full">➕ ساخت اتاق جدید</button>
-      <p class="status-line">یا کد اتاق دوستت رو وارد کن:</p>
-      <input type="text" id="roomInput" placeholder="مثلاً: A7K2P" maxlength="8" style="text-align:center; letter-spacing:3px;" />
-      <button id="joinRoomBtn" class="btn-full btn-ghost">ورود به اتاق</button>
-      <p class="status-line" id="roomStatus"></p>
+    <div id="homeContent" style="display:none">
+      <div class="hero">
+        <div class="hero-emojis">🎮🕹️👾</div>
+        <h1>بازی کن. رقابت کن. لذت ببر.</h1>
+        <p>خوش اومدی <span id="helloName" style="color:var(--gold); font-weight:700;"></span> — یه اتاق بساز یا وارد اتاق دوستت شو</p>
+        <div class="hero-btns">
+          <button id="createRoomBtn">➕ ساخت اتاق جدید</button>
+          <button id="scrollToJoin" class="btn-ghost">🔑 ورود با کد اتاق</button>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>🔥 بازی‌های دومیتو</h2></div>
+      <div class="game-scroll">
+        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#4F7CFF55,#9B5CFF33)">❓</div><div class="game-body"><div class="name">کوییز عمومی</div><div class="meta">فکری</div></div></div>
+        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#3ECF8E55,#4F7CFF33)">⚡</div><div class="game-body"><div class="name">سرعت واکنش</div><div class="meta">سرعتی</div></div></div>
+        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#FFC84555,#9B5CFF33)">🧠</div><div class="game-body"><div class="name">بازی حافظه</div><div class="meta">پازل</div></div></div>
+        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#9B5CFF55,#4F7CFF33)">🔢</div><div class="game-body"><div class="name">اسپرینت ریاضی</div><div class="meta">سرعتی</div></div></div>
+        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#4F7CFF55,#3ECF8E33)">🔤</div><div class="game-body"><div class="name">حروف به‌هم‌ریخته</div><div class="meta">فکری</div></div></div>
+        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#FFC84555,#4F7CFF33)">⌨️</div><div class="game-body"><div class="name">سرعت تایپ</div><div class="meta">مهارتی</div></div></div>
+      </div>
+
+      <div class="section-title"><h2>🧩 دسته‌بندی</h2></div>
+      <div class="cat-grid">
+        <div class="cat-item"><div class="ic">🧠</div><div class="lbl">فکری</div></div>
+        <div class="cat-item"><div class="ic">⚡</div><div class="lbl">سرعتی</div></div>
+        <div class="cat-item"><div class="ic">🎯</div><div class="lbl">مهارتی</div></div>
+        <div class="cat-item"><div class="ic">👥</div><div class="lbl">چندنفره</div></div>
+      </div>
+
+      <div class="section-title"><h2>🏆 لیدربورد</h2></div>
+      <div class="leader-card" id="leaderCard">
+        <p class="muted" id="leaderLoading">در حال بارگذاری...</p>
+      </div>
+
+      <div class="card" id="roomCard" style="margin-top:22px;">
+        <h2>ورود با کد اتاق</h2>
+        <input type="text" id="roomInput" placeholder="مثلاً: A7K2P" maxlength="8" style="text-align:center; letter-spacing:3px;" />
+        <button id="joinRoomBtn" class="btn-full btn-ghost">ورود به اتاق</button>
+        <p class="status-line" id="roomStatus"></p>
+      </div>
+
+      <button id="logoutBtn" class="btn-full btn-ghost">خروج از حساب</button>
     </div>
 
     <a href="profile.html" class="link-back">مشاهده پروفایل من ←</a>
@@ -40,11 +75,11 @@
 <script type="module">
   import {
     registerUser, loginUser, waitForUser, getSavedName,
-    createRoom, joinRoomByCode
+    createRoom, joinRoomByCode, logoutUser, getLeaderboard
   } from "./js/app.js";
 
   const authCard = document.getElementById("authCard");
-  const roomCard = document.getElementById("roomCard");
+  const homeContent = document.getElementById("homeContent");
   const userInput = document.getElementById("userInput");
   const passInput = document.getElementById("passInput");
   const authBtn = document.getElementById("authBtn");
@@ -54,35 +89,25 @@
 
   let mode = "register";
   tabRegister.addEventListener("click", () => {
-    mode = "register";
-    tabRegister.classList.remove("btn-ghost");
-    tabLogin.classList.add("btn-ghost");
+    mode = "register"; tabRegister.classList.remove("btn-ghost"); tabLogin.classList.add("btn-ghost");
     authBtn.textContent = "ثبت‌نام و ورود";
   });
   tabLogin.addEventListener("click", () => {
-    mode = "login";
-    tabLogin.classList.remove("btn-ghost");
-    tabRegister.classList.add("btn-ghost");
+    mode = "login"; tabLogin.classList.remove("btn-ghost"); tabRegister.classList.add("btn-ghost");
     authBtn.textContent = "ورود";
   });
 
   authBtn.addEventListener("click", async () => {
     const username = userInput.value.trim();
     const password = passInput.value;
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
-      authStatus.textContent = "نام‌کاربری باید ۳ تا ۲۰ حرف انگلیسی/عدد باشه";
-      return;
-    }
-    if (password.length < 6) {
-      authStatus.textContent = "رمز باید حداقل ۶ کاراکتر باشه";
-      return;
-    }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) { authStatus.textContent = "نام‌کاربری باید ۳ تا ۲۰ حرف انگلیسی/عدد باشه"; return; }
+    if (password.length < 6) { authStatus.textContent = "رمز باید حداقل ۶ کاراکتر باشه"; return; }
     authBtn.disabled = true;
     authStatus.textContent = "در حال اتصال...";
     try {
       if (mode === "register") await registerUser(username, password);
       else await loginUser(username, password);
-      showRoomCard();
+      showHome();
     } catch (e) {
       console.error(e);
       if (e.code === "auth/email-already-in-use") authStatus.textContent = "این نام‌کاربری قبلاً گرفته شده. برو تب ورود.";
@@ -92,15 +117,38 @@
     }
   });
 
-  function showRoomCard() {
+  async function showHome() {
     authCard.style.display = "none";
-    roomCard.style.display = "block";
+    homeContent.style.display = "block";
     document.getElementById("helloName").textContent = getSavedName();
+    renderLeaderboard();
+  }
+
+  async function renderLeaderboard() {
+    const leaderCard = document.getElementById("leaderCard");
+    try {
+      const list = await getLeaderboard(5);
+      if (list.length === 0) { leaderCard.innerHTML = '<p class="muted">هنوز کسی برد ثبت نکرده</p>'; return; }
+      const medals = ["🥇", "🥈", "🥉"];
+      leaderCard.innerHTML = list.map((p, i) => `
+        <div class="leader-row">
+          <span class="rank">${medals[i] || i + 1}</span>
+          <span class="who">${p.name}</span>
+          <span class="score">${p.wins} برد</span>
+        </div>
+      `).join("");
+    } catch (e) {
+      leaderCard.innerHTML = '<p class="muted">خطا در بارگذاری لیدربورد</p>';
+    }
   }
 
   document.getElementById("createRoomBtn").addEventListener("click", async () => {
-    const code = await createRoom();
+    await createRoom();
     window.location.href = "lobby.html";
+  });
+
+  document.getElementById("scrollToJoin").addEventListener("click", () => {
+    document.getElementById("roomCard").scrollIntoView({ behavior: "smooth" });
   });
 
   document.getElementById("joinRoomBtn").addEventListener("click", async () => {
@@ -113,8 +161,12 @@
     else roomStatus.textContent = "همچین اتاقی پیدا نشد";
   });
 
-  // اگه از قبل لاگین بودیم، مستقیم بریم سراغ اتاق
-  waitForUser().then((user) => { if (user) showRoomCard(); });
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await logoutUser();
+    window.location.reload();
+  });
+
+  waitForUser().then((user) => { if (user) showHome(); });
 </script>
 </body>
 </html>
