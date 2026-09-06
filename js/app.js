@@ -13,7 +13,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 export const db = getDatabase(app);
 
-export { ref, set, get, onValue, remove, update, serverTimestamp, runTransaction, onDisconnect };
+export { ref, set, get, onValue, remove, update, serverTimestamp, runTransaction, onDisconnect, push };
 
 // ---------- احراز هویت با نام‌کاربری/رمز ----------
 function usernameToEmail(username) {
@@ -51,7 +51,7 @@ export function currentUid() {
   return auth.currentUser ? auth.currentUser.uid : null;
 }
 
-// ---------- اتاق‌ها (به‌جای یه سالن مشترک) ----------
+// ---------- اتاق‌ها ----------
 function randomRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -114,7 +114,7 @@ const COIN_WIN = 15;
 const COIN_PLAY = 5;
 
 function blankProfile() {
-  return { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default" };
+  return { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [] };
 }
 
 export function profileRef(name, path = "") {
@@ -134,6 +134,17 @@ export async function resetSessionForNextRound() {
   await set(roomRef(code, "results"), null);
 }
 
+export async function logTransaction(name, { type, amount, note }) {
+  await push(ref(db, `profiles/${encodeURIComponent(name)}/transactions`), { type, amount, note, at: Date.now() });
+}
+
+export async function getTransactions(name, limitN = 20) {
+  const snap = await get(ref(db, `profiles/${encodeURIComponent(name)}/transactions`));
+  const val = snap.val() || {};
+  const list = Object.values(val).sort((a, b) => (b.at || 0) - (a.at || 0));
+  return list.slice(0, limitN);
+}
+
 export async function recordRoundResult(name, gameId, { won }) {
   await runTransaction(profileRef(name), (curr) => {
     curr = curr || blankProfile();
@@ -150,6 +161,7 @@ export async function recordRoundResult(name, gameId, { won }) {
     curr.byGame[gameId] = g;
     return curr;
   });
+  await logTransaction(name, { type: won ? "win" : "play", amount: won ? COIN_WIN : COIN_PLAY, note: won ? "برد در بازی" : "شرکت در بازی" });
 }
 
 export const SHOP_ITEMS = [
@@ -186,6 +198,32 @@ export async function equipTheme(name, itemId) {
   });
 }
 
+// ---------- ماموریت‌ها ----------
+export const MISSIONS = [
+  { id: "m-play3", label: "۳ بازی انجام بده", reward: 20, target: 3, statKey: "gamesPlayed" },
+  { id: "m-win1", label: "یه برد کسب کن", reward: 30, target: 1, statKey: "wins" },
+  { id: "m-play10", label: "۱۰ بازی انجام بده", reward: 60, target: 10, statKey: "gamesPlayed" },
+];
+
+export async function claimMission(name, missionId) {
+  const mission = MISSIONS.find((m) => m.id === missionId);
+  if (!mission) return { ok: false };
+  let result = { ok: false };
+  await runTransaction(profileRef(name), (curr) => {
+    curr = curr || blankProfile();
+    curr.claimedMissions = curr.claimedMissions || [];
+    if (curr.claimedMissions.includes(missionId)) { result = { ok: false, reason: "claimed" }; return curr; }
+    const progressVal = curr[mission.statKey] || 0;
+    if (progressVal < mission.target) { result = { ok: false, reason: "incomplete" }; return curr; }
+    curr.coins = (curr.coins || 0) + mission.reward;
+    curr.claimedMissions.push(missionId);
+    result = { ok: true, reward: mission.reward };
+    return curr;
+  });
+  if (result.ok) await logTransaction(name, { type: "mission", amount: result.reward, note: mission.label });
+  return result;
+}
+
 // ---------- چت (مخصوص هر اتاق) ----------
 export function chatRef(code, path = "") {
   return ref(db, `rooms/${code}/chat${path ? "/" + path : ""}`);
@@ -217,45 +255,6 @@ export function listenChat(code, callback) {
 
 // ---------- لیدربورد ----------
 export async function getLeaderboard(limitN = 5) {
-  // ---------- ماموریت و تاریخچه تراکنش ----------
-export const MISSIONS = [
-  { id: "m-play3", label: "۳ بازی انجام بده", reward: 20, target: 3, statKey: "gamesPlayed" },
-  { id: "m-win1", label: "یه برد کسب کن", reward: 30, target: 1, statKey: "wins" },
-  { id: "m-play10", label: "۱۰ بازی انجام بده", reward: 60, target: 10, statKey: "gamesPlayed" },
-];
-
-export async function logTransaction(name, { type, amount, note }) {
-  await push(ref(db, `profiles/${encodeURIComponent(name)}/transactions`), { type, amount, note, at: Date.now() });
-}
-
-export async function getTransactions(name, limitN = 20) {
-  const snap = await get(ref(db, `profiles/${encodeURIComponent(name)}/transactions`));
-  const val = snap.val() || {};
-  const list = Object.values(val).sort((a, b) => (b.at || 0) - (a.at || 0));
-  return list.slice(0, limitN);
-}
-
-export async function recordRoundResult(name, gameId, { won }) {
-  await runTransaction(profileRef(name), (curr) => {
-    curr = curr || blankProfile();
-    curr.gamesPlayed = (curr.gamesPlayed || 0) + 1;
-    curr.byGame = curr.byGame || {};
-    curr.purchased = curr.purchased || [];
-    curr.equippedTheme = curr.equippedTheme || "default";
-    curr.coins = curr.coins || 0;
-    if (won) { curr.wins = (curr.wins || 0) + 1; curr.coins += COIN_WIN; }
-    else { curr.losses = (curr.losses || 0) + 1; curr.coins += COIN_PLAY; }
-    const g = curr.byGame[gameId] || { wins: 0, plays: 0 };
-    g.plays = (g.plays || 0) + 1;
-    if (won) g.wins = (g.wins || 0) + 1;
-    curr.byGame[gameId] = g;
-    return curr;
-  });
-  await logTransaction(name, { type: won ? "win" : "play", amount: won ? COIN_WIN : COIN_PLAY, note: won ? "برد در بازی" : "شرکت در بازی" });
-}
-  if (result.ok) await logTransaction(name, { type: "mission", amount: result.reward, note: mission.label });
-  return result;
-}
   const snap = await get(ref(db, "profiles"));
   const val = snap.val() || {};
   const list = Object.entries(val).map(([encodedName, p]) => ({
@@ -265,17 +264,3 @@ export async function recordRoundResult(name, gameId, { won }) {
   list.sort((a, b) => b.wins - a.wins);
   return list.slice(0, limitN);
 }
-
-// ---------- ماموریت و تاریخچه تراکنش ----------
-export const MISSIONS = [
-  { id: "m-play3", label: "۳ بازی انجام بده", reward: 20, target: 3, statKey: "gamesPlayed" },
-  { id: "m-win1", label: "یه برد کسب کن", reward: 30, target: 1, statKey: "wins" },
-  { id: "m-play10", label: "۱۰ بازی انجام بده", reward: 60, target: 10, statKey: "gamesPlayed" },
-];
-
-export async function logTransaction(name, { type, amount, note }) {
-  await push(ref(db, `profiles/${encodeURIComponent(name)}/transactions`), { type, amount, note, at: Date.now() });
-}
-
-export async function getTransactions(name, limitN = 20) {
-  const snap = await get(ref(db, `profiles/${encodeURIComponent(name)}/transaction
