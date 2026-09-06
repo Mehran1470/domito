@@ -1,8 +1,7 @@
-// app.js — هسته مشترک سایت: فایربیس، سشن، سکه/فروشگاه، چت
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, signInAnonymously, onAuthStateChanged
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getDatabase, ref, set, get, push, onValue, remove, update,
@@ -14,42 +13,90 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 export const db = getDatabase(app);
 
-export const SESSION_ID = "main";
-export const sessionRef = (path = "") =>
-  ref(db, `sessions/${SESSION_ID}${path ? "/" + path : ""}`);
-
 export { ref, set, get, onValue, remove, update, serverTimestamp, runTransaction, onDisconnect };
 
-export function ensureAuth() {
+// ---------- احراز هویت با نام‌کاربری/رمز ----------
+function usernameToEmail(username) {
+  return `${username.trim().toLowerCase()}@domito.local`;
+}
+
+export function getSavedName() { return localStorage.getItem("domito_name") || ""; }
+export function saveName(name) { localStorage.setItem("domito_name", name); }
+
+export async function registerUser(username, password) {
+  const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
+  saveName(username);
+  return cred.user;
+}
+
+export async function loginUser(username, password) {
+  const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+  saveName(username);
+  return cred.user;
+}
+
+export async function logoutUser() {
+  localStorage.removeItem("domito_name");
+  localStorage.removeItem("domito_room");
+  await signOut(auth);
+}
+
+export function waitForUser() {
   return new Promise((resolve) => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) resolve(user.uid);
-      else signInAnonymously(auth).catch((e) => console.error("auth error", e));
-    });
+    const unsub = onAuthStateChanged(auth, (user) => { unsub(); resolve(user); });
   });
 }
 
-export function getSavedName() {
-  return localStorage.getItem("domito_name") || "";
+export function currentUid() {
+  return auth.currentUser ? auth.currentUser.uid : null;
 }
-export function saveName(name) {
-  localStorage.setItem("domito_name", name);
+
+// ---------- اتاق‌ها (به‌جای یه سالن مشترک) ----------
+function randomRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+export function getSavedRoom() { return localStorage.getItem("domito_room") || ""; }
+export function saveRoom(code) { localStorage.setItem("domito_room", code); }
+export function clearRoom() { localStorage.removeItem("domito_room"); }
+
+export function roomRef(code, path = "") {
+  return ref(db, `rooms/${code}${path ? "/" + path : ""}`);
+}
+
+export async function createRoom() {
+  const code = randomRoomCode();
+  await set(roomRef(code, "meta"), { createdAt: serverTimestamp() });
+  saveRoom(code);
+  return code;
+}
+
+export async function joinRoomByCode(rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  const snap = await get(roomRef(code, "meta"));
+  if (!snap.exists()) return { ok: false, reason: "not-found" };
+  saveRoom(code);
+  return { ok: true, code };
 }
 
 export async function joinLobby(name) {
-  const uid = await ensureAuth();
-  saveName(name);
-  await set(sessionRef(`players/${uid}`), { name, joinedAt: serverTimestamp() });
-  onDisconnect(sessionRef(`players/${uid}`)).remove();
-  onDisconnect(sessionRef(`votes/${uid}`)).remove();
-  onDisconnect(sessionRef(`results/${uid}`)).remove();
+  const code = getSavedRoom();
+  const uid = currentUid();
+  await set(roomRef(code, `players/${uid}`), { name, joinedAt: serverTimestamp() });
+  onDisconnect(roomRef(code, `players/${uid}`)).remove();
+  onDisconnect(roomRef(code, `votes/${uid}`)).remove();
+  onDisconnect(roomRef(code, `results/${uid}`)).remove();
   return uid;
 }
 
 export async function leaveLobby() {
-  const uid = await ensureAuth();
-  await remove(sessionRef(`players/${uid}`));
-  await remove(sessionRef(`votes/${uid}`));
+  const code = getSavedRoom();
+  const uid = currentUid();
+  await remove(roomRef(code, `players/${uid}`));
+  await remove(roomRef(code, `votes/${uid}`));
 }
 
 // ---------- بازی‌ها ----------
@@ -59,6 +106,7 @@ export const GAMES = [
   { id: "memory", name: "بازی حافظه", desc: "دنباله رنگ‌ها رو حفظ کن و تکرار کن" },
   { id: "math", name: "اسپرینت ریاضی", desc: "سریع و درست حساب کن" },
   { id: "scramble", name: "حروف به‌هم‌ریخته", desc: "کلمه‌ی درست رو از بین گزینه‌ها پیدا کن" },
+  { id: "typing", name: "سرعت تایپ", desc: "جمله رو با دقت و سریع تایپ کن" },
 ];
 
 // ---------- پروفایل، سکه، فروشگاه ----------
@@ -75,13 +123,15 @@ export function profileRef(name, path = "") {
 }
 
 export async function submitResult(gameId, uid, name, score) {
-  await set(sessionRef(`results/${uid}`), { name, score, gameId });
+  const code = getSavedRoom();
+  await set(roomRef(code, `results/${uid}`), { name, score, gameId });
 }
 
 export async function resetSessionForNextRound() {
-  await runTransaction(sessionRef("currentGame"), (curr) => (curr === null ? curr : null));
-  await set(sessionRef("votes"), null);
-  await set(sessionRef("results"), null);
+  const code = getSavedRoom();
+  await runTransaction(roomRef(code, "currentGame"), (curr) => (curr === null ? curr : null));
+  await set(roomRef(code, "votes"), null);
+  await set(roomRef(code, "results"), null);
 }
 
 export async function recordRoundResult(name, gameId, { won }) {
@@ -92,13 +142,8 @@ export async function recordRoundResult(name, gameId, { won }) {
     curr.purchased = curr.purchased || [];
     curr.equippedTheme = curr.equippedTheme || "default";
     curr.coins = curr.coins || 0;
-    if (won) {
-      curr.wins = (curr.wins || 0) + 1;
-      curr.coins += COIN_WIN;
-    } else {
-      curr.losses = (curr.losses || 0) + 1;
-      curr.coins += COIN_PLAY;
-    }
+    if (won) { curr.wins = (curr.wins || 0) + 1; curr.coins += COIN_WIN; }
+    else { curr.losses = (curr.losses || 0) + 1; curr.coins += COIN_PLAY; }
     const g = curr.byGame[gameId] || { wins: 0, plays: 0 };
     g.plays = (g.plays || 0) + 1;
     if (won) g.wins = (g.wins || 0) + 1;
@@ -140,15 +185,15 @@ export async function equipTheme(name, itemId) {
   });
 }
 
-// ---------- چت عمومی (سراسری، مستقل از دور بازی) ----------
-export function chatRef(path = "") {
-  return ref(db, `chat${path ? "/" + path : ""}`);
+// ---------- چت (مخصوص هر اتاق) ----------
+export function chatRef(code, path = "") {
+  return ref(db, `rooms/${code}/chat${path ? "/" + path : ""}`);
 }
 
-export async function sendChatMessage(name, text) {
+export async function sendChatMessage(code, name, text) {
   const clean = String(text).slice(0, 200).trim();
   if (!clean) return;
-  const msgsRef = chatRef("messages");
+  const msgsRef = chatRef(code, "messages");
   await push(msgsRef, { name, text: clean, at: Date.now() });
   try {
     const snap = await get(msgsRef);
@@ -156,18 +201,15 @@ export async function sendChatMessage(name, text) {
     const keys = Object.keys(val);
     if (keys.length > 60) {
       const sorted = keys.sort((a, b) => (val[a].at || 0) - (val[b].at || 0));
-      const toRemove = sorted.slice(0, keys.length - 60);
-      for (const k of toRemove) await remove(chatRef(`messages/${k}`));
+      for (const k of sorted.slice(0, keys.length - 60)) await remove(chatRef(code, `messages/${k}`));
     }
-  } catch (e) { /* trimming is best-effort */ }
+  } catch (e) {}
 }
 
-export function listenChat(callback) {
-  return onValue(chatRef("messages"), (snap) => {
+export function listenChat(code, callback) {
+  return onValue(chatRef(code, "messages"), (snap) => {
     const val = snap.val() || {};
-    const list = Object.entries(val)
-      .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => (a.at || 0) - (b.at || 0));
+    const list = Object.entries(val).map(([id, v]) => ({ id, ...v })).sort((a, b) => (a.at || 0) - (b.at || 0));
     callback(list);
   });
 }
