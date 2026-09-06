@@ -11,6 +11,7 @@
     <div class="brand">
       <div class="brand-mark">🁢</div>
       <h1>سالن انتظار</h1>
+      <p>کد اتاق: <span id="roomCodeText" style="color:var(--gold); font-weight:900;"></span></p>
     </div>
 
     <div class="card">
@@ -24,18 +25,22 @@
       <p class="status-line" id="voteStatus">در انتظار رای‌ها...</p>
     </div>
 
-    <button id="leaveBtn" class="btn-full btn-ghost">خروج از سالن</button>
+    <button id="leaveBtn" class="btn-full btn-ghost">خروج از اتاق</button>
   </div>
 
 <script type="module">
   import {
-    GAMES, sessionRef, onValue, set, ensureAuth,
-    getSavedName, leaveLobby, runTransaction
+    GAMES, roomRef, getSavedRoom, onValue, set, waitForUser,
+    getSavedName, leaveLobby, joinLobby, runTransaction, clearRoom, currentUid
   } from "./js/app.js";
   import { mountChat } from "./js/chat.js";
 
   const myName = getSavedName();
-  if (!myName) window.location.href = "index.html";
+  const code = getSavedRoom();
+  if (!myName || !code) window.location.href = "index.html";
+  document.getElementById("roomCodeText").textContent = code;
+
+  const R = (p) => roomRef(code, p);
 
   let myUid = null;
   let players = {};
@@ -75,14 +80,11 @@
       const myVote = votes[myUid]?.gameId === g.id;
       el.className = "game-option" + (myVote ? " voted" : "");
       el.innerHTML = `
-        <div>
-          <div class="name">${g.name}</div>
-          <div class="desc">${g.desc}</div>
-        </div>
+        <div><div class="name">${g.name}</div><div class="desc">${g.desc}</div></div>
         <div class="votes">${counts[g.id]}</div>
       `;
       el.addEventListener("click", async () => {
-        await set(sessionRef(`votes/${myUid}`), { gameId: g.id, name: myName });
+        await set(R(`votes/${myUid}`), { gameId: g.id, name: myName });
       });
       gameOptions.appendChild(el);
     });
@@ -101,43 +103,30 @@
     let best = -1;
     GAMES.forEach((g) => { if (counts[g.id] > best) { best = counts[g.id]; winner = g.id; } });
 
-    await runTransaction(sessionRef("currentGame"), (curr) => {
-      if (curr && curr.gameId) return curr;
-      return { gameId: winner, roundId: Date.now() };
-    });
+    await runTransaction(R("currentGame"), (curr) => (curr && curr.gameId ? curr : { gameId: winner, roundId: Date.now() }));
   }
 
   async function init() {
-    myUid = await ensureAuth();
-    mountChat(myName);
+    const user = await waitForUser();
+    if (!user) { window.location.href = "index.html"; return; }
+    myUid = currentUid();
+    await joinLobby(myName);
+    mountChat(myName, code);
     renderPlayers();
     renderGames();
 
-    onValue(sessionRef("players"), (snap) => {
-      players = snap.val() || {};
-      renderPlayers();
-      renderGames();
-      maybeStartGame();
-    });
-
-    onValue(sessionRef("votes"), (snap) => {
-      votes = snap.val() || {};
-      renderGames();
-      maybeStartGame();
-    });
-
-    onValue(sessionRef("currentGame"), (snap) => {
+    onValue(R("players"), (snap) => { players = snap.val() || {}; renderPlayers(); renderGames(); maybeStartGame(); });
+    onValue(R("votes"), (snap) => { votes = snap.val() || {}; renderGames(); maybeStartGame(); });
+    onValue(R("currentGame"), (snap) => {
       const cg = snap.val();
-      if (cg && cg.gameId) {
-        started = true;
-        window.location.href = `games/${cg.gameId}.html?round=${cg.roundId}`;
-      }
+      if (cg && cg.gameId) { started = true; window.location.href = `games/${cg.gameId}.html?round=${cg.roundId}`; }
     });
   }
   init();
 
   document.getElementById("leaveBtn").addEventListener("click", async () => {
     await leaveLobby();
+    clearRoom();
     window.location.href = "index.html";
   });
 </script>
