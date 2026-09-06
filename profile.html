@@ -10,12 +10,16 @@
   <div class="wrap">
     <div class="brand">
       <div class="brand-mark">🁢</div>
-      <h1>پروفایل</h1>
+      <h1 id="pageTitle">پروفایل</h1>
     </div>
 
     <div class="card" id="noNameCard" style="display:none">
       <p class="status-line">هنوز وارد نشدی.</p>
       <a href="index.html" class="btn btn-full">ورود</a>
+    </div>
+
+    <div class="card" id="notFoundCard" style="display:none">
+      <p class="status-line">همچین کاربری پیدا نشد.</p>
     </div>
 
     <div id="profileContent" style="display:none">
@@ -27,13 +31,15 @@
             <div class="muted" id="joinedGamesText"></div>
           </div>
         </div>
-        <div style="margin-top:10px;">
-          <a href="wallet.html" class="coin-badge" style="text-decoration:none;">🪙 <span id="coinCount">0</span> سکه ←</a>
-        </div>
+        <div id="coinBadgeWrap" style="margin-top:10px;"></div>
         <div class="stat-grid">
           <div class="stat-box"><div class="num" id="winsNum">0</div><div class="lbl">برد</div></div>
           <div class="stat-box"><div class="num" id="lossesNum">0</div><div class="lbl">باخت</div></div>
           <div class="stat-box"><div class="num" id="playedNum">0</div><div class="lbl">کل بازی‌ها</div></div>
+        </div>
+        <div id="addFriendWrap" style="display:none;">
+          <button id="addFriendFromProfileBtn" class="btn-full">➕ ارسال درخواست دوستی</button>
+          <p class="status-line" id="friendReqStatus"></p>
         </div>
       </div>
 
@@ -42,13 +48,13 @@
         <div class="score-board" id="perGameBoard"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="shopCard" style="display:none;">
         <h2>فروشگاه تم آواتار</h2>
         <div class="shop-grid" id="shopGrid"></div>
         <p class="status-line" id="shopStatus"></p>
       </div>
 
-      <button id="logoutBtn" class="btn-full btn-ghost">خروج از حساب</button>
+      <button id="logoutBtn" class="btn-full btn-ghost" style="display:none;">خروج از حساب</button>
     </div>
 
     <a href="index.html" class="link-back">← بازگشت</a>
@@ -56,33 +62,62 @@
 
 <script type="module">
   import {
-    getSavedName, profileRef, onValue, GAMES, SHOP_ITEMS, buyItem, equipTheme, waitForUser, logoutUser
+    getSavedName, profileRef, onValue, GAMES, SHOP_ITEMS, buyItem, equipTheme,
+    waitForUser, logoutUser, getPublicProfile, sendFriendRequest
   } from "./js/app.js";
 
-  const shopStatus = document.getElementById("shopStatus");
+  const params = new URLSearchParams(location.search);
+  const viewedUser = params.get("user");
 
-  waitForUser().then((user) => {
-    const name = getSavedName();
-    if (!user || !name) { document.getElementById("noNameCard").style.display = "block"; return; }
+  waitForUser().then(async (user) => {
+    const myName = getSavedName();
+    if (!user || !myName) { document.getElementById("noNameCard").style.display = "block"; return; }
+
+    const isOwnProfile = !viewedUser || viewedUser === myName;
+    const targetName = isOwnProfile ? myName : viewedUser;
+
+    if (!isOwnProfile) {
+      const exists = await getPublicProfile(targetName);
+      if (!exists) { document.getElementById("notFoundCard").style.display = "block"; return; }
+      document.getElementById("pageTitle").textContent = `پروفایل ${targetName}`;
+    }
 
     document.getElementById("profileContent").style.display = "block";
-    document.getElementById("nameText").textContent = name;
+    document.getElementById("nameText").textContent = targetName;
+
+    if (isOwnProfile) {
+      document.getElementById("shopCard").style.display = "block";
+      document.getElementById("logoutBtn").style.display = "block";
+      document.getElementById("logoutBtn").addEventListener("click", async () => { await logoutUser(); window.location.href = "index.html"; });
+    } else {
+      document.getElementById("addFriendWrap").style.display = "block";
+      document.getElementById("addFriendFromProfileBtn").addEventListener("click", async () => {
+        const res = await sendFriendRequest(myName, targetName);
+        const st = document.getElementById("friendReqStatus");
+        if (res.ok) st.textContent = "درخواست ارسال شد!";
+        else if (res.reason === "already-friends") st.textContent = "قبلاً دوست هستید";
+        else st.textContent = "خطا در ارسال درخواست";
+      });
+    }
 
     function themeGradient(equippedTheme) {
       const item = SHOP_ITEMS.find((i) => i.id === equippedTheme);
       return item ? `linear-gradient(145deg, ${item.colors[0]}, ${item.colors[1]})` : null;
     }
 
-    onValue(profileRef(name), (snap) => {
+    onValue(profileRef(targetName), (snap) => {
       const p = snap.val() || { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default" };
       document.getElementById("winsNum").textContent = p.wins || 0;
       document.getElementById("lossesNum").textContent = p.losses || 0;
       document.getElementById("playedNum").textContent = p.gamesPlayed || 0;
-      document.getElementById("coinCount").textContent = p.coins || 0;
       document.getElementById("joinedGamesText").textContent = `${p.gamesPlayed || 0} دور بازی کرده`;
 
+      if (isOwnProfile) {
+        document.getElementById("coinBadgeWrap").innerHTML = `<a href="wallet.html" class="coin-badge" style="text-decoration:none;">🪙 ${p.coins || 0} سکه ←</a>`;
+      }
+
       const avatarBox = document.getElementById("avatarBox");
-      avatarBox.textContent = name.trim()[0]?.toUpperCase() || "?";
+      avatarBox.textContent = targetName.trim()[0]?.toUpperCase() || "?";
       const grad = themeGradient(p.equippedTheme);
       if (grad) avatarBox.style.background = grad;
 
@@ -96,7 +131,7 @@
         board.appendChild(row);
       });
 
-      renderShop(p);
+      if (isOwnProfile) renderShop(p);
     });
 
     function renderShop(p) {
@@ -117,23 +152,18 @@
         if (equipped) { btn.textContent = "فعاله"; btn.disabled = true; }
         else if (owned) {
           btn.textContent = "فعال کردن"; btn.className = "btn-ghost";
-          btn.addEventListener("click", async () => { await equipTheme(name, item.id); });
+          btn.addEventListener("click", async () => { await equipTheme(targetName, item.id); });
         } else {
           btn.textContent = "خرید"; btn.className = "btn-gold";
           btn.addEventListener("click", async () => {
-            const res = await buyItem(name, item.id);
-            shopStatus.textContent = res.ok ? "خریداری شد!" : (res.reason === "insufficient" ? "سکه‌ت کافی نیست" : "خطا در خرید");
+            const res = await buyItem(targetName, item.id);
+            document.getElementById("shopStatus").textContent = res.ok ? "خریداری شد!" : (res.reason === "insufficient" ? "سکه‌ت کافی نیست" : "خطا در خرید");
           });
         }
         el.appendChild(btn);
         grid.appendChild(el);
       });
     }
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await logoutUser();
-      window.location.href = "index.html";
-    });
   });
 </script>
 </body>
