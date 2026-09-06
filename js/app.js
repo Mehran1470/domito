@@ -118,6 +118,7 @@ export const GAMES = [
   { id: "math", name: "اسپرینت ریاضی", desc: "سریع و درست حساب کن", icon: "🔢", soloThreshold: 40 },
   { id: "scramble", name: "حروف به‌هم‌ریخته", desc: "کلمه‌ی درست رو از بین گزینه‌ها پیدا کن", icon: "🔤", soloThreshold: 30 },
   { id: "typing", name: "سرعت تایپ", desc: "جمله رو با دقت و سریع تایپ کن", icon: "⌨️", soloThreshold: 60 },
+  { id: "snake", name: "بازی مار", desc: "غذا بخور، بزرگ شو، به خودت نخور", icon: "🐍", soloThreshold: 8 },
 ];
 
 export function soloWon(gameId, score) {
@@ -130,12 +131,22 @@ const COIN_WIN = 15;
 const COIN_PLAY = 5;
 
 function blankProfile() {
-  return { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [], friends: {} };
+  return { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [], friends: {}, friendRequests: {} };
 }
 
 export function profileRef(name, path = "") {
   const safe = encodeURIComponent(name);
   return ref(db, `profiles/${safe}${path ? "/" + path : ""}`);
+}
+
+export async function getPublicProfile(name) {
+  const snap = await get(profileRef(name));
+  if (!snap.exists()) return null;
+  return snap.val();
+}
+
+export function listenProfile(name, callback) {
+  return onValue(profileRef(name), (snap) => callback(snap.val()));
 }
 
 export async function submitResult(gameId, uid, name, score) {
@@ -246,15 +257,33 @@ export async function claimMission(name, missionId) {
   return result;
 }
 
-// ---------- دوستان ----------
-export async function addFriend(myName, friendName) {
-  friendName = friendName.trim();
-  if (!friendName || friendName === myName) return { ok: false, reason: "invalid" };
-  const friendSnap = await get(profileRef(friendName));
-  if (!friendSnap.exists()) return { ok: false, reason: "not-found" };
-  await update(profileRef(myName, "friends"), { [friendName]: true });
-  await update(profileRef(friendName, "friends"), { [myName]: true });
+// ---------- دوستان (با درخواست/تایید) ----------
+export async function sendFriendRequest(myName, targetName) {
+  targetName = targetName.trim();
+  if (!targetName || targetName === myName) return { ok: false, reason: "invalid" };
+  const targetSnap = await get(profileRef(targetName));
+  if (!targetSnap.exists()) return { ok: false, reason: "not-found" };
+  const targetVal = targetSnap.val() || {};
+  if (targetVal.friends && targetVal.friends[myName]) return { ok: false, reason: "already-friends" };
+  await update(profileRef(targetName, "friendRequests"), { [myName]: Date.now() });
   return { ok: true };
+}
+
+export function listenFriendRequests(myName, callback) {
+  return onValue(profileRef(myName, "friendRequests"), (snap) => {
+    const val = snap.val() || {};
+    callback(Object.keys(val));
+  });
+}
+
+export async function acceptFriendRequest(myName, fromName) {
+  await update(profileRef(myName, "friends"), { [fromName]: true });
+  await update(profileRef(fromName, "friends"), { [myName]: true });
+  await remove(profileRef(myName, `friendRequests/${fromName}`));
+}
+
+export async function rejectFriendRequest(myName, fromName) {
+  await remove(profileRef(myName, `friendRequests/${fromName}`));
 }
 
 export function listenFriends(myName, callback) {
@@ -326,4 +355,4 @@ export async function getLeaderboard(limitN = 5) {
   }));
   list.sort((a, b) => b.wins - a.wins);
   return list.slice(0, limitN);
-}
+  }
