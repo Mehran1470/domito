@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دوستان | دومیتو</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">👥</div>
+      <h1>دوستان من</h1>
+    </div>
+
+    <div class="card" id="noNameCard" style="display:none">
+      <p class="status-line">هنوز وارد نشدی.</p>
+      <a href="index.html" class="btn btn-full">ورود</a>
+    </div>
+
+    <div id="content" style="display:none">
+      <div class="card">
+        <h2>➕ اضافه کردن دوست</h2>
+        <input type="text" id="friendInput" placeholder="نام‌کاربری دوستت" maxlength="20" />
+        <button id="addFriendBtn" class="btn-full">اضافه کن</button>
+        <p class="status-line" id="addStatus"></p>
+      </div>
+
+      <div class="card">
+        <h2>لیست دوستان (<span id="friendCount">0</span>)</h2>
+        <div id="friendList"></div>
+        <p class="muted" id="noFriends" style="display:none;">هنوز دوستی اضافه نکردی</p>
+      </div>
+    </div>
+
+    <a href="index.html" class="link-back">← بازگشت به خانه</a>
+  </div>
+
+<script type="module">
+  import { getSavedName, waitForUser, addFriend, listenFriends, getSavedRoom, createRoom, inviteFriendToRoom } from "./js/app.js";
+
+  waitForUser().then((user) => {
+    const myName = getSavedName();
+    if (!user || !myName) { document.getElementById("noNameCard").style.display = "block"; return; }
+    document.getElementById("content").style.display = "block";
+
+    const addStatus = document.getElementById("addStatus");
+    document.getElementById("addFriendBtn").addEventListener("click", async () => {
+      const friendName = document.getElementById("friendInput").value.trim();
+      if (!friendName) { addStatus.textContent = "نام‌کاربری رو بنویس"; return; }
+      addStatus.textContent = "در حال بررسی...";
+      const res = await addFriend(myName, friendName);
+      if (res.ok) { addStatus.textContent = "اضافه شد!"; document.getElementById("friendInput").value = ""; }
+      else if (res.reason === "not-found") addStatus.textContent = "همچین کاربری پیدا نشد";
+      else addStatus.textContent = "نمی‌تونی خودتو اضافه کنی";
+    });
+
+    listenFriends(myName, (list) => {
+      const friendList = document.getElementById("friendList");
+      const noFriends = document.getElementById("noFriends");
+      document.getElementById("friendCount").textContent = list.length;
+      if (list.length === 0) { noFriends.style.display = "block"; friendList.innerHTML = ""; return; }
+      noFriends.style.display = "none";
+      friendList.innerHTML = "";
+      list.forEach((f) => {
+        const row = document.createElement("div");
+        row.className = "friend-row";
+        row.innerHTML = `<span class="fname">${f.name}</span>`;
+        if (f.online) {
+          const btn = document.createElement("button");
+          btn.textContent = "دعوت به بازی";
+          btn.addEventListener("click", async () => {
+            let code = getSavedRoom();
+            if (!code) code = await createRoom();
+            await inviteFriendToRoom(myName, f.name, code);
+            btn.textContent = "دعوت شد ✓";
+            btn.disabled = true;
+          });
+          row.appendChild(btn);
+        }
+        const dot = document.createElement("span");
+        dot.className = "fdot" + (f.online ? "" : " off");
+        row.appendChild(dot);
+        friendList.appendChild(row);
+      });
+    });
+  });
+</script>
+</body>
+</html>
