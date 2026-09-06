@@ -8,22 +8,16 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">❓</div>
-      <h1>کوییز اطلاعات عمومی</h1>
-    </div>
-
+    <div class="brand"><div class="brand-mark">❓</div><h1>کوییز اطلاعات عمومی</h1></div>
     <div class="card" id="playArea">
       <h2 id="qCounter">سوال ۱ از ۵</h2>
       <p id="qText" style="font-size:16px; margin-bottom:16px;"></p>
       <div id="options"></div>
     </div>
-
     <div class="card" id="waitArea" style="display:none">
       <h2>نتیجه تو ثبت شد</h2>
       <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
     </div>
-
     <div class="card" id="scoreArea" style="display:none">
       <h2>نتیجه این دور</h2>
       <div class="score-board" id="scoreBoard"></div>
@@ -33,10 +27,13 @@
 
 <script type="module">
   import {
-    sessionRef, onValue, ensureAuth, getSavedName,
+    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
     submitResult, resetSessionForNextRound, recordRoundResult
   } from "../js/app.js";
   import { mountChat } from "../js/chat.js";
+
+  const code = getSavedRoom();
+  const R = (p) => roomRef(code, p);
 
   const QUESTION_POOL = [
     { q: "بزرگترین کشور جهان از نظر مساحت کدومه؟", options: ["چین", "روسیه", "کانادا", "آمریکا"], correct: 1 },
@@ -63,16 +60,10 @@
     { q: "ماه چند روز طول می‌کشه دور زمین بچرخه؟", options: ["۱۴ روز", "۲۱ روز", "۲۷ روز", "۴۵ روز"], correct: 2 },
   ];
 
-  function pickQuestions(n) {
-    const shuffled = [...QUESTION_POOL].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, n);
-  }
+  function pickQuestions(n) { return [...QUESTION_POOL].sort(() => Math.random() - 0.5).slice(0, n); }
 
   const questions = pickQuestions(5);
-  let idx = 0;
-  let correctCount = 0;
-  let myUid, myName;
-  let players = {};
+  let idx = 0, correctCount = 0, myUid, myName, players = {};
 
   const qCounter = document.getElementById("qCounter");
   const qText = document.getElementById("qText");
@@ -99,42 +90,35 @@
     buttons[q.correct].classList.add("correct");
     if (i !== q.correct) buttons[i].classList.add("wrong");
     if (i === q.correct) correctCount++;
-
     setTimeout(() => {
       idx++;
-      if (idx < questions.length) {
-        buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); });
-        renderQuestion();
-      } else {
-        finish();
-      }
+      if (idx < questions.length) { buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); }); renderQuestion(); }
+      else finish();
     }, 700);
   }
 
   async function finish() {
     document.getElementById("playArea").style.display = "none";
     document.getElementById("waitArea").style.display = "block";
-    const score = correctCount * 10;
-    await submitResult("quiz", myUid, myName, score);
+    await submitResult("quiz", myUid, myName, correctCount * 10);
   }
 
   async function init() {
-    myUid = await ensureAuth();
+    const user = await waitForUser();
     myName = getSavedName();
-    if (!myName) { window.location.href = "../index.html"; return; }
-    mountChat(myName);
+    if (!user || !myName || !code) { window.location.href = "../index.html"; return; }
+    myUid = currentUid();
+    mountChat(myName, code);
 
-    onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
-
+    onValue(R("players"), (snap) => { players = snap.val() || {}; });
     renderQuestion();
 
     let handled = false;
-    onValue(sessionRef("results"), async (snap) => {
+    onValue(R("results"), async (snap) => {
       const results = snap.val() || {};
       const totalPlayers = Object.keys(players).length;
       const totalResults = Object.keys(results).length;
       document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
-
       if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
       handled = true;
 
@@ -143,23 +127,17 @@
       await recordRoundResult(myName, "quiz", { won });
 
       document.getElementById("waitArea").style.display = "none";
-      const scoreArea = document.getElementById("scoreArea");
-      scoreArea.style.display = "block";
+      document.getElementById("scoreArea").style.display = "block";
       const board = document.getElementById("scoreBoard");
       board.innerHTML = "";
-      Object.entries(results)
-        .sort((a, b) => b[1].score - a[1].score)
-        .forEach(([uid, r]) => {
-          const row = document.createElement("div");
-          row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-          row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
-          board.appendChild(row);
-        });
+      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
+        const row = document.createElement("div");
+        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+        board.appendChild(row);
+      });
 
-      setTimeout(async () => {
-        await resetSessionForNextRound();
-        window.location.href = "../lobby.html";
-      }, 4000);
+      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
     });
   }
   init();
