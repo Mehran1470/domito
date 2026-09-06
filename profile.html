@@ -14,8 +14,8 @@
     </div>
 
     <div class="card" id="noNameCard" style="display:none">
-      <p class="status-line">هنوز اسمی ثبت نکردی.</p>
-      <a href="index.html" class="btn btn-full">ورود به سالن</a>
+      <p class="status-line">هنوز وارد نشدی.</p>
+      <a href="index.html" class="btn btn-full">ورود</a>
     </div>
 
     <div id="profileContent" style="display:none">
@@ -44,38 +44,37 @@
 
       <div class="card">
         <h2>فروشگاه تم آواتار</h2>
-        <p class="muted" style="margin-top:-8px;">با سکه‌هایی که از برد جمع می‌کنی، تم آواتارتو رنگی کن</p>
         <div class="shop-grid" id="shopGrid"></div>
         <p class="status-line" id="shopStatus"></p>
       </div>
+
+      <button id="logoutBtn" class="btn-full btn-ghost">خروج از حساب</button>
     </div>
 
-    <a href="index.html" class="link-back">← بازگشت به سالن</a>
+    <a href="index.html" class="link-back">← بازگشت</a>
   </div>
 
 <script type="module">
   import {
-    getSavedName, profileRef, onValue, GAMES, SHOP_ITEMS, buyItem, equipTheme
+    getSavedName, profileRef, onValue, GAMES, SHOP_ITEMS, buyItem, equipTheme, waitForUser, logoutUser
   } from "./js/app.js";
 
-  const name = getSavedName();
   const shopStatus = document.getElementById("shopStatus");
 
-  if (!name) {
-    document.getElementById("noNameCard").style.display = "block";
-  } else {
+  waitForUser().then((user) => {
+    const name = getSavedName();
+    if (!user || !name) { document.getElementById("noNameCard").style.display = "block"; return; }
+
     document.getElementById("profileContent").style.display = "block";
     document.getElementById("nameText").textContent = name;
 
     function themeGradient(equippedTheme) {
       const item = SHOP_ITEMS.find((i) => i.id === equippedTheme);
-      if (!item) return null;
-      return `linear-gradient(145deg, ${item.colors[0]}, ${item.colors[1]})`;
+      return item ? `linear-gradient(145deg, ${item.colors[0]}, ${item.colors[1]})` : null;
     }
 
     onValue(profileRef(name), (snap) => {
       const p = snap.val() || { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default" };
-
       document.getElementById("winsNum").textContent = p.wins || 0;
       document.getElementById("lossesNum").textContent = p.losses || 0;
       document.getElementById("playedNum").textContent = p.gamesPlayed || 0;
@@ -83,7 +82,7 @@
       document.getElementById("joinedGamesText").textContent = `${p.gamesPlayed || 0} دور بازی کرده`;
 
       const avatarBox = document.getElementById("avatarBox");
-      avatarBox.textContent = name.trim()[0] || "?";
+      avatarBox.textContent = name.trim()[0]?.toUpperCase() || "?";
       const grad = themeGradient(p.equippedTheme);
       if (grad) avatarBox.style.background = grad;
 
@@ -93,11 +92,7 @@
         const stats = (p.byGame && p.byGame[g.id]) || { wins: 0, plays: 0 };
         const row = document.createElement("div");
         row.className = "score-row";
-        row.innerHTML = `
-          <span>${g.name}</span>
-          <span class="muted" style="font-size:12px;">${stats.plays} بازی</span>
-          <span class="points">${stats.wins} برد</span>
-        `;
+        row.innerHTML = `<span>${g.name}</span><span class="muted" style="font-size:12px;">${stats.plays} بازی</span><span class="points">${stats.wins} برد</span>`;
         board.appendChild(row);
       });
 
@@ -119,30 +114,27 @@
           <div class="price">${owned ? (equipped ? "فعاله" : "خریداری‌شده") : `🪙 ${item.price}`}</div>
         `;
         const btn = document.createElement("button");
-        if (equipped) {
-          btn.textContent = "فعاله";
-          btn.disabled = true;
-        } else if (owned) {
-          btn.textContent = "فعال کردن";
-          btn.className = "btn-ghost";
+        if (equipped) { btn.textContent = "فعاله"; btn.disabled = true; }
+        else if (owned) {
+          btn.textContent = "فعال کردن"; btn.className = "btn-ghost";
           btn.addEventListener("click", async () => { await equipTheme(name, item.id); });
         } else {
-          btn.textContent = "خرید";
-          btn.className = "btn-gold";
+          btn.textContent = "خرید"; btn.className = "btn-gold";
           btn.addEventListener("click", async () => {
             const res = await buyItem(name, item.id);
-            if (!res.ok) {
-              shopStatus.textContent = res.reason === "insufficient" ? "سکه‌ت کافی نیست" : "خطا در خرید";
-            } else {
-              shopStatus.textContent = "خریداری شد!";
-            }
+            shopStatus.textContent = res.ok ? "خریداری شد!" : (res.reason === "insufficient" ? "سکه‌ت کافی نیست" : "خطا در خرید");
           });
         }
         el.appendChild(btn);
         grid.appendChild(el);
       });
     }
-  }
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await logoutUser();
+      window.location.href = "index.html";
+    });
+  });
 </script>
 </body>
 </html>
