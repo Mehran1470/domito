@@ -8,22 +8,16 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">🔢</div>
-      <h1>اسپرینت ریاضی</h1>
-    </div>
-
+    <div class="brand"><div class="brand-mark">🔢</div><h1>اسپرینت ریاضی</h1></div>
     <div class="card" id="playArea">
       <h2 id="qCounter">سوال ۱ از ۶</h2>
       <p id="qText" style="font-size:28px; font-weight:900; text-align:center; margin:10px 0 20px;"></p>
       <div id="options"></div>
     </div>
-
     <div class="card" id="waitArea" style="display:none">
       <h2>نتیجه تو ثبت شد</h2>
       <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
     </div>
-
     <div class="card" id="scoreArea" style="display:none">
       <h2>نتیجه این دور</h2>
       <div class="score-board" id="scoreBoard"></div>
@@ -33,35 +27,26 @@
 
 <script type="module">
   import {
-    sessionRef, onValue, ensureAuth, getSavedName,
+    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
     submitResult, resetSessionForNextRound, recordRoundResult
   } from "../js/app.js";
   import { mountChat } from "../js/chat.js";
 
-  function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+  const code = getSavedRoom();
+  const R = (p) => roomRef(code, p);
 
+  function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
   function generateQuestions(n) {
     const qs = [];
     for (let i = 0; i < n; i++) {
       const ops = ["+", "-", "×"];
       const op = ops[Math.floor(Math.random() * ops.length)];
       let a, b, answer;
-      if (op === "×") {
-        a = Math.floor(Math.random() * 11) + 2;
-        b = Math.floor(Math.random() * 11) + 2;
-        answer = a * b;
-      } else {
-        a = Math.floor(Math.random() * 40) + 1;
-        b = Math.floor(Math.random() * 40) + 1;
-        answer = op === "+" ? a + b : a - b;
-      }
+      if (op === "×") { a = Math.floor(Math.random() * 11) + 2; b = Math.floor(Math.random() * 11) + 2; answer = a * b; }
+      else { a = Math.floor(Math.random() * 40) + 1; b = Math.floor(Math.random() * 40) + 1; answer = op === "+" ? a + b : a - b; }
       const options = new Set([answer]);
       let guard = 0;
-      while (options.size < 4 && guard < 30) {
-        const delta = Math.floor(Math.random() * 13) - 6;
-        if (delta !== 0) options.add(answer + delta);
-        guard++;
-      }
+      while (options.size < 4 && guard < 30) { const delta = Math.floor(Math.random() * 13) - 6; if (delta !== 0) options.add(answer + delta); guard++; }
       const optArr = shuffle([...options]);
       qs.push({ q: `${a} ${op} ${b} = ?`, options: optArr.map(String), correct: optArr.indexOf(answer) });
     }
@@ -69,10 +54,7 @@
   }
 
   const questions = generateQuestions(6);
-  let idx = 0;
-  let correctCount = 0;
-  let myUid, myName;
-  let players = {};
+  let idx = 0, correctCount = 0, myUid, myName, players = {};
 
   const qCounter = document.getElementById("qCounter");
   const qText = document.getElementById("qText");
@@ -86,8 +68,7 @@
     q.options.forEach((opt, i) => {
       const btn = document.createElement("button");
       btn.className = "quiz-option";
-      btn.style.textAlign = "center";
-      btn.style.fontSize = "18px";
+      btn.style.textAlign = "center"; btn.style.fontSize = "18px";
       btn.textContent = opt;
       btn.addEventListener("click", () => answer(i));
       optionsEl.appendChild(btn);
@@ -101,42 +82,35 @@
     buttons[q.correct].classList.add("correct");
     if (i !== q.correct) buttons[i].classList.add("wrong");
     if (i === q.correct) correctCount++;
-
     setTimeout(() => {
       idx++;
-      if (idx < questions.length) {
-        buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); });
-        renderQuestion();
-      } else {
-        finish();
-      }
+      if (idx < questions.length) { buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); }); renderQuestion(); }
+      else finish();
     }, 550);
   }
 
   async function finish() {
     document.getElementById("playArea").style.display = "none";
     document.getElementById("waitArea").style.display = "block";
-    const score = correctCount * 10;
-    await submitResult("math", myUid, myName, score);
+    await submitResult("math", myUid, myName, correctCount * 10);
   }
 
   async function init() {
-    myUid = await ensureAuth();
+    const user = await waitForUser();
     myName = getSavedName();
-    if (!myName) { window.location.href = "../index.html"; return; }
-    mountChat(myName);
+    if (!user || !myName || !code) { window.location.href = "../index.html"; return; }
+    myUid = currentUid();
+    mountChat(myName, code);
 
-    onValue(sessionRef("players"), (snap) => { players = snap.val() || {}; });
-
+    onValue(R("players"), (snap) => { players = snap.val() || {}; });
     renderQuestion();
 
     let handled = false;
-    onValue(sessionRef("results"), async (snap) => {
+    onValue(R("results"), async (snap) => {
       const results = snap.val() || {};
       const totalPlayers = Object.keys(players).length;
       const totalResults = Object.keys(results).length;
       document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
-
       if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
       handled = true;
 
@@ -145,23 +119,16 @@
       await recordRoundResult(myName, "math", { won });
 
       document.getElementById("waitArea").style.display = "none";
-      const scoreArea = document.getElementById("scoreArea");
-      scoreArea.style.display = "block";
+      document.getElementById("scoreArea").style.display = "block";
       const board = document.getElementById("scoreBoard");
       board.innerHTML = "";
-      Object.entries(results)
-        .sort((a, b) => b[1].score - a[1].score)
-        .forEach(([uid, r]) => {
-          const row = document.createElement("div");
-          row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-          row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
-          board.appendChild(row);
-        });
-
-      setTimeout(async () => {
-        await resetSessionForNextRound();
-        window.location.href = "../lobby.html";
-      }, 4000);
+      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
+        const row = document.createElement("div");
+        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+        board.appendChild(row);
+      });
+      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
     });
   }
   init();
