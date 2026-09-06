@@ -213,3 +213,29 @@ export function listenChat(code, callback) {
     callback(list);
   });
 }
+
+// ---------- لیدربورد ----------
+export async function getLeaderboard(limitN = 5) {
+  const snap = await get(ref(db, "profiles"));
+  const val = snap.val() || {};
+  const list = Object.entries(val).map(([encodedName, p]) => ({
+    name: decodeURIComponent(encodedName),
+    wins: p.wins || 0,
+  }));
+  list.sort((a, b) => b.wins - a.wins);
+  return list.slice(0, limitN);
+}
+
+// ---------- ماموریت و تاریخچه تراکنش ----------
+export const MISSIONS = [
+  { id: "m-play3", label: "۳ بازی انجام بده", reward: 20, target: 3, statKey: "gamesPlayed" },
+  { id: "m-win1", label: "یه برد کسب کن", reward: 30, target: 1, statKey: "wins" },
+  { id: "m-play10", label: "۱۰ بازی انجام بده", reward: 60, target: 10, statKey: "gamesPlayed" },
+];
+
+export async function logTransaction(name, { type, amount, note }) {
+  await push(ref(db, `profiles/${encodeURIComponent(name)}/transactions`), { type, amount, note, at: Date.now() });
+}
+
+export async function getTransactions(name, limitN = 20) {
+  const snap = await get(ref(db, `profiles/${encodeURIComponent(name)}/transaction
