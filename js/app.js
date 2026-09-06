@@ -15,7 +15,7 @@ export const db = getDatabase(app);
 
 export { ref, set, get, onValue, remove, update, serverTimestamp, runTransaction, onDisconnect, push };
 
-// ---------- احراز هویت با نام‌کاربری/رمز ----------
+// ---------- احراز هویت ----------
 function usernameToEmail(username) {
   return `${username.trim().toLowerCase()}@domito.local`;
 }
@@ -26,16 +26,20 @@ export function saveName(name) { localStorage.setItem("domito_name", name); }
 export async function registerUser(username, password) {
   const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
   saveName(username);
+  setPresence(username, true);
   return cred.user;
 }
 
 export async function loginUser(username, password) {
   const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
   saveName(username);
+  setPresence(username, true);
   return cred.user;
 }
 
 export async function logoutUser() {
+  const name = getSavedName();
+  if (name) await setPresence(name, false);
   localStorage.removeItem("domito_name");
   localStorage.removeItem("domito_room");
   await signOut(auth);
@@ -49,6 +53,13 @@ export function waitForUser() {
 
 export function currentUid() {
   return auth.currentUser ? auth.currentUser.uid : null;
+}
+
+// ---------- حضور آنلاین ----------
+export async function setPresence(name, online) {
+  const pRef = ref(db, `profiles/${encodeURIComponent(name)}/presence`);
+  await update(pRef, { online, lastSeen: Date.now() });
+  if (online) onDisconnect(pRef).update({ online: false, lastSeen: Date.now() });
 }
 
 // ---------- اتاق‌ها ----------
@@ -101,20 +112,25 @@ export async function leaveLobby() {
 
 // ---------- بازی‌ها ----------
 export const GAMES = [
-  { id: "quiz", name: "کوییز اطلاعات عمومی", desc: "به سوالات جواب بده، درست‌تر بیشتر امتیاز می‌گیری" },
-  { id: "reaction", name: "سرعت واکنش", desc: "وقتی رنگ سبز شد سریع‌تر از بقیه بزن" },
-  { id: "memory", name: "بازی حافظه", desc: "دنباله رنگ‌ها رو حفظ کن و تکرار کن" },
-  { id: "math", name: "اسپرینت ریاضی", desc: "سریع و درست حساب کن" },
-  { id: "scramble", name: "حروف به‌هم‌ریخته", desc: "کلمه‌ی درست رو از بین گزینه‌ها پیدا کن" },
-  { id: "typing", name: "سرعت تایپ", desc: "جمله رو با دقت و سریع تایپ کن" },
+  { id: "quiz", name: "کوییز اطلاعات عمومی", desc: "به سوالات جواب بده، درست‌تر بیشتر امتیاز می‌گیری", icon: "❓", soloThreshold: 30 },
+  { id: "reaction", name: "سرعت واکنش", desc: "وقتی رنگ سبز شد سریع‌تر از بقیه بزن", icon: "⚡", soloThreshold: 500 },
+  { id: "memory", name: "بازی حافظه", desc: "دنباله رنگ‌ها رو حفظ کن و تکرار کن", icon: "🧠", soloThreshold: 3 },
+  { id: "math", name: "اسپرینت ریاضی", desc: "سریع و درست حساب کن", icon: "🔢", soloThreshold: 40 },
+  { id: "scramble", name: "حروف به‌هم‌ریخته", desc: "کلمه‌ی درست رو از بین گزینه‌ها پیدا کن", icon: "🔤", soloThreshold: 30 },
+  { id: "typing", name: "سرعت تایپ", desc: "جمله رو با دقت و سریع تایپ کن", icon: "⌨️", soloThreshold: 60 },
 ];
+
+export function soloWon(gameId, score) {
+  const g = GAMES.find((x) => x.id === gameId);
+  return g ? score >= g.soloThreshold : false;
+}
 
 // ---------- پروفایل، سکه، فروشگاه ----------
 const COIN_WIN = 15;
 const COIN_PLAY = 5;
 
 function blankProfile() {
-  return { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [] };
+  return { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [], friends: {} };
 }
 
 export function profileRef(name, path = "") {
@@ -168,7 +184,13 @@ export const SHOP_ITEMS = [
   { id: "theme-sunset", name: "تم غروب", price: 30, colors: ["#FF7A59", "#FFC845"] },
   { id: "theme-ocean", name: "تم اقیانوس", price: 30, colors: ["#4FD1FF", "#7C4DFF"] },
   { id: "theme-forest", name: "تم جنگل", price: 30, colors: ["#4CD97B", "#1F9E56"] },
-  { id: "theme-gold", name: "تم طلایی ویژه", price: 60, colors: ["#FFD700", "#FF8C00"] },
+  { id: "theme-gold", name: "تم طلایی", price: 60, colors: ["#FFD700", "#FF8C00"] },
+  { id: "theme-neon", name: "تم نئون", price: 80, colors: ["#39FF14", "#00E5FF"] },
+  { id: "theme-galaxy", name: "تم کهکشانی", price: 120, colors: ["#7C4DFF", "#FF4F81"] },
+  { id: "theme-fire", name: "تم آتشین", price: 150, colors: ["#FF3D00", "#FFC107"] },
+  { id: "theme-royal", name: "تم سلطنتی", price: 250, colors: ["#5B2C82", "#D4AF37"] },
+  { id: "theme-diamond", name: "تم الماس", price: 500, colors: ["#B9F2FF", "#5FD3F3"] },
+  { id: "theme-legend", name: "تم افسانه‌ای", price: 1000, colors: ["#FFD700", "#FF1744"] },
 ];
 
 export async function buyItem(name, itemId) {
@@ -224,7 +246,48 @@ export async function claimMission(name, missionId) {
   return result;
 }
 
-// ---------- چت (مخصوص هر اتاق) ----------
+// ---------- دوستان ----------
+export async function addFriend(myName, friendName) {
+  friendName = friendName.trim();
+  if (!friendName || friendName === myName) return { ok: false, reason: "invalid" };
+  const friendSnap = await get(profileRef(friendName));
+  if (!friendSnap.exists()) return { ok: false, reason: "not-found" };
+  await update(profileRef(myName, "friends"), { [friendName]: true });
+  await update(profileRef(friendName, "friends"), { [myName]: true });
+  return { ok: true };
+}
+
+export function listenFriends(myName, callback) {
+  return onValue(profileRef(myName, "friends"), async (snap) => {
+    const val = snap.val() || {};
+    const names = Object.keys(val);
+    const results = [];
+    for (const n of names) {
+      const pSnap = await get(profileRef(n, "presence"));
+      const presence = pSnap.val() || { online: false, lastSeen: 0 };
+      results.push({ name: n, online: !!presence.online });
+    }
+    callback(results);
+  });
+}
+
+export async function inviteFriendToRoom(myName, friendName, roomCode) {
+  await push(ref(db, `profiles/${encodeURIComponent(friendName)}/invites`), { from: myName, roomCode, at: Date.now() });
+}
+
+export function listenInvites(myName, callback) {
+  return onValue(ref(db, `profiles/${encodeURIComponent(myName)}/invites`), (snap) => {
+    const val = snap.val() || {};
+    const list = Object.entries(val).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.at - a.at);
+    callback(list);
+  });
+}
+
+export async function dismissInvite(myName, inviteId) {
+  await remove(ref(db, `profiles/${encodeURIComponent(myName)}/invites/${inviteId}`));
+}
+
+// ---------- چت ----------
 export function chatRef(code, path = "") {
   return ref(db, `rooms/${code}/chat${path ? "/" + path : ""}`);
 }
