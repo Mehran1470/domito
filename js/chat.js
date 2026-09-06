@@ -1,4 +1,3 @@
-// chat.js — ویجت چت شناور، قابل نصب روی هر صفحه
 import { sendChatMessage, listenChat } from "./app.js";
 
 function escapeHtml(s) {
@@ -7,17 +6,16 @@ function escapeHtml(s) {
   }[c]));
 }
 
-export function mountChat(myName) {
+export function mountChat(myName, roomCode) {
   const btn = document.createElement("button");
   btn.className = "chat-toggle";
-  btn.setAttribute("aria-label", "چت");
   btn.textContent = "💬";
   document.body.appendChild(btn);
 
   const panel = document.createElement("div");
   panel.className = "chat-panel";
   panel.innerHTML = `
-    <div class="chat-header">چت عمومی دومیتو</div>
+    <div class="chat-header">چت اتاق ${roomCode}</div>
     <div class="chat-messages"></div>
     <form class="chat-form">
       <input type="text" maxlength="200" placeholder="پیام بنویس..." />
@@ -29,7 +27,7 @@ export function mountChat(myName) {
   btn.addEventListener("click", () => panel.classList.toggle("open"));
 
   const messagesEl = panel.querySelector(".chat-messages");
-  listenChat((list) => {
+  listenChat(roomCode, (list) => {
     messagesEl.innerHTML = list.map((m) => `
       <div class="chat-msg${m.name === myName ? " me" : ""}">
         <span class="chat-name">${escapeHtml(m.name)}</span>
@@ -46,6 +44,6 @@ export function mountChat(myName) {
     const text = input.value.trim();
     if (!text) return;
     input.value = "";
-    await sendChatMessage(myName, text);
+    await sendChatMessage(roomCode, myName, text);
   });
 }
