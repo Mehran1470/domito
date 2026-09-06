@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بازی مار | دومیتو</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><div class="brand-mark">🐍</div><h1>بازی مار</h1></div>
+    <div class="card" id="playArea">
+      <h2>طول مار: <span id="lengthText">1</span></h2>
+      <div class="snake-wrap">
+        <canvas id="snakeCanvas" width="300" height="300"></canvas>
+        <div class="dpad">
+          <button class="dp-up">⬆️</button>
+          <button class="dp-left">⬅️</button>
+          <button class="dp-right">➡️</button>
+          <button class="dp-down">⬇️</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="waitArea" style="display:none">
+      <h2>نتیجه تو ثبت شد</h2>
+      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
+    </div>
+    <div class="card" id="scoreArea" style="display:none">
+      <h2 id="scoreAreaTitle">نتیجه این دور</h2>
+      <div class="score-board" id="scoreBoard"></div>
+      <div class="solo-result" id="soloResult" style="display:none"></div>
+      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
+    </div>
+  </div>
+
+<script type="module">
+  import {
+    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
+    submitResult, resetSessionForNextRound, recordRoundResult, soloWon
+  } from "../js/app.js";
+  import { mountChat } from "../js/chat.js";
+
+  const isSolo = new URLSearchParams(location.search).has("solo");
+  const code = getSavedRoom();
+  const R = (p) => roomRef(code, p);
+
+  const canvas = document.getElementById("snakeCanvas");
+  const ctx = canvas.getContext("2d");
+  const GRID = 15;
+  const CELL = canvas.width / GRID;
+
+  let snake = [{ x: 7, y: 7 }];
+  let dir = { x: 1, y: 0 };
+  let nextDir = { x: 1, y: 0 };
+  let food = randomFood();
+  let done = false;
+  let myUid, myName, players = {};
+
+  function randomFood() {
+    return { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
+  }
+
+  function draw() {
+    ctx.fillStyle = "#1B1F3A";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#FFC845";
+    ctx.fillRect(food.x * CELL, food.y * CELL, CELL - 2, CELL - 2);
+    snake.forEach((s, i) => {
+      ctx.fillStyle = i === 0 ? "#4F7CFF" : "#9B5CFF";
+      ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 2, CELL - 2);
+    });
+  }
+
+  function tick() {
+    if (done) return;
+    dir = nextDir;
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    if (head.x < 0 || head.y < 0 || head.x >= GRID || head.y >= GRID || snake.some((s) => s.x === head.x && s.y === head.y)) {
+      gameOver();
+      return;
+    }
+
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      food = randomFood();
+      document.getElementById("lengthText").textContent = snake.length;
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function setDir(x, y) {
+    if (dir.x === -x && dir.y === -y) return; // نمی‌تونه برگرده عقب
+    nextDir = { x, y };
+  }
+
+  document.querySelector(".dp-up").addEventListener("click", () => setDir(0, -1));
+  document.querySelector(".dp-down").addEventListener("click", () => setDir(0, 1));
+  document.querySelector(".dp-left").addEventListener("click", () => setDir(-1, 0));
+  document.querySelector(".dp-right").addEventListener("click", () => setDir(1, 0));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowUp") setDir(0, -1);
+    if (e.key === "ArrowDown") setDir(0, 1);
+    if (e.key === "ArrowLeft") setDir(-1, 0);
+    if (e.key === "ArrowRight") setDir(1, 0);
+  });
+
+  let gameLoop;
+
+  async function gameOver() {
+    done = true;
+    clearInterval(gameLoop);
+    const score = snake.length;
+    if (isSolo) { await finishSolo(score); return; }
+    document.getElementById("playArea").style.display = "none";
+    document.getElementById("waitArea").style.display = "block";
+    await submitResult("snake", myUid, myName, score);
+  }
+
+  async function finishSolo(score) {
+    document.getElementById("playArea").style.display = "none";
+    const won = soloWon("snake", score);
+    await recordRoundResult(myName, "snake", { won });
+    const scoreArea = document.getElementById("scoreArea");
+    scoreArea.style.display = "block";
+    document.getElementById("scoreAreaTitle").style.display = "none";
+    document.getElementById("scoreBoard").style.display = "none";
+    document.getElementById("nextStatus").style.display = "none";
+    const soloResult = document.getElementById("soloResult");
+    soloResult.style.display = "block";
+    soloResult.innerHTML = `
+      <div class="big-emoji">${won ? "🎉" : "😅"}</div>
+      <h2>${won ? "آفرین، بردی!" : "این‌بار نشد"}</h2>
+      <div class="score-big">طول: ${score}</div>
+      <button onclick="location.reload()" class="btn-full">دوباره بازی کن</button>
+      <a href="../index.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">بازگشت به خانه</a>
+    `;
+  }
+
+  async function init() {
+    const user = await waitForUser();
+    myName = getSavedName();
+    if (!user || !myName) { window.location.href = "../index.html"; return; }
+    myUid = currentUid();
+
+    draw();
+    gameLoop = setInterval(tick, 180);
+
+    if (isSolo) return;
+
+    if (!code) { window.location.href = "../index.html"; return; }
+    mountChat(myName, code);
+    onValue(R("players"), (snap) => { players = snap.val() || {}; });
+
+    let handled = false;
+    onValue(R("results"), async (snap) => {
+      const results = snap.val() || {};
+      const totalPlayers = Object.keys(players).length;
+      const totalResults = Object.keys(results).length;
+      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
+      handled = true;
+
+      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
+      const won = results[myUid]?.score === maxScore;
+      await recordRoundResult(myName, "snake", { won });
+
+      document.getElementById("waitArea").style.display = "none";
+      document.getElementById("scoreArea").style.display = "block";
+      const board = document.getElementById("scoreBoard");
+      board.innerHTML = "";
+      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
+        const row = document.createElement("div");
+        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+        board.appendChild(row);
+      });
+      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
+    });
+  }
+  init();
+</script>
+</body>
+</html>
