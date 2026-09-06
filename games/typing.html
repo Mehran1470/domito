@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سرعت تایپ | دومیتو</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><div class="brand-mark">⌨️</div><h1>سرعت تایپ</h1></div>
+    <div class="card" id="playArea">
+      <h2>این جمله رو دقیق و سریع تایپ کن</h2>
+      <p id="targetText" style="font-size:16px; background:var(--panel-2); padding:14px; border-radius:12px; margin-bottom:14px; line-height:2;"></p>
+      <input type="text" id="typeInput" placeholder="اینجا تایپ کن..." />
+      <button id="submitBtn" class="btn-full">تایید</button>
+    </div>
+    <div class="card" id="waitArea" style="display:none">
+      <h2>نتیجه تو ثبت شد</h2>
+      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
+    </div>
+    <div class="card" id="scoreArea" style="display:none">
+      <h2>نتیجه این دور</h2>
+      <div class="score-board" id="scoreBoard"></div>
+      <p class="status-line">به زودی برمی‌گردیم به سالن...</p>
+    </div>
+  </div>
+
+<script type="module">
+  import {
+    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
+    submitResult, resetSessionForNextRound, recordRoundResult
+  } from "../js/app.js";
+  import { mountChat } from "../js/chat.js";
+
+  const code = getSavedRoom();
+  const R = (p) => roomRef(code, p);
+
+  const SENTENCES = [
+    "دوستی بهترین سرمایه‌ی زندگیه",
+    "امروز بهترین روز برای شروع یه کار جدیده",
+    "بازی کردن با دوستان لذت زندگیه",
+    "هر روز یه فرصت تازه برای یادگیریه",
+    "خلاقیت از کنجکاوی شروع می‌شه",
+    "صبر کلید حل خیلی از مشکلاته",
+  ];
+
+  const target = SENTENCES[Math.floor(Math.random() * SENTENCES.length)];
+  document.getElementById("targetText").textContent = target;
+  const startTime = performance.now();
+
+  let myUid, myName, players = {};
+
+  function similarity(a, b) {
+    const len = Math.max(a.length, b.length);
+    if (len === 0) return 1;
+    let match = 0;
+    for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] === b[i]) match++;
+    return match / len;
+  }
+
+  document.getElementById("submitBtn").addEventListener("click", async () => {
+    document.getElementById("submitBtn").disabled = true;
+    const typed = document.getElementById("typeInput").value.trim();
+    const seconds = (performance.now() - startTime) / 1000;
+    const acc = similarity(typed, target);
+    const speedBonus = Math.max(0, Math.min(20, Math.round(20 - seconds)));
+    const score = Math.round(acc * 80) + speedBonus;
+    await finish(score);
+  });
+
+  async function finish(score) {
+    document.getElementById("playArea").style.display = "none";
+    document.getElementById("waitArea").style.display = "block";
+    await submitResult("typing", myUid, myName, score);
+  }
+
+  async function init() {
+    const user = await waitForUser();
+    myName = getSavedName();
+    if (!user || !myName || !code) { window.location.href = "../index.html"; return; }
+    myUid = currentUid();
+    mountChat(myName, code);
+
+    onValue(R("players"), (snap) => { players = snap.val() || {}; });
+
+    let handled = false;
+    onValue(R("results"), async (snap) => {
+      const results = snap.val() || {};
+      const totalPlayers = Object.keys(players).length;
+      const totalResults = Object.keys(results).length;
+      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
+      handled = true;
+
+      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
+      const won = results[myUid]?.score === maxScore;
+      await recordRoundResult(myName, "typing", { won });
+
+      document.getElementById("waitArea").style.display = "none";
+      document.getElementById("scoreArea").style.display = "block";
+      const board = document.getElementById("scoreBoard");
+      board.innerHTML = "";
+      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
+        const row = document.createElement("div");
+        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
+        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+        board.appendChild(row);
+      });
+      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
+    });
+  }
+  init();
+</script>
+</body>
+</html>
