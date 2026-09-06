@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>دومیتو | سالن بازی</title>
+<title>دومیتو</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,41 +14,107 @@
       <p>سالن مینی‌گیم‌های آنلاین</p>
     </div>
 
-    <div class="card">
-      <h2>اسمتو بنویس و وارد سالن شو</h2>
-      <input type="text" id="nameInput" placeholder="مثلاً: مهران" maxlength="20" />
-      <button id="joinBtn" class="btn-full">ورود به سالن</button>
-      <p class="status-line" id="statusLine"></p>
+    <div class="card" id="authCard">
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="tabRegister" class="btn-full" style="margin:0;">ثبت‌نام</button>
+        <button id="tabLogin" class="btn-full btn-ghost" style="margin:0;">ورود</button>
+      </div>
+      <input type="text" id="userInput" placeholder="نام‌کاربری (فقط حروف انگلیسی/عدد)" maxlength="20" style="margin-bottom:10px;" />
+      <input type="password" id="passInput" placeholder="رمز عبور (حداقل ۶ کاراکتر)" maxlength="40" />
+      <button id="authBtn" class="btn-full">ثبت‌نام و ورود</button>
+      <p class="status-line" id="authStatus"></p>
+    </div>
+
+    <div class="card" id="roomCard" style="display:none">
+      <h2>خوش اومدی، <span id="helloName"></span>!</h2>
+      <button id="createRoomBtn" class="btn-full">➕ ساخت اتاق جدید</button>
+      <p class="status-line">یا کد اتاق دوستت رو وارد کن:</p>
+      <input type="text" id="roomInput" placeholder="مثلاً: A7K2P" maxlength="8" style="text-align:center; letter-spacing:3px;" />
+      <button id="joinRoomBtn" class="btn-full btn-ghost">ورود به اتاق</button>
+      <p class="status-line" id="roomStatus"></p>
     </div>
 
     <a href="profile.html" class="link-back">مشاهده پروفایل من ←</a>
   </div>
 
 <script type="module">
-  import { joinLobby, getSavedName } from "./js/app.js";
+  import {
+    registerUser, loginUser, waitForUser, getSavedName,
+    createRoom, joinRoomByCode
+  } from "./js/app.js";
 
-  const nameInput = document.getElementById("nameInput");
-  const joinBtn = document.getElementById("joinBtn");
-  const statusLine = document.getElementById("statusLine");
+  const authCard = document.getElementById("authCard");
+  const roomCard = document.getElementById("roomCard");
+  const userInput = document.getElementById("userInput");
+  const passInput = document.getElementById("passInput");
+  const authBtn = document.getElementById("authBtn");
+  const authStatus = document.getElementById("authStatus");
+  const tabRegister = document.getElementById("tabRegister");
+  const tabLogin = document.getElementById("tabLogin");
 
-  nameInput.value = getSavedName();
+  let mode = "register";
+  tabRegister.addEventListener("click", () => {
+    mode = "register";
+    tabRegister.classList.remove("btn-ghost");
+    tabLogin.classList.add("btn-ghost");
+    authBtn.textContent = "ثبت‌نام و ورود";
+  });
+  tabLogin.addEventListener("click", () => {
+    mode = "login";
+    tabLogin.classList.remove("btn-ghost");
+    tabRegister.classList.add("btn-ghost");
+    authBtn.textContent = "ورود";
+  });
 
-  joinBtn.addEventListener("click", async () => {
-    const name = nameInput.value.trim();
-    if (!name) { statusLine.textContent = "لطفاً اسمتو بنویس"; return; }
-    joinBtn.disabled = true;
-    statusLine.textContent = "در حال ورود...";
+  authBtn.addEventListener("click", async () => {
+    const username = userInput.value.trim();
+    const password = passInput.value;
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      authStatus.textContent = "نام‌کاربری باید ۳ تا ۲۰ حرف انگلیسی/عدد باشه";
+      return;
+    }
+    if (password.length < 6) {
+      authStatus.textContent = "رمز باید حداقل ۶ کاراکتر باشه";
+      return;
+    }
+    authBtn.disabled = true;
+    authStatus.textContent = "در حال اتصال...";
     try {
-      await joinLobby(name);
-      window.location.href = "lobby.html";
+      if (mode === "register") await registerUser(username, password);
+      else await loginUser(username, password);
+      showRoomCard();
     } catch (e) {
       console.error(e);
-      statusLine.textContent = "خطا در اتصال به سرور. دوباره امتحان کن.";
-      joinBtn.disabled = false;
+      if (e.code === "auth/email-already-in-use") authStatus.textContent = "این نام‌کاربری قبلاً گرفته شده. برو تب ورود.";
+      else if (e.code === "auth/invalid-credential" || e.code === "auth/wrong-password") authStatus.textContent = "رمز اشتباهه یا حسابی با این اسم نیست.";
+      else authStatus.textContent = "خطا: " + e.code;
+      authBtn.disabled = false;
     }
   });
 
-  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") joinBtn.click(); });
+  function showRoomCard() {
+    authCard.style.display = "none";
+    roomCard.style.display = "block";
+    document.getElementById("helloName").textContent = getSavedName();
+  }
+
+  document.getElementById("createRoomBtn").addEventListener("click", async () => {
+    const code = await createRoom();
+    window.location.href = "lobby.html";
+  });
+
+  document.getElementById("joinRoomBtn").addEventListener("click", async () => {
+    const val = document.getElementById("roomInput").value;
+    const roomStatus = document.getElementById("roomStatus");
+    if (!val.trim()) { roomStatus.textContent = "کد اتاق رو بنویس"; return; }
+    roomStatus.textContent = "در حال بررسی...";
+    const res = await joinRoomByCode(val);
+    if (res.ok) window.location.href = "lobby.html";
+    else roomStatus.textContent = "همچین اتاقی پیدا نشد";
+  });
+
+  // اگه از قبل لاگین بودیم، مستقیم بریم سراغ اتاق
+  waitForUser().then((user) => { if (user) showRoomCard(); });
 </script>
 </body>
 </html>
