@@ -216,6 +216,42 @@ export function listenChat(code, callback) {
 
 // ---------- لیدربورد ----------
 export async function getLeaderboard(limitN = 5) {
+  // ---------- ماموریت و تاریخچه تراکنش ----------
+export const MISSIONS = [
+  { id: "m-play3", label: "۳ بازی انجام بده", reward: 20, target: 3, statKey: "gamesPlayed" },
+  { id: "m-win1", label: "یه برد کسب کن", reward: 30, target: 1, statKey: "wins" },
+  { id: "m-play10", label: "۱۰ بازی انجام بده", reward: 60, target: 10, statKey: "gamesPlayed" },
+];
+
+export async function logTransaction(name, { type, amount, note }) {
+  await push(ref(db, `profiles/${encodeURIComponent(name)}/transactions`), { type, amount, note, at: Date.now() });
+}
+
+export async function getTransactions(name, limitN = 20) {
+  const snap = await get(ref(db, `profiles/${encodeURIComponent(name)}/transactions`));
+  const val = snap.val() || {};
+  const list = Object.values(val).sort((a, b) => (b.at || 0) - (a.at || 0));
+  return list.slice(0, limitN);
+}
+
+export async function claimMission(name, missionId) {
+  const mission = MISSIONS.find((m) => m.id === missionId);
+  if (!mission) return { ok: false };
+  let result = { ok: false };
+  await runTransaction(profileRef(name), (curr) => {
+    curr = curr || { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default", claimedMissions: [] };
+    curr.claimedMissions = curr.claimedMissions || [];
+    if (curr.claimedMissions.includes(missionId)) { result = { ok: false, reason: "claimed" }; return curr; }
+    const progressVal = curr[mission.statKey] || 0;
+    if (progressVal < mission.target) { result = { ok: false, reason: "incomplete" }; return curr; }
+    curr.coins = (curr.coins || 0) + mission.reward;
+    curr.claimedMissions.push(missionId);
+    result = { ok: true, reward: mission.reward };
+    return curr;
+  });
+  if (result.ok) await logTransaction(name, { type: "mission", amount: result.reward, note: mission.label });
+  return result;
+}
   const snap = await get(ref(db, "profiles"));
   const val = snap.val() || {};
   const list = Object.entries(val).map(([encodedName, p]) => ({
