@@ -24,19 +24,21 @@
       <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
     </div>
     <div class="card" id="scoreArea" style="display:none">
-      <h2>نتیجه این دور</h2>
+      <h2 id="scoreAreaTitle">نتیجه این دور</h2>
       <div class="score-board" id="scoreBoard"></div>
-      <p class="status-line">به زودی برمی‌گردیم به سالن...</p>
+      <div class="solo-result" id="soloResult" style="display:none"></div>
+      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
     </div>
   </div>
 
 <script type="module">
   import {
     roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
-    submitResult, resetSessionForNextRound, recordRoundResult
+    submitResult, resetSessionForNextRound, recordRoundResult, soloWon
   } from "../js/app.js";
   import { mountChat } from "../js/chat.js";
 
+  const isSolo = new URLSearchParams(location.search).has("solo");
   const code = getSavedRoom();
   const R = (p) => roomRef(code, p);
 
@@ -80,17 +82,41 @@
   });
 
   async function finish(score) {
+    if (isSolo) { setTimeout(() => finishSolo(score), 800); return; }
     setTimeout(() => { document.getElementById("playArea").style.display = "none"; document.getElementById("waitArea").style.display = "block"; }, 1200);
     await submitResult("memory", myUid, myName, score);
+  }
+
+  async function finishSolo(score) {
+    document.getElementById("playArea").style.display = "none";
+    const won = soloWon("memory", score);
+    await recordRoundResult(myName, "memory", { won });
+    const scoreArea = document.getElementById("scoreArea");
+    scoreArea.style.display = "block";
+    document.getElementById("scoreAreaTitle").style.display = "none";
+    document.getElementById("scoreBoard").style.display = "none";
+    document.getElementById("nextStatus").style.display = "none";
+    const soloResult = document.getElementById("soloResult");
+    soloResult.style.display = "block";
+    soloResult.innerHTML = `
+      <div class="big-emoji">${won ? "🎉" : "😅"}</div>
+      <h2>${won ? "آفرین، بردی!" : "این‌بار نشد"}</h2>
+      <div class="score-big">${score} امتیاز</div>
+      <button onclick="location.reload()" class="btn-full">دوباره بازی کن</button>
+      <a href="../index.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">بازگشت به خانه</a>
+    `;
   }
 
   async function init() {
     const user = await waitForUser();
     myName = getSavedName();
-    if (!user || !myName || !code) { window.location.href = "../index.html"; return; }
+    if (!user || !myName) { window.location.href = "../index.html"; return; }
     myUid = currentUid();
-    mountChat(myName, code);
 
+    if (isSolo) { addStep(); await playSequence(); return; }
+
+    if (!code) { window.location.href = "../index.html"; return; }
+    mountChat(myName, code);
     onValue(R("players"), (snap) => { players = snap.val() || {}; });
     addStep(); await playSequence();
 
