@@ -29,30 +29,20 @@
       <div class="hero">
         <div class="hero-emojis">🎮🕹️👾</div>
         <h1>بازی کن. رقابت کن. لذت ببر.</h1>
-        <p>خوش اومدی <span id="helloName" style="color:var(--gold); font-weight:700;"></span> — یه اتاق بساز یا وارد اتاق دوستت شو</p>
+        <p>خوش اومدی <span id="helloName" style="color:var(--gold); font-weight:700;"></span></p>
         <div class="hero-btns">
           <button id="createRoomBtn">➕ ساخت اتاق جدید</button>
           <button id="scrollToJoin" class="btn-ghost">🔑 ورود با کد اتاق</button>
         </div>
       </div>
 
-      <div class="section-title"><h2>🔥 بازی‌های دومیتو</h2></div>
-      <div class="game-scroll">
-        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#4F7CFF55,#9B5CFF33)">❓</div><div class="game-body"><div class="name">کوییز عمومی</div><div class="meta">فکری</div></div></div>
-        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#3ECF8E55,#4F7CFF33)">⚡</div><div class="game-body"><div class="name">سرعت واکنش</div><div class="meta">سرعتی</div></div></div>
-        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#FFC84555,#9B5CFF33)">🧠</div><div class="game-body"><div class="name">بازی حافظه</div><div class="meta">پازل</div></div></div>
-        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#9B5CFF55,#4F7CFF33)">🔢</div><div class="game-body"><div class="name">اسپرینت ریاضی</div><div class="meta">سرعتی</div></div></div>
-        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#4F7CFF55,#3ECF8E33)">🔤</div><div class="game-body"><div class="name">حروف به‌هم‌ریخته</div><div class="meta">فکری</div></div></div>
-        <div class="game-card"><div class="game-thumb" style="background:linear-gradient(160deg,#FFC84555,#4F7CFF33)">⌨️</div><div class="game-body"><div class="name">سرعت تایپ</div><div class="meta">مهارتی</div></div></div>
+      <div class="card" id="invitesCard" style="display:none;">
+        <h2>📩 دعوت‌های تو</h2>
+        <div id="inviteList"></div>
       </div>
 
-      <div class="section-title"><h2>🧩 دسته‌بندی</h2></div>
-      <div class="cat-grid">
-        <div class="cat-item"><div class="ic">🧠</div><div class="lbl">فکری</div></div>
-        <div class="cat-item"><div class="ic">⚡</div><div class="lbl">سرعتی</div></div>
-        <div class="cat-item"><div class="ic">🎯</div><div class="lbl">مهارتی</div></div>
-        <div class="cat-item"><div class="ic">👥</div><div class="lbl">چندنفره</div></div>
-      </div>
+      <div class="section-title"><h2>🎮 بازی تک‌نفره — همین الان بازی کن</h2></div>
+      <div class="game-scroll" id="gameScroll"></div>
 
       <div class="section-title"><h2>🏆 لیدربورد</h2></div>
       <div class="leader-card" id="leaderCard">
@@ -66,6 +56,7 @@
         <p class="status-line" id="roomStatus"></p>
       </div>
 
+      <a href="friends.html" class="btn-full btn-ghost" style="display:block; text-align:center; text-decoration:none; margin-top:14px;">👥 دوستان من</a>
       <button id="logoutBtn" class="btn-full btn-ghost">خروج از حساب</button>
     </div>
 
@@ -75,7 +66,8 @@
 <script type="module">
   import {
     registerUser, loginUser, waitForUser, getSavedName,
-    createRoom, joinRoomByCode, logoutUser, getLeaderboard
+    createRoom, joinRoomByCode, logoutUser, getLeaderboard, GAMES,
+    listenInvites, dismissInvite
   } from "./js/app.js";
 
   const authCard = document.getElementById("authCard");
@@ -117,11 +109,60 @@
     }
   });
 
+  function renderGameCards() {
+    const scroll = document.getElementById("gameScroll");
+    scroll.innerHTML = "";
+    GAMES.forEach((g) => {
+      const card = document.createElement("div");
+      card.className = "game-card";
+      card.innerHTML = `
+        <div class="game-thumb" style="background:linear-gradient(160deg, rgba(79,124,255,.3), rgba(155,92,255,.2));">
+          ${g.icon}<span class="solo-badge">تک‌نفره</span>
+        </div>
+        <div class="game-body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div></div>
+      `;
+      card.addEventListener("click", () => { window.location.href = `games/${g.id}.html?solo=1`; });
+      scroll.appendChild(card);
+    });
+  }
+
   async function showHome() {
     authCard.style.display = "none";
     homeContent.style.display = "block";
-    document.getElementById("helloName").textContent = getSavedName();
+    const myName = getSavedName();
+    document.getElementById("helloName").textContent = myName;
+    renderGameCards();
     renderLeaderboard();
+
+    listenInvites(myName, (list) => {
+      const card = document.getElementById("invitesCard");
+      const listEl = document.getElementById("inviteList");
+      if (list.length === 0) { card.style.display = "none"; return; }
+      card.style.display = "block";
+      listEl.innerHTML = "";
+      list.forEach((inv) => {
+        const row = document.createElement("div");
+        row.className = "invite-row";
+        row.innerHTML = `<span class="txt">${inv.from} تو رو به اتاقش دعوت کرد</span>`;
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const acceptBtn = document.createElement("button");
+        acceptBtn.textContent = "ورود";
+        acceptBtn.addEventListener("click", async () => {
+          const res = await joinRoomByCode(inv.roomCode);
+          await dismissInvite(myName, inv.id);
+          if (res.ok) window.location.href = "lobby.html";
+        });
+        const declineBtn = document.createElement("button");
+        declineBtn.textContent = "رد کردن";
+        declineBtn.className = "btn-ghost";
+        declineBtn.addEventListener("click", async () => { await dismissInvite(myName, inv.id); });
+        actions.appendChild(acceptBtn);
+        actions.appendChild(declineBtn);
+        row.appendChild(actions);
+        listEl.appendChild(row);
+      });
+    });
   }
 
   async function renderLeaderboard() {
@@ -137,9 +178,7 @@
           <span class="score">${p.wins} برد</span>
         </div>
       `).join("");
-    } catch (e) {
-      leaderCard.innerHTML = '<p class="muted">خطا در بارگذاری لیدربورد</p>';
-    }
+    } catch (e) { leaderCard.innerHTML = '<p class="muted">خطا در بارگذاری لیدربورد</p>'; }
   }
 
   document.getElementById("createRoomBtn").addEventListener("click", async () => {
