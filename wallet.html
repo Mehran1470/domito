@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>کیف‌پول | دومیتو</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark">🪙</div>
+      <h1>کیف‌پول</h1>
+    </div>
+
+    <div class="card" id="noNameCard" style="display:none">
+      <p class="status-line">هنوز وارد نشدی.</p>
+      <a href="index.html" class="btn btn-full">ورود</a>
+    </div>
+
+    <div id="walletContent" style="display:none">
+      <div class="wallet-hero">
+        <div class="muted">موجودی فعلی</div>
+        <div class="amt">🪙 <span id="balanceNum">0</span></div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <h2>🎯 ماموریت‌های امروز</h2>
+        <div id="missionList"></div>
+      </div>
+
+      <div class="card">
+        <h2>تاریخچه تراکنش</h2>
+        <div id="txList"></div>
+        <p class="muted" id="txEmpty" style="display:none;">هنوز تراکنشی ثبت نشده</p>
+      </div>
+    </div>
+
+    <a href="profile.html" class="link-back">← بازگشت به پروفایل</a>
+  </div>
+
+<script type="module">
+  import {
+    getSavedName, profileRef, onValue, getTransactions, MISSIONS, claimMission, waitForUser
+  } from "./js/app.js";
+
+  waitForUser().then(async (user) => {
+    const name = getSavedName();
+    if (!user || !name) { document.getElementById("noNameCard").style.display = "block"; return; }
+    document.getElementById("walletContent").style.display = "block";
+
+    let latestProfile = null;
+
+    onValue(profileRef(name), (snap) => {
+      const p = snap.val() || { coins: 0, gamesPlayed: 0, wins: 0, claimedMissions: [] };
+      latestProfile = p;
+      document.getElementById("balanceNum").textContent = p.coins || 0;
+      renderMissions(p);
+      refreshTx();
+    });
+
+    function renderMissions(p) {
+      const claimed = p.claimedMissions || [];
+      const list = document.getElementById("missionList");
+      list.innerHTML = "";
+      MISSIONS.forEach((m) => {
+        const progressVal = p[m.statKey] || 0;
+        const pct = Math.min(100, Math.round((progressVal / m.target) * 100));
+        const done = progressVal >= m.target;
+        const isClaimed = claimed.includes(m.id);
+        const row = document.createElement("div");
+        row.className = "mission-row";
+        row.innerHTML = `
+          <div class="top"><span class="txt">${m.label}</span><span class="reward">🪙 +${m.reward}</span></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        `;
+        const btn = document.createElement("button");
+        if (isClaimed) { btn.textContent = "دریافت شد"; btn.disabled = true; btn.className = "btn-ghost"; }
+        else if (done) {
+          btn.textContent = "دریافت پاداش"; btn.className = "btn-gold";
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            const res = await claimMission(name, m.id);
+            if (!res.ok) btn.disabled = false;
+          });
+        } else {
+          btn.textContent = `${progressVal} از ${m.target}`; btn.disabled = true; btn.className = "btn-ghost";
+        }
+        row.appendChild(btn);
+        list.appendChild(row);
+      });
+    }
+
+    async function refreshTx() {
+      const txs = await getTransactions(name, 20);
+      const txList = document.getElementById("txList");
+      const txEmpty = document.getElementById("txEmpty");
+      if (txs.length === 0) { txEmpty.style.display = "block"; txList.innerHTML = ""; return; }
+      txEmpty.style.display = "none";
+      txList.innerHTML = txs.map((t) => `
+        <div class="tx-row">
+          <span>${t.note}</span>
+          <span class="${t.amount >= 0 ? "plus" : "minus"}">${t.amount >= 0 ? "+" : ""}${t.amount}</span>
+        </div>
+      `).join("");
+    }
+  });
+</script>
+</body>
+</html>
