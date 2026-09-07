@@ -23,7 +23,53 @@ function usernameToEmail(username) {
 export function getSavedName() { return localStorage.getItem("domito_name") || ""; }
 export function saveName(name) { localStorage.setItem("domito_name", name); }
 
+export async function async function ensureOwnerLinks(username, uid) {
+  const ownerRef = ref(db, `profiles/${encodeURIComponent(username)}/ownerUid`);
+  const snap = await get(ownerRef);
+  if (!snap.exists()) {
+    await set(ownerRef, uid);
+    await set(ref(db, `uidToName/${uid}`), username);
+  }
+}
+
 export async function registerUser(username, password) {
+  const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
+  saveName(username);
+  await ensureOwnerLinks(username, cred.user.uid);
+  setPresence(username, true);
+  return cred.user;
+}
+
+export async function async function ensureOwnerLinks(username, uid) {
+  const ownerRef = ref(db, `profiles/${encodeURIComponent(username)}/ownerUid`);
+  const snap = await get(ownerRef);
+  if (!snap.exists()) {
+    await set(ownerRef, uid);
+    await set(ref(db, `uidToName/${uid}`), username);
+  }
+}
+
+export async function registerUser(username, password) {
+  const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
+  saveName(username);
+  await ensureOwnerLinks(username, cred.user.uid);
+  setPresence(username, true);
+  return cred.user;
+}
+
+export async function loginUser(username, password) {
+  const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+  saveName(username);
+  await ensureOwnerLinks(username, cred.user.uid);
+  setPresence(username, true);
+  return cred.user;
+}(username, password) {
+  const cred = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+  saveName(username);
+  await ensureOwnerLinks(username, cred.user.uid);
+  setPresence(username, true);
+  return cred.user;
+}(username, password) {
   const cred = await createUserWithEmailAndPassword(auth, usernameToEmail(username), password);
   saveName(username);
   setPresence(username, true);
