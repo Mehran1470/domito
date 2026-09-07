@@ -523,7 +523,6 @@ export const GAMES = [
 { id: "snake", name: "بازی مار", desc: "غذا بخور، بزرگ شو، به خودت نخور", icon: "🐍", soloThreshold: 8 },
   { id: "astra", name: "دومیتو استرا", desc: "تسخیر تایل‌های فضایی، کمبو بگیر، ربات رو شکست بده", icon: "🚀", soloThreshold: 1 },
 ];
-];
 
 
 export function soloWon(gameId, score) {
