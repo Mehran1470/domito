@@ -1,0 +1,68 @@
+.astra-body{
+  margin:0; padding:0; min-height:100vh; overflow:hidden;
+  background:
+    radial-gradient(1px 1px at 20% 30%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 70% 60%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 40% 80%, #fff 100%, transparent),
+    radial-gradient(2px 2px at 85% 20%, #fff 100%, transparent),
+    radial-gradient(1px 1px at 10% 90%, #fff 100%, transparent),
+    radial-gradient(circle at 30% 20%, rgba(124,77,255,.25), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(79,124,255,.2), transparent 45%),
+    #05060f;
+  font-family:'Vazirmatn', sans-serif; color:#EAF0FF; direction:rtl;
+  display:flex; align-items:center; justify-content:center;
+}
+
+.astra-rotate-screen{
+  position:fixed; inset:0; z-index:500; display:none;
+  align-items:center; justify-content:center; flex-direction:column; text-align:center;
+  background:#05060f; padding:20px;
+}
+.astra-rotate-screen.show{display:flex;}
+.astra-rotate-screen .icon{font-size:56px; margin-bottom:14px; animation:rotatehint 1.6s ease-in-out infinite;}
+@keyframes rotatehint{0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);}}
+.astra-rotate-screen h2{margin:0 0 8px; font-size:18px;}
+.astra-rotate-screen p{color:#8B93B8; font-size:13px; margin:0;}
+
+.astra-wrap{width:100%; max-width:920px; padding:10px;}
+.astra-hud-top{display:flex; justify-content:space-between; align-items:center; padding:0 8px 8px;}
+.astra-hud-item{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:6px 12px; font-size:12px; font-weight:900; backdrop-filter:blur(8px);}
+.astra-hud-item.combo{color:#FFC845;}
+.astra-title{font-size:13px; font-weight:900; letter-spacing:1px; background:linear-gradient(135deg,#4F7CFF,#9B5CFF); -webkit-background-clip:text; background-clip:text; color:transparent;}
+
+.astra-arena-box{position:relative; border-radius:20px; overflow:hidden; border:1px solid rgba(124,77,255,.35); box-shadow:0 0 40px -10px rgba(124,77,255,.4);}
+#astraCanvas{display:block; width:100%; height:auto; background:transparent;}
+
+.astra-overlay-msg{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; background:rgba(5,6,15,.7); backdrop-filter:blur(4px); z-index:20;
+}
+.astra-overlay-msg .big{font-size:46px; font-weight:900; background:linear-gradient(135deg,#4F7CFF,#FFC845); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.astra-overlay-msg .sub{font-size:14px; color:#8B93B8; margin-top:6px;}
+
+.astra-joystick-base{
+  position:absolute; bottom:18px; left:18px; width:90px; height:90px; border-radius:50%;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15); z-index:15; touch-action:none;
+}
+.astra-joystick-knob{
+  position:absolute; width:38px; height:38px; border-radius:50%; top:26px; left:26px;
+  background:linear-gradient(135deg,#4F7CFF,#9B5CFF); box-shadow:0 0 16px rgba(79,124,255,.6);
+}
+
+.astra-result{
+  position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+  background:rgba(5,6,15,.92); backdrop-filter:blur(10px); flex-direction:column; text-align:center; padding:20px;
+}
+.astra-result .headline{font-size:26px; font-weight:900; margin-bottom:14px;}
+.astra-result .headline.win{color:#3ECF8E;}
+.astra-result .headline.lose{color:#FF6B6B;}
+.astra-result-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; width:100%; max-width:340px;}
+.astra-result-box{background:rgba(255,255,255,.06); border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,.08);}
+.astra-result-box .num{font-size:18px; font-weight:900; color:#FFC845;}
+.astra-result-box .lbl{font-size:10.5px; color:#8B93B8;}
+.astra-result button{
+  width:100%; max-width:280px; margin-top:8px; padding:13px; border:none; border-radius:14px;
+  font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;
+  background:linear-gradient(135deg,#4F7CFF,#9B5CFF); color:#fff;
+}
+.astra-result button.ghost{background:transparent; border:1px solid rgba(255,255,255,.15); color:#EAF0FF;}
