@@ -1,29 +1,31 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0,
-  maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  >
 
-<title>Domito Astra</title>
+  <title>Domito Astra</title>
 
-<link rel="stylesheet" href="astra.css">
+  <link rel="stylesheet" href="astra.css">
 </head>
 
 <body class="astra-body">
 
-  <!-- حالت عمودی -->
-  <div class="astra-rotate-screen" id="astraRotateScreen">
-    <div class="rotate-icon">📱↻</div>
+  <!-- Portrait warning -->
+  <div id="astraRotateScreen" class="astra-rotate-screen">
+    <div class="rotate-icon">📱</div>
     <h2>گوشیتو بچرخون</h2>
-    <p>Domito Astra فقط در حالت افقی بازی می‌شه</p>
+    <p>
+      دومیتو استرا فقط در حالت افقی بازی می‌شه
+    </p>
   </div>
 
-  <main class="astra-game-root">
+
+  <main class="astra-root">
 
     <!-- HUD -->
     <header class="astra-hud">
@@ -32,74 +34,172 @@
         🚀 ASTRA
       </div>
 
-      <div class="hud-center">
-        <div class="race-title">
-          🏁 RACE TO WORLD 2
-        </div>
-
-        <div id="hudStatus" class="hud-status">
-          آماده شو...
-        </div>
+      <div class="hud-item">
+        <span id="hudMode">تک‌نفره</span>
       </div>
 
-      <div class="hud-actions">
-        <button id="astraMuteBtn">🔊</button>
-        <button id="astraFullscreenBtn">⛶</button>
+      <div class="hud-item">
+        ⛽
+        <span id="hudFuel">0%</span>
+      </div>
+
+      <div class="hud-item">
+        📦
+        <span id="hudCargo">0</span>
+      </div>
+
+      <div class="hud-item">
+        👥
+        <span id="hudPlayers">1</span>
+      </div>
+
+      <div class="hud-item objective">
+        <span id="hudObjective">
+          منابع رو جمع کن
+        </span>
       </div>
 
     </header>
 
 
-    <!-- اطلاعات بازیکن‌ها -->
-    <section class="players-panel" id="playersPanel"></section>
-
-
     <!-- Arena -->
-    <section class="astra-arena-box" id="astraArenaBox">
+    <section
+      id="astraArena"
+      class="astra-arena"
+    >
 
       <canvas id="astraCanvas"></canvas>
 
+
+      <!-- Center message -->
       <div
-        class="astra-overlay-msg"
-        id="astraOverlayMsg"
-        style="display:none;"
-      ></div>
+        id="astraMessage"
+        class="astra-message"
+      >
+        <div class="message-title">
+          🚀 آماده‌ای؟
+        </div>
+
+        <div
+          id="messageSub"
+          class="message-sub"
+        >
+          منابع فضایی رو جمع کن
+        </div>
+      </div>
 
 
-      <!-- جوی‌استیک -->
+      <!-- Joystick -->
       <div
-        class="astra-joystick-base"
-        id="astraJoyBase"
+        id="joyBase"
+        class="joystick"
       >
         <div
-          class="astra-joystick-knob"
-          id="astraJoyKnob"
+          id="joyKnob"
+          class="joystick-knob"
         ></div>
       </div>
 
 
-      <!-- پاورآپ -->
+      <!-- Turbo -->
       <button
-        class="astra-powerup-slot"
-        id="astraPowerupSlot"
+        id="boostButton"
+        class="boost-button"
+        type="button"
       >
         ⚡
+        <span>توربو</span>
       </button>
 
 
-      <!-- نتیجه -->
+      <!-- Launch -->
+      <button
+        id="launchButton"
+        class="launch-button"
+        type="button"
+      >
+        🚀 پرتاب
+      </button>
+
+
+      <!-- Fullscreen -->
+      <button
+        id="fullscreenButton"
+        class="small-button fullscreen-button"
+        type="button"
+      >
+        ⛶
+      </button>
+
+
+      <!-- Mute -->
+      <button
+        id="muteButton"
+        class="small-button mute-button"
+        type="button"
+      >
+        🔊
+      </button>
+
+
+      <!-- Players panel -->
       <div
-        class="astra-result"
-        id="astraResult"
-        style="display:none;"
+        id="playersPanel"
+        class="players-panel"
       ></div>
+
+
+      <!-- Result -->
+      <div
+        id="resultScreen"
+        class="result-screen hidden"
+      >
+
+        <div
+          id="resultIcon"
+          class="result-icon"
+        >
+          🏆
+        </div>
+
+        <div
+          id="resultTitle"
+          class="result-title"
+        >
+          World 2
+        </div>
+
+        <div
+          id="resultText"
+          class="result-text"
+        >
+          برنده شدی!
+        </div>
+
+        <div
+          id="resultStats"
+          class="result-stats"
+        ></div>
+
+        <button
+          id="backButton"
+          class="result-button"
+          type="button"
+        >
+          برگشت
+        </button>
+
+      </div>
 
     </section>
 
   </main>
 
 
-<script type="module" src="astra.js"></script>
+  <script
+    type="module"
+    src="astra.js"
+  ></script>
 
 </body>
 </html>
