@@ -4,17 +4,13 @@ const ROUND_TIME = 30;
 const TOTAL_ROUNDS = 3;
 const COMBO_WINDOW = 3;
 const COMBO_LEVELS = [1, 2, 3, 4, 5, 6, 8];
-const BASE_SPEED = 190;
+const BASE_SPEED_FACTOR = 0.42; // نسبت به min(W,H)
 const BOOST_MULT = 1.6;
 const BOOST_DURATION = 4;
-const PLAYER_R = 14;
-const TILE_R = 16;
-const POWERUP_R = 14;
 
 const canvas = document.getElementById("astraCanvas");
 const ctx = canvas.getContext("2d");
-const W = 900, H = 450;
-canvas.width = W; canvas.height = H;
+const arenaBox = document.getElementById("astraArenaBox");
 
 const rotateScreen = document.getElementById("astraRotateScreen");
 const overlayMsg = document.getElementById("astraOverlayMsg");
@@ -24,10 +20,55 @@ const roundHud = document.getElementById("hudRound");
 const timerHud = document.getElementById("hudTimer");
 const comboHud = document.getElementById("hudCombo");
 
+// W,H منطقی (پیکسل CSS واقعی Arena) — با resizeArena به‌روز می‌شن
+let W = 900, H = 450;
+let PLAYER_R = 14, TILE_R = 16, POWERUP_R = 14, BASE_SPEED = 190;
+
+function recomputeScaledSizes() {
+  const minDim = Math.min(W, H);
+  PLAYER_R = Math.max(9, minDim * 0.032);
+  TILE_R = Math.max(10, minDim * 0.036);
+  POWERUP_R = Math.max(10, minDim * 0.032);
+  BASE_SPEED = minDim * BASE_SPEED_FACTOR;
+}
+
+function resizeCanvasResolution() {
+  const rect = arenaBox.getBoundingClientRect();
+  const cssW = Math.max(1, rect.width);
+  const cssH = Math.max(1, rect.height);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const oldW = W, oldH = H;
+  W = cssW; H = cssH;
+  recomputeScaledSizes();
+
+  if (entitiesInitialized) {
+    const rx = W / oldW, ry = H / oldH;
+    if (isFinite(rx) && isFinite(ry) && rx > 0 && ry > 0) {
+      [player, ai].forEach((e) => { e.x *= rx; e.y *= ry; });
+      tiles.forEach((t) => { t.x *= rx; t.y *= ry; });
+      if (powerup) { powerup.x *= rx; powerup.y *= ry; }
+      clampAllToBounds();
+    }
+  }
+}
+
+function clampAllToBounds() {
+  [player, ai].forEach((e) => {
+    e.x = Math.max(PLAYER_R, Math.min(W - PLAYER_R, e.x));
+    e.y = Math.max(PLAYER_R, Math.min(H - PLAYER_R, e.y));
+  });
+}
+
 let player, ai, tiles, powerup, comboIndex, comboTimer, score, aiScore, tilesCapturedTotal;
 let round = 1, timeLeft = ROUND_TIME, running = false, paused = true;
-let myName, myUid;
+let myName;
 let joyVec = { x: 0, y: 0 };
+let entitiesInitialized = false;
 
 function rand(min, max) { return Math.random() * (max - min) + min; }
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
@@ -39,28 +80,28 @@ function resetEntities() {
   powerup = null;
   comboIndex = 0;
   comboTimer = 0;
+  entitiesInitialized = true;
   for (let i = 0; i < 4; i++) spawnTile();
 }
 
 function tileValue() {
   const roll = Math.random();
-  if (roll < 0.08) return 100; // rare
+  if (roll < 0.08) return 100;
   if (roll < 0.33) return 50;
   if (roll < 0.66) return 25;
   return 10;
 }
 
 function spawnTile() {
-  tiles.push({
-    x: rand(60, W - 60), y: rand(60, H - 60),
-    value: tileValue(),
-  });
+  const margin = TILE_R * 3;
+  tiles.push({ x: rand(margin, W - margin), y: rand(margin, H - margin), value: tileValue() });
 }
 
 function maybeSpawnPowerup(dt) {
   if (powerup) return;
   if (Math.random() < dt * 0.05) {
-    powerup = { x: rand(80, W - 80), y: rand(80, H - 80) };
+    const margin = POWERUP_R * 3;
+    powerup = { x: rand(margin, W - margin), y: rand(margin, H - margin) };
   }
 }
 
@@ -69,9 +110,9 @@ function currentSpeed(entity, now) {
 }
 
 function updatePlayer(dt, now) {
+  const mag = Math.min(1, Math.hypot(joyVec.x, joyVec.y));
   const len = Math.hypot(joyVec.x, joyVec.y) || 1;
   const nx = joyVec.x / len, ny = joyVec.y / len;
-  const mag = Math.min(1, Math.hypot(joyVec.x, joyVec.y));
   const speed = currentSpeed(player, now);
   player.x += nx * mag * speed * dt;
   player.y += ny * mag * speed * dt;
@@ -135,26 +176,26 @@ function draw(now) {
     ctx.beginPath();
     ctx.arc(t.x, t.y, TILE_R, 0, Math.PI * 2);
     ctx.fillStyle = rare ? "#FFC845" : t.value >= 50 ? "#4FD1FF" : t.value >= 25 ? "#9B5CFF" : "#4F7CFF";
-    if (rare) { ctx.shadowColor = "#FFC845"; ctx.shadowBlur = 18; } else { ctx.shadowBlur = 0; }
+    if (rare) { ctx.shadowColor = "#FFC845"; ctx.shadowBlur = Math.min(18, TILE_R); } else { ctx.shadowBlur = 0; }
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.fillStyle = "#05060f";
-    ctx.font = "10px Vazirmatn";
+    ctx.font = `${Math.max(8, TILE_R * 0.6)}px Vazirmatn, sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(t.value, t.x, t.y + 3);
+    ctx.fillText(t.value, t.x, t.y + TILE_R * 0.2);
   });
 
   if (powerup) {
     ctx.beginPath();
     ctx.arc(powerup.x, powerup.y, POWERUP_R, 0, Math.PI * 2);
     ctx.fillStyle = "#3ECF8E";
-    ctx.shadowColor = "#3ECF8E"; ctx.shadowBlur = 16;
+    ctx.shadowColor = "#3ECF8E"; ctx.shadowBlur = Math.min(16, POWERUP_R);
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.fillStyle = "#05060f";
-    ctx.font = "12px Vazirmatn";
+    ctx.font = `${Math.max(9, POWERUP_R * 0.7)}px Vazirmatn, sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText("⚡", powerup.x, powerup.y + 4);
+    ctx.fillText("⚡", powerup.x, powerup.y + POWERUP_R * 0.25);
   }
 
   drawOrb(ai, "#9B5CFF", now);
@@ -167,7 +208,7 @@ function drawOrb(entity, color, now) {
   ctx.arc(entity.x, entity.y, PLAYER_R, 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.shadowColor = color;
-  ctx.shadowBlur = boosted ? 26 : 12;
+  ctx.shadowBlur = boosted ? Math.min(26, PLAYER_R * 1.6) : Math.min(12, PLAYER_R * 0.8);
   ctx.fill();
   ctx.shadowBlur = 0;
 }
@@ -204,7 +245,7 @@ function loop(ts) {
 
 function showOverlay(big, sub, duration) {
   return new Promise((resolve) => {
-    overlayMsg.innerHTML = `<div class="big">${big}</div><div class="sub">${sub}</div>`;
+    overlayMsg.innerHTML = `<div class="big">${big}</div><div class="sub">${sub || ""}</div>`;
     overlayMsg.style.display = "flex";
     setTimeout(() => { overlayMsg.style.display = "none"; resolve(); }, duration);
   });
@@ -218,7 +259,7 @@ async function countdown() {
     await new Promise((r) => setTimeout(r, 650));
   }
   overlayMsg.style.display = "none";
-  paused = false;
+  paused = orientationLocked;
 }
 
 async function endRound() {
@@ -228,7 +269,7 @@ async function endRound() {
     resetEntities();
     timeLeft = ROUND_TIME;
     await showOverlay(`راند ${round}`, "آماده شو...", 1400);
-    paused = false;
+    paused = orientationLocked;
   } else {
     finishMatch();
   }
@@ -245,7 +286,7 @@ async function finishMatch() {
     <div class="astra-result-grid">
       <div class="astra-result-box"><div class="num">${score}</div><div class="lbl">امتیاز تو</div></div>
       <div class="astra-result-box"><div class="num">${aiScore}</div><div class="lbl">امتیاز ربات</div></div>
-      <div class="astra-result-box"><div class="num">x${COMBO_LEVELS[comboIndex]}</div><div class="lbl">بهترین کمبو دور آخر</div></div>
+      <div class="astra-result-box"><div class="num">x${COMBO_LEVELS[comboIndex]}</div><div class="lbl">آخرین کمبو</div></div>
       <div class="astra-result-box"><div class="num">${tilesCapturedTotal}</div><div class="lbl">تایل گرفته‌شده</div></div>
     </div>
     <button id="rematchBtn">🔄 دوباره بازی کن</button>
@@ -257,6 +298,7 @@ async function finishMatch() {
 
 async function startMatch() {
   round = 1; score = 0; aiScore = 0; tilesCapturedTotal = 0; timeLeft = ROUND_TIME;
+  resizeCanvasResolution();
   resetEntities();
   running = true;
   requestAnimationFrame(loop);
@@ -276,7 +318,7 @@ function joyStart(clientX, clientY) {
 function joyMove(clientX, clientY) {
   if (!joyActive) return;
   let dx = clientX - joyOrigin.x, dy = clientY - joyOrigin.y;
-  const max = 34;
+  const max = joyBase.getBoundingClientRect().width * 0.38;
   const d = Math.hypot(dx, dy);
   if (d > max) { dx = (dx / d) * max; dy = (dy / d) * max; }
   joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -291,6 +333,7 @@ function joyEnd() {
 joyBase.addEventListener("touchstart", (e) => { e.preventDefault(); const t = e.touches[0]; joyStart(t.clientX, t.clientY); joyMove(t.clientX, t.clientY); }, { passive: false });
 joyBase.addEventListener("touchmove", (e) => { e.preventDefault(); const t = e.touches[0]; joyMove(t.clientX, t.clientY); }, { passive: false });
 joyBase.addEventListener("touchend", joyEnd);
+joyBase.addEventListener("touchcancel", joyEnd);
 
 // ---------- کیبورد (دسکتاپ) ----------
 const keys = {};
@@ -305,17 +348,31 @@ function updateKeyVec() {
   joyVec = { x, y };
 }
 
-// ---------- قفل حالت landscape ----------
+// ---------- قفل حالت landscape + پاسخ به تغییرات viewport ----------
+let orientationLocked = false;
+
 function checkOrientation() {
-  const isMobileWidth = window.innerWidth < 900;
-  const isPortrait = window.innerHeight > window.innerWidth;
-  const shouldLock = isMobileWidth && isPortrait;
-  rotateScreen.classList.toggle("show", shouldLock);
-  paused = shouldLock || paused === true && !running ? paused : shouldLock;
-  if (running) paused = shouldLock;
+  const w = window.innerWidth, h = window.innerHeight;
+  const isMobileLike = Math.min(w, h) < 700; // گوشی/تبلت کوچیک
+  const isPortrait = h > w;
+  orientationLocked = isMobileLike && isPortrait;
+  rotateScreen.classList.toggle("show", orientationLocked);
+  if (running) paused = orientationLocked;
 }
-window.addEventListener("resize", checkOrientation);
-window.addEventListener("orientationchange", checkOrientation);
+
+function handleViewportChange() {
+  checkOrientation();
+  if (!orientationLocked) {
+    // یه فریم صبر می‌کنیم تا Layout واقعاً settle بشه، بعد Canvas رو ری‌سایز می‌کنیم
+    requestAnimationFrame(() => requestAnimationFrame(resizeCanvasResolution));
+  }
+}
+
+window.addEventListener("resize", handleViewportChange);
+window.addEventListener("orientationchange", handleViewportChange);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", handleViewportChange);
+}
 
 // ---------- شروع ----------
 async function init() {
