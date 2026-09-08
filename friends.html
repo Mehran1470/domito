@@ -103,7 +103,7 @@
         row.innerHTML = `<a href="profile.html?user=${encodeURIComponent(f.name)}" class="friend-name-link">${f.name}</a>`;
         if (f.online) {
           const btn = document.createElement("button");
-          btn.textContent = "دعوت به بازی";
+          btn.textContent = "دعوت به اتاق";
           btn.addEventListener("click", async () => {
             let code = getSavedRoom();
             if (!code) code = await createRoom();
