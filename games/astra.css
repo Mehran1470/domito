@@ -13,182 +13,49 @@ body {
 }
 
 body {
-  background: #02040b;
-  color: white;
-  font-family:
-    Tahoma,
-    Arial,
-    sans-serif;
-
-  touch-action: none;
-  overscroll-behavior: none;
+  font-family: Arial, "Vazirmatn", sans-serif;
 }
 
 button {
   font-family: inherit;
 }
 
-
-/* =========================
-   MAIN
-========================= */
-
-.astra {
+.astra-body {
   width: 100%;
   height: 100dvh;
 
-  display: flex;
-  flex-direction: column;
+  margin: 0;
+  padding: 0;
 
   overflow: hidden;
 
   background:
     radial-gradient(
       circle at 20% 20%,
-      rgba(90,70,255,.14),
-      transparent 35%
+      rgba(79, 124, 255, .25),
+      transparent 40%
     ),
     radial-gradient(
       circle at 80% 80%,
-      rgba(0,190,255,.12),
-      transparent 35%
+      rgba(155, 92, 255, .20),
+      transparent 40%
     ),
-    #02040b;
-}
+    #03040b;
 
-
-/* =========================
-   HUD
-========================= */
-
-.hud {
-  height: 50px;
-  min-height: 50px;
-
-  display: flex;
-  align-items: center;
-
-  gap: 7px;
-
-  padding:
-    max(5px, env(safe-area-inset-top))
-    10px
-    5px;
-
-  overflow-x: auto;
-
-  background:
-    rgba(4,7,18,.88);
-
-  border-bottom:
-    1px solid rgba(130,150,255,.18);
-
-  backdrop-filter: blur(12px);
-
-  z-index: 20;
-
-  scrollbar-width: none;
-}
-
-.hud::-webkit-scrollbar {
-  display: none;
-}
-
-.logo {
-  flex: 0 0 auto;
-
-  font-weight: 1000;
-  font-size: 14px;
-
-  background:
-    linear-gradient(
-      135deg,
-      #55dfff,
-      #9664ff,
-      #ff6fcf
-    );
-
-  -webkit-background-clip: text;
-  background-clip: text;
-
-  color: transparent;
-}
-
-.hud-box {
-  flex: 0 0 auto;
-
-  height: 31px;
-
-  display: flex;
-  align-items: center;
-
-  gap: 4px;
-
-  padding: 0 9px;
-
-  border-radius: 9px;
-
-  background:
-    rgba(255,255,255,.06);
-
-  border:
-    1px solid rgba(255,255,255,.1);
-
-  font-size: 11px;
-}
-
-.objective {
-  flex: 0 0 auto;
-
-  padding: 7px 10px;
-
-  border-radius: 9px;
-
-  background:
-    rgba(77,220,255,.07);
-
-  border:
-    1px solid rgba(77,220,255,.12);
-
-  color: #80eaff;
-
-  font-size: 10px;
-
-  white-space: nowrap;
-}
-
-
-/* =========================
-   ARENA
-========================= */
-
-.arena {
-  position: relative;
-
-  flex: 1;
-
-  min-height: 0;
-
-  overflow: hidden;
-
-  background: #02040b;
-}
-
-#canvas {
-  display: block;
-
-  width: 100%;
-  height: 100%;
+  color: #fff;
 
   touch-action: none;
+  overscroll-behavior: none;
+
+  direction: rtl;
 }
 
 
-/* =========================
-   ROTATE
-========================= */
+/* =========================================
+   Rotate
+========================================= */
 
-.rotate-screen {
+.astra-rotate-screen {
   position: fixed;
 
   inset: 0;
@@ -204,24 +71,32 @@ button {
 
   text-align: center;
 
-  background:
-    radial-gradient(
-      circle,
-      #111a3c,
-      #02040b 70%
-    );
+  background: #03040b;
+
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
 }
 
-.rotate-icon {
-  font-size: 55px;
+.astra-rotate-screen.show {
+  display: flex;
+}
 
-  animation:
-    phoneRotate 1.4s infinite;
+.astra-rotate-screen .icon {
+  font-size: 58px;
+
+  margin-bottom: 15px;
+
+  animation: phoneRotate 1.5s infinite ease-in-out;
 }
 
 @keyframes phoneRotate {
-  0%,100% {
-    transform: rotate(0);
+
+  0%,
+  100% {
+    transform: rotate(0deg);
   }
 
   50% {
@@ -229,536 +104,646 @@ button {
   }
 }
 
-.rotate-screen h2 {
-  margin: 10px 0 5px;
+.astra-rotate-screen h2 {
+  margin: 0 0 8px;
+
+  font-size: 22px;
 }
 
-.rotate-screen p {
-  color: #8994b5;
-  font-size: 12px;
+.astra-rotate-screen p {
+  margin: 0;
+
+  color: #8f96b8;
+
+  font-size: 13px;
+
+  max-width: 300px;
 }
 
 
-/* =========================
-   START MESSAGE
-========================= */
+/* =========================================
+   Root
+========================================= */
 
-.start-message {
-  position: absolute;
+.astra-game-root {
+  width: 100%;
+  height: 100dvh;
 
-  top: 50%;
-  left: 50%;
-
-  transform:
-    translate(-50%,-50%);
-
-  z-index: 10;
-
-  min-width: 230px;
-
-  padding: 15px 22px;
+  min-height: 0;
 
   display: flex;
+
   flex-direction: column;
 
-  gap: 5px;
+  overflow: hidden;
+
+  padding-top: env(safe-area-inset-top);
+}
+
+
+/* =========================================
+   HUD
+========================================= */
+
+.astra-hud {
+  flex: 0 0 auto;
+
+  height: clamp(40px, 8vh, 60px);
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding:
+    5px
+    max(8px, env(safe-area-inset-left))
+    5px
+    max(8px, env(safe-area-inset-right));
+
+  background: rgba(5, 7, 18, .92);
+
+  border-bottom: 1px solid rgba(255,255,255,.08);
+
+  z-index: 100;
+}
+
+.astra-brand {
+  font-size: clamp(11px, 2vh, 16px);
+
+  font-weight: 900;
+
+  color: #fff;
+
+  white-space: nowrap;
+}
+
+.astra-mode {
+  padding: 5px 9px;
+
+  border-radius: 9px;
+
+  background: rgba(255,255,255,.07);
+
+  border: 1px solid rgba(255,255,255,.09);
+
+  color: #aeb7df;
+
+  font-size: clamp(8px, 1.6vh, 12px);
+
+  white-space: nowrap;
+}
+
+.astra-time {
+  padding: 5px 9px;
+
+  border-radius: 9px;
+
+  background: rgba(255,255,255,.07);
+
+  font-size: clamp(9px, 1.7vh, 12px);
+
+  white-space: nowrap;
+}
+
+.astra-race-title {
+  flex: 1;
 
   text-align: center;
 
-  border-radius: 16px;
+  font-size: clamp(9px, 1.8vh, 14px);
 
-  background:
-    rgba(4,7,18,.84);
+  font-weight: 900;
 
-  border:
-    1px solid rgba(130,150,255,.2);
+  letter-spacing: .5px;
 
-  backdrop-filter: blur(12px);
+  color: #ffd34f;
 
-  transition:
-    opacity .3s,
-    transform .3s;
+  white-space: nowrap;
 }
 
-.start-message.hidden {
-  opacity: 0;
+.hud-button {
+  width: clamp(30px, 6vh, 40px);
 
-  transform:
-    translate(-50%,-50%)
-    scale(.9);
-}
+  height: clamp(30px, 6vh, 40px);
 
-.start-message strong {
-  font-size: 20px;
-}
+  border: 1px solid rgba(255,255,255,.12);
 
-.start-message span {
-  color: #8f9ab9;
-  font-size: 11px;
+  border-radius: 10px;
+
+  background: rgba(255,255,255,.07);
+
+  color: #fff;
+
+  cursor: pointer;
+
+  flex-shrink: 0;
 }
 
 
-/* =========================
-   PLAYERS
-========================= */
+/* =========================================
+   Players HUD
+========================================= */
 
-.players {
+.players-hud {
   position: absolute;
 
-  top: 8px;
-  left: 8px;
+  top: calc(
+    clamp(40px, 8vh, 60px)
+    + env(safe-area-inset-top)
+  );
 
-  z-index: 15;
+  left: 0;
+  right: 0;
+
+  z-index: 80;
 
   display: flex;
 
+  justify-content: center;
+
   gap: 6px;
 
-  max-width: 45vw;
+  padding: 5px 8px;
 
-  overflow-x: auto;
-
-  scrollbar-width: none;
-}
-
-.players::-webkit-scrollbar {
-  display: none;
+  pointer-events: none;
 }
 
 .player-card {
   min-width: 90px;
 
-  padding: 6px 8px;
+  padding: 5px 8px;
 
-  border-radius: 9px;
+  border-radius: 10px;
 
-  background:
-    rgba(3,6,16,.78);
+  background: rgba(5,7,18,.78);
 
-  border:
-    1px solid rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.10);
 
   backdrop-filter: blur(8px);
 
-  font-size: 9px;
+  font-size: 10px;
+
+  text-align: center;
 }
 
-.player-name {
+.player-card.me {
+  border-color: rgba(79,124,255,.55);
+}
+
+.player-card .player-name {
   font-weight: 900;
 
-  overflow: hidden;
-
   white-space: nowrap;
+
+  overflow: hidden;
 
   text-overflow: ellipsis;
 }
 
-.fuel-bar {
-  width: 100%;
-  height: 4px;
+.player-card .player-stats {
+  margin-top: 3px;
 
-  margin-top: 5px;
+  color: #aeb7df;
+}
 
-  border-radius: 10px;
+
+/* =========================================
+   Arena
+========================================= */
+
+.astra-arena-box {
+  position: relative;
+
+  flex: 1;
+
+  min-width: 0;
+  min-height: 0;
 
   overflow: hidden;
 
-  background:
-    rgba(255,255,255,.1);
+  background: #03040b;
 }
 
-.fuel-bar i {
-  display: block;
-
+#astraCanvas {
+  width: 100%;
   height: 100%;
 
-  width: 0;
-
-  background:
-    linear-gradient(
-      90deg,
-      #43e6ff,
-      #866cff
-    );
+  display: block;
 }
 
 
-/* =========================
-   JOYSTICK
-========================= */
+/* =========================================
+   Overlay
+========================================= */
 
-.joystick {
+.astra-overlay-msg {
   position: absolute;
 
-  left:
-    calc(
-      14px +
-      env(safe-area-inset-left)
-    );
+  inset: 0;
+
+  z-index: 200;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-direction: column;
+
+  text-align: center;
+
+  background: rgba(3,4,11,.78);
+
+  backdrop-filter: blur(5px);
+
+  pointer-events: none;
+}
+
+.astra-overlay-msg.hidden {
+  display: none;
+}
+
+.astra-overlay-msg .big {
+  font-size: clamp(30px, 7vh, 60px);
+
+  font-weight: 900;
+
+  color: #fff;
+}
+
+.astra-overlay-msg .sub {
+  margin-top: 8px;
+
+  color: #9ca5c8;
+
+  font-size: clamp(11px, 2vh, 15px);
+}
+
+
+/* =========================================
+   Controls
+========================================= */
+
+.astra-control {
+  position: absolute;
 
   bottom:
     calc(
-      14px +
-      env(safe-area-inset-bottom)
+      10px
+      + env(safe-area-inset-bottom)
     );
 
-  width: 100px;
-  height: 100px;
+  z-index: 150;
+
+  pointer-events: none;
+}
+
+.p1-control {
+  left:
+    calc(
+      12px
+      + env(safe-area-inset-left)
+    );
+}
+
+.p2-control {
+  right:
+    calc(
+      12px
+      + env(safe-area-inset-right)
+    );
+}
+
+.astra-joystick-base {
+  position: relative;
+
+  width: clamp(72px, 18vh, 108px);
+
+  height: clamp(72px, 18vh, 108px);
 
   border-radius: 50%;
 
-  background:
-    radial-gradient(
-      circle,
-      rgba(255,255,255,.13),
-      rgba(255,255,255,.035)
-    );
+  background: rgba(255,255,255,.06);
 
-  border:
-    1px solid rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.15);
 
-  z-index: 30;
+  box-shadow:
+    inset 0 0 20px rgba(255,255,255,.03),
+    0 0 25px rgba(0,0,0,.35);
+
+  touch-action: none;
+
+  pointer-events: auto;
 }
 
-.knob {
-  position: absolute;
+.p1-control .astra-joystick-base {
+  border-color: rgba(79,124,255,.45);
+}
 
-  left: 29%;
-  top: 29%;
+.p2-control .astra-joystick-base {
+  border-color: rgba(155,92,255,.45);
+}
+
+.astra-joystick-base.pressed {
+  background: rgba(255,255,255,.12);
+}
+
+.astra-joystick-knob {
+  position: absolute;
 
   width: 42%;
   height: 42%;
+
+  top: 29%;
+  left: 29%;
 
   border-radius: 50%;
 
   background:
     linear-gradient(
       135deg,
-      #4d8dff,
-      #a05dff
+      #4f7cff,
+      #9b5cff
     );
 
   box-shadow:
-    0 0 22px rgba(90,120,255,.65);
+    0 0 18px rgba(79,124,255,.7);
+}
+
+.p2-control .astra-joystick-knob {
+  background:
+    linear-gradient(
+      135deg,
+      #9b5cff,
+      #d34cff
+    );
+
+  box-shadow:
+    0 0 18px rgba(155,92,255,.7);
+}
+
+.player-control-label {
+  position: absolute;
+
+  bottom: -18px;
+
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  font-size: 10px;
+
+  font-weight: 900;
+
+  color: #fff;
+
+  white-space: nowrap;
+}
+
+.action-button {
+  position: absolute;
+
+  width: clamp(40px, 9vh, 56px);
+
+  height: clamp(40px, 9vh, 56px);
+
+  border-radius: 50%;
+
+  border: 1px solid rgba(255,255,255,.18);
+
+  background: rgba(255,255,255,.10);
+
+  color: #fff;
+
+  font-size: clamp(18px, 4vh, 25px);
+
+  pointer-events: auto;
+
+  touch-action: manipulation;
+
+  cursor: pointer;
+
+  box-shadow: 0 0 15px rgba(79,124,255,.25);
+}
+
+.p1-control .action-button {
+  right: -48px;
+  top: 4px;
+}
+
+.p2-control .action-button {
+  left: -48px;
+  top: 4px;
 }
 
 
-/* =========================
-   BUTTONS
-========================= */
+/* =========================================
+   Powerup
+========================================= */
 
-.boost,
-.launch {
+.powerup-indicator {
   position: absolute;
 
-  z-index: 30;
+  right:
+    calc(
+      10px
+      + env(safe-area-inset-right)
+    );
+
+  top: 70px;
+
+  z-index: 100;
+
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: rgba(255,255,255,.06);
+
+  border: 1px solid rgba(255,255,255,.12);
+
+  opacity: .4;
+
+  transition: .2s;
+}
+
+.powerup-indicator.active {
+  opacity: 1;
+
+  box-shadow:
+    0 0 25px rgba(62,207,142,.8);
+
+  border-color: #3ecf8e;
+}
+
+
+/* =========================================
+   Result
+========================================= */
+
+.astra-result {
+  position: absolute;
+
+  inset: 0;
+
+  z-index: 500;
+
+  display: none;
+
+  align-items: center;
+  justify-content: center;
+
+  flex-direction: column;
+
+  text-align: center;
+
+  background:
+    rgba(3,4,11,.94);
+
+  backdrop-filter: blur(12px);
+
+  padding: 20px;
+}
+
+.astra-result.show {
+  display: flex;
+}
+
+.result-title {
+  font-size: clamp(28px, 7vh, 55px);
+
+  font-weight: 900;
+
+  margin-bottom: 10px;
+}
+
+.result-sub {
+  color: #aeb7df;
+
+  font-size: 14px;
+
+  margin-bottom: 20px;
+}
+
+.result-players {
+  width: min(600px, 90vw);
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(120px, 1fr)
+    );
+
+  gap: 8px;
+
+  margin-bottom: 20px;
+}
+
+.result-player {
+  padding: 10px;
+
+  background: rgba(255,255,255,.06);
+
+  border: 1px solid rgba(255,255,255,.10);
+
+  border-radius: 12px;
+}
+
+.result-player .name {
+  font-weight: 900;
+}
+
+.result-player .score {
+  margin-top: 5px;
+
+  color: #ffd34f;
+}
+
+.result-button {
+  width: min(280px, 80vw);
 
   border: none;
 
-  color: white;
+  border-radius: 12px;
+
+  padding: 12px;
+
+  margin-top: 7px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #4f7cff,
+      #9b5cff
+    );
+
+  color: #fff;
 
   font-weight: 900;
 
   cursor: pointer;
 }
 
-.boost {
-  right:
-    calc(
-      18px +
-      env(safe-area-inset-right)
-    );
+.result-button.secondary {
+  background: rgba(255,255,255,.07);
 
-  bottom:
-    calc(
-      17px +
-      env(safe-area-inset-bottom)
-    );
-
-  width: 70px;
-  height: 70px;
-
-  border-radius: 50%;
-
-  background:
-    radial-gradient(
-      circle,
-      #4ee8ff,
-      #416bff
-    );
-
-  box-shadow:
-    0 0 25px rgba(65,150,255,.45);
-}
-
-.boost small {
-  display: block;
-  font-size: 8px;
-}
-
-.launch {
-  right:
-    calc(
-      103px +
-      env(safe-area-inset-right)
-    );
-
-  bottom:
-    calc(
-      29px +
-      env(safe-area-inset-bottom)
-    );
-
-  padding: 12px 16px;
-
-  border-radius: 12px;
-
-  background:
-    linear-gradient(
-      135deg,
-      #ffae3b,
-      #ff456a
-    );
-
-  box-shadow:
-    0 7px 25px rgba(255,70,90,.25);
-}
-
-.launch.disabled {
-  opacity: .3;
-  filter: grayscale(1);
+  border: 1px solid rgba(255,255,255,.12);
 }
 
 
-/* =========================
-   SMALL BUTTONS
-========================= */
+/* =========================================
+   Small screens
+========================================= */
 
-.small-btn {
-  position: absolute;
+@media (max-height: 420px) {
 
-  z-index: 40;
-
-  width: 35px;
-  height: 35px;
-
-  border-radius: 50%;
-
-  border:
-    1px solid rgba(255,255,255,.13);
-
-  background:
-    rgba(255,255,255,.07);
-
-  color: white;
-
-  font-size: 16px;
-}
-
-.fullscreen {
-  top: 8px;
-
-  left:
-    calc(
-      8px +
-      env(safe-area-inset-left)
-    );
-}
-
-.mute {
-  top: 8px;
-
-  right:
-    calc(
-      8px +
-      env(safe-area-inset-right)
-    );
-}
-
-
-/* =========================
-   RESULT
-========================= */
-
-.result {
-  position: absolute;
-
-  inset: 0;
-
-  z-index: 100;
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-
-  padding: 20px;
-
-  background:
-    radial-gradient(
-      circle,
-      rgba(60,80,170,.4),
-      rgba(2,4,11,.96) 70%
-    );
-
-  backdrop-filter: blur(12px);
-}
-
-.result.hidden {
-  display: none;
-}
-
-.result-icon {
-  font-size: 70px;
-
-  animation:
-    resultPop .6s ease;
-}
-
-@keyframes resultPop {
-  from {
-    transform: scale(.2);
-    opacity: 0;
+  .astra-hud {
+    height: 38px;
   }
 
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.result h1 {
-  margin: 5px 0;
-
-  font-size: 38px;
-
-  background:
-    linear-gradient(
-      135deg,
-      #55eaff,
-      #9c69ff,
-      #ffc857
-    );
-
-  -webkit-background-clip: text;
-  background-clip: text;
-
-  color: transparent;
-}
-
-.result p {
-  color: #aab5d0;
-  font-size: 13px;
-}
-
-.result-stats {
-  display: flex;
-
-  gap: 8px;
-
-  margin-top: 10px;
-}
-
-.stat {
-  min-width: 80px;
-
-  padding: 8px;
-
-  border-radius: 10px;
-
-  background:
-    rgba(255,255,255,.06);
-
-  border:
-    1px solid rgba(255,255,255,.1);
-}
-
-.stat b {
-  display: block;
-
-  font-size: 17px;
-}
-
-.stat span {
-  color: #8490ae;
-
-  font-size: 8px;
-}
-
-.back {
-  margin-top: 16px;
-
-  min-width: 170px;
-
-  padding: 11px;
-
-  border: none;
-
-  border-radius: 12px;
-
-  background:
-    linear-gradient(
-      135deg,
-      #4c83ff,
-      #965bff
-    );
-
-  color: white;
-
-  font-weight: 900;
-}
-
-
-/* =========================
-   PORTRAIT
-========================= */
-
-@media (orientation: portrait) {
-
-  .rotate-screen {
-    display: flex;
+  .players-hud {
+    top: 38px;
   }
 
-  .astra {
-    filter: blur(5px);
+  .powerup-indicator {
+    top: 48px;
+  }
+
+}
+
+@media (max-width: 650px) {
+
+  .astra-race-title {
+    display: none;
+  }
+
+  .player-card {
+    min-width: 72px;
+
+    font-size: 8px;
   }
 
 }
 
 
-/* =========================
-   SMALL LANDSCAPE
-========================= */
+/* =========================================
+   Desktop
+========================================= */
 
-@media (max-height: 430px) {
+@media (min-width: 900px) {
 
-  .hud {
-    height: 42px;
-    min-height: 42px;
-  }
-
-  .hud-box {
-    height: 27px;
-    font-size: 9px;
-  }
-
-  .joystick {
-    width: 82px;
-    height: 82px;
-  }
-
-  .boost {
-    width: 58px;
-    height: 58px;
-  }
-
-  .launch {
-    right: 88px;
-    padding: 9px 11px;
+  .astra-control {
+    bottom: 18px;
   }
 
 }
