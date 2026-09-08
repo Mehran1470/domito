@@ -1,349 +1,287 @@
 import {
   waitForUser,
   getSavedName,
-  getSavedRoom,
   currentUid,
+  getSavedRoom,
   recordRoundResult,
-
   db,
   ref,
-  set,
   get,
-  onValue,
+  set,
   update,
-  remove,
+  onValue,
   runTransaction,
   onDisconnect
 } from "../js/app.js";
 
 
-/* =========================================================
-   DOM
-========================================================= */
+// ============================================================
+// تنظیمات
+// ============================================================
+
+const GAME_ID = "astra";
+
+const MAX_PLAYERS = 4;
+
+const MATCH_TIME = 180;
+
+const PLAYER_SPEED = 220;
+
+const BOOST_SPEED = 390;
+
+const BOOST_TIME = 2.5;
+
+const RESOURCE_COUNT = 12;
+
+const RESOURCE_RESPAWN = 3500;
+
+const SYNC_INTERVAL = 80;
+
+
+// ============================================================
+// DOM
+// ============================================================
 
 const canvas =
-  document.getElementById("canvas");
+  document.getElementById("astraCanvas");
 
 const ctx =
   canvas.getContext("2d");
 
 const arena =
-  document.getElementById("arena");
+  document.getElementById("astraArenaBox");
 
-const rotateScreen =
-  document.getElementById("rotateScreen");
-
-const fuelEl =
-  document.getElementById("fuel");
-
-const cargoEl =
-  document.getElementById("cargo");
-
-const powerupEl =
-  document.getElementById("powerup");
-
-const playerCountEl =
-  document.getElementById("playerCount");
-
-const objectiveEl =
-  document.getElementById("objective");
-
-const playersEl =
-  document.getElementById("players");
-
-const startMessage =
-  document.getElementById("startMessage");
-
-const messageTitle =
-  document.getElementById("messageTitle");
-
-const messageText =
-  document.getElementById("messageText");
-
-const joystick =
-  document.getElementById("joystick");
-
-const knob =
-  document.getElementById("knob");
-
-const boostButton =
-  document.getElementById("boost");
-
-const launchButton =
-  document.getElementById("launch");
-
-const fullscreenButton =
-  document.getElementById("fullscreen");
-
-const muteButton =
-  document.getElementById("mute");
+const overlay =
+  document.getElementById("astraOverlayMsg");
 
 const result =
-  document.getElementById("result");
+  document.getElementById("astraResult");
 
-const resultIcon =
-  document.getElementById("resultIcon");
+const playersHud =
+  document.getElementById("playersHud");
 
-const resultTitle =
-  document.getElementById("resultTitle");
+const hudTimer =
+  document.getElementById("hudTimer");
 
-const resultText =
-  document.getElementById("resultText");
+const hudMode =
+  document.getElementById("hudMode");
 
-const resultStats =
-  document.getElementById("resultStats");
+const rotateScreen =
+  document.getElementById("astraRotateScreen");
 
-const backButton =
-  document.getElementById("back");
+const powerupIndicator =
+  document.getElementById("powerupIndicator");
 
+const fullscreenBtn =
+  document.getElementById("astraFullscreenBtn");
 
-/* =========================================================
-   URL / MODE
-========================================================= */
-
-const params =
-  new URLSearchParams(
-    location.search
-  );
-
-const roundId =
-  params.get("round");
-
-const roomCode =
-  getSavedRoom();
-
-const online =
-  !!roundId &&
-  !!roomCode;
+const muteBtn =
+  document.getElementById("astraMuteBtn");
 
 
-/* =========================================================
-   USER
-========================================================= */
+// ============================================================
+// بازی
+// ============================================================
 
-let uid = null;
+let myName = "";
 
-let username =
-  getSavedName() ||
-  "بازیکن";
+let myUid = "";
 
+let roomCode = "";
 
-/* =========================================================
-   GAME
-========================================================= */
+let multiplayer = false;
 
-const MAX_FUEL = 100;
+let W = 900;
 
-const RESOURCE_COUNT = 20;
-
-const RESOURCE_RESPAWN = 5000;
-
-const PLAYER_SPEED = 205;
-
-const BOOST_SPEED = 330;
-
-const BOOST_DURATION = 2200;
-
-const BASE_RADIUS = 42;
-
-const RESOURCE_RADIUS = 10;
-
-const PLAYER_RADIUS = 15;
-
-const SYNC_EVERY = 120;
-
-let W = 1000;
-
-let H = 600;
-
-let dpr = 1;
-
-let player = null;
-
-let bot = null;
-
-let resources = [];
-
-let remotePlayers = {};
+let H = 450;
 
 let running = false;
 
-let ended = false;
+let paused = true;
 
-let lastFrame = performance.now();
+let gameFinished = false;
+
+let lastFrame = 0;
 
 let lastSync = 0;
 
-let winner = null;
+let countdownRunning = false;
+
+
+// ============================================================
+// وضعیت محلی
+// ============================================================
+
+let players = {};
+
+let resources = [];
+
+let powerups = [];
+
+let particles = [];
+
+let stars = [];
+
+let worldTime = 0;
+
+
+// ============================================================
+// کنترل
+// ============================================================
+
+const controls = {
+
+  p1: {
+    x: 0,
+    y: 0,
+    pointerId: null
+  },
+
+  p2: {
+    x: 0,
+    y: 0,
+    pointerId: null
+  }
+
+};
+
+
+// ============================================================
+// بازیکن محلی
+// ============================================================
+
+let myPlayer = null;
+
+
+// ============================================================
+// کمبو
+// ============================================================
+
+let combo = 0;
+
+let comboTimer = 0;
+
+
+// ============================================================
+// صدا
+// ============================================================
+
+let audioCtx = null;
 
 let muted = false;
 
-let audio = null;
 
+function tone(
+  frequency,
+  duration = .1
+) {
 
-/* =========================================================
-   FIREBASE PATHS
-========================================================= */
+  if (muted) return;
 
-/*
-  Rules فعلی اجازه write روی currentGame را
-  به اعضای Room می‌دهد.
+  try {
 
-  پس از این مسیر استفاده می‌کنیم:
+    if (!audioCtx) {
 
-  rooms/CODE/currentGame/astra/ROUND_ID
-*/
+      audioCtx =
+        new (
+          window.AudioContext ||
+          window.webkitAudioContext
+        )();
 
-let onlineRoot = null;
+    }
 
-let onlinePlayers = null;
+    const osc =
+      audioCtx.createOscillator();
 
-let onlineResources = null;
+    const gain =
+      audioCtx.createGain();
 
-let onlineWinner = null;
+    osc.frequency.value =
+      frequency;
 
+    osc.type = "sine";
 
-if (online) {
-
-  onlineRoot =
-    ref(
-      db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}`
+    gain.gain.setValueAtTime(
+      .08,
+      audioCtx.currentTime
     );
 
-  onlinePlayers =
-    ref(
-      db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}/players`
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audioCtx.currentTime + duration
     );
 
-  onlineResources =
-    ref(
-      db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}/resources`
+    osc.connect(gain);
+
+    gain.connect(
+      audioCtx.destination
     );
 
-  onlineWinner =
-    ref(
-      db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}/winner`
+    osc.start();
+
+    osc.stop(
+      audioCtx.currentTime +
+      duration
     );
+
+  } catch {}
+
 }
 
 
-/* =========================================================
-   UTILS
-========================================================= */
+muteBtn.addEventListener(
+  "click",
+  () => {
 
-function clamp(
-  n,
-  min,
-  max
-) {
-  return Math.max(
-    min,
-    Math.min(max, n)
-  );
-}
+    muted = !muted;
 
+    muteBtn.textContent =
+      muted
+        ? "🔇"
+        : "🔊";
 
-function random(
-  min,
-  max
-) {
-  return Math.random() *
-    (max - min) +
-    min;
-}
+  }
+);
 
 
-function distance(
-  a,
-  b
-) {
-  return Math.hypot(
-    a.x - b.x,
-    a.y - b.y
-  );
-}
+// ============================================================
+// Resize
+// ============================================================
 
-
-function escapeHtml(
-  text
-) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-
-/* =========================================================
-   COLORS
-========================================================= */
-
-const COLORS = [
-  "#4f8cff",
-  "#ff4f81",
-  "#45e6a4",
-  "#ffc857",
-  "#a968ff",
-  "#42d8ff",
-  "#ff875f",
-  "#72d65f",
-  "#f05cff",
-  "#ffda55"
-];
-
-
-function colorFor(
-  index
-) {
-  return COLORS[
-    index %
-    COLORS.length
-  ];
-}
-
-
-/* =========================================================
-   CANVAS
-========================================================= */
-
-function resize() {
+function resizeCanvas() {
 
   const rect =
     arena.getBoundingClientRect();
 
   W =
     Math.max(
-      320,
+      1,
       rect.width
     );
 
   H =
     Math.max(
-      220,
+      1,
       rect.height
     );
 
-  dpr =
+  const dpr =
     Math.min(
       window.devicePixelRatio || 1,
-      2
+      2.5
     );
 
   canvas.width =
-    Math.floor(
-      W * dpr
-    );
+    Math.round(W * dpr);
 
   canvas.height =
-    Math.floor(
-      H * dpr
-    );
+    Math.round(H * dpr);
+
+  canvas.style.width =
+    `${W}px`;
+
+  canvas.style.height =
+    `${H}px`;
 
   ctx.setTransform(
     dpr,
@@ -355,18 +293,42 @@ function resize() {
   );
 
   createStars();
+
+  if (myPlayer) {
+
+    myPlayer.x =
+      Math.max(
+        25,
+        Math.min(
+          W - 25,
+          myPlayer.x
+        )
+      );
+
+    myPlayer.y =
+      Math.max(
+        25,
+        Math.min(
+          H - 25,
+          myPlayer.y
+        )
+      );
+
+  }
+
 }
 
-
-let stars = [];
 
 function createStars() {
 
   stars = [];
 
   const count =
-    Math.floor(
-      W * H / 3200
+    Math.max(
+      60,
+      Math.round(
+        W * H / 4000
+      )
     );
 
   for (
@@ -376,190 +338,245 @@ function createStars() {
   ) {
 
     stars.push({
-      x: random(0, W),
-      y: random(0, H),
-      r: random(.4, 1.5),
-      a: random(.15, .8)
+
+      x: Math.random() * W,
+
+      y: Math.random() * H,
+
+      r:
+        Math.random() *
+        1.5 +
+        .3,
+
+      alpha:
+        Math.random() *
+        .7 +
+        .2
+
     });
+
   }
+
 }
 
 
-window.addEventListener(
-  "resize",
-  resize
-);
+// ============================================================
+// Firebase paths
+// ============================================================
 
-
-/* =========================================================
-   BASES
-========================================================= */
-
-function baseFor(
-  index,
-  total
+function roomGameRef(
+  path = ""
 ) {
 
-  if (
-    total <= 1
-  ) {
-    return {
-      x: W * .18,
-      y: H * .5
-    };
-  }
-
-  const angle =
-    -Math.PI / 2 +
-    index *
-      Math.PI * 2 /
-      total;
-
-  return {
-    x:
-      W / 2 +
-      Math.cos(angle) *
-        W * .38,
-
-    y:
-      H / 2 +
-      Math.sin(angle) *
-        H * .34
-  };
-}
-
-
-function playerIds() {
-
-  return Object.keys(
-    remotePlayers
-  )
-    .sort();
-}
-
-
-function myBase() {
-
-  if (!online) {
-
-    return {
-      x: W * .18,
-      y: H * .5
-    };
-  }
-
-  const ids =
-    playerIds();
-
-  const index =
-    Math.max(
-      0,
-      ids.indexOf(uid)
-    );
-
-  return baseFor(
-    index,
-    Math.max(
-      1,
-      ids.length
-    )
+  return ref(
+    db,
+    `rooms/${roomCode}/currentGame/astra${
+      path
+        ? "/" + path
+        : ""
+    }`
   );
+
 }
 
 
-/* =========================================================
-   PLAYER OBJECT
-========================================================= */
+// ============================================================
+// نام امن
+// ============================================================
+
+function cleanName(name) {
+
+  return String(name || "")
+    .slice(0, 24);
+
+}
+
+
+// ============================================================
+// بازیکن جدید
+// ============================================================
 
 function makePlayer(
-  id,
+  uid,
   name,
-  index,
-  total
+  index
 ) {
 
-  const base =
-    baseFor(
-      index,
-      total
-    );
+  const colors = [
+    "#4F7CFF",
+    "#9B5CFF",
+    "#3ECF8E",
+    "#FF7A59"
+  ];
+
+  const positions = [
+
+    {
+      x: W * .18,
+      y: H * .50
+    },
+
+    {
+      x: W * .82,
+      y: H * .50
+    },
+
+    {
+      x: W * .50,
+      y: H * .25
+    },
+
+    {
+      x: W * .50,
+      y: H * .75
+    }
+
+  ];
+
+  const pos =
+    positions[
+      index % positions.length
+    ];
 
   return {
 
-    id,
+    uid,
 
-    name,
+    name:
+      cleanName(name),
 
-    x: base.x,
-    y: base.y,
+    x: pos.x,
 
-    baseX: base.x,
-    baseY: base.y,
+    y: pos.y,
 
     fuel: 0,
+
     cargo: 0,
 
-    powerup: 0,
+    score: 0,
 
-    boosting: false,
+    combo: 0,
+
+    powerup: "",
+
     boostUntil: 0,
 
-    launching: false,
-    launchAt: 0,
+    launched: false,
 
-    won: false,
+    finished: false,
+
+    lastUpdate:
+      Date.now(),
 
     color:
-      colorFor(index),
+      colors[
+        index % colors.length
+      ]
 
-    trail: []
   };
+
 }
 
 
-/* =========================================================
-   LOCAL RESOURCES
-========================================================= */
+// ============================================================
+// فاصله
+// ============================================================
+
+function distance(a, b) {
+
+  return Math.hypot(
+    a.x - b.x,
+    a.y - b.y
+  );
+
+}
+
+
+// ============================================================
+// محدوده
+// ============================================================
+
+function clampPlayer(p) {
+
+  p.x =
+    Math.max(
+      24,
+      Math.min(
+        W - 24,
+        p.x
+      )
+    );
+
+  p.y =
+    Math.max(
+      24,
+      Math.min(
+        H - 24,
+        p.y
+      )
+    );
+
+}
+
+
+// ============================================================
+// منابع
+// ============================================================
 
 function makeResource(
   id
 ) {
 
+  const margin = 45;
+
+  const values = [
+    10,
+    10,
+    10,
+    15,
+    15,
+    20,
+    20,
+    25
+  ];
+
   return {
 
     id,
 
     x:
-      random(
-        45,
-        W - 45
+      margin +
+      Math.random() *
+      Math.max(
+        1,
+        W - margin * 2
       ),
 
     y:
-      random(
-        45,
-        H - 45
+      margin +
+      Math.random() *
+      Math.max(
+        1,
+        H - margin * 2
       ),
 
     value:
-      Math.floor(
-        random(8, 16)
-      ),
+      values[
+        Math.floor(
+          Math.random() *
+          values.length
+        )
+      ],
 
-    active: true,
+    createdAt:
+      Date.now()
 
-    respawnAt: 0,
-
-    phase:
-      random(
-        0,
-        Math.PI * 2
-      )
   };
+
 }
 
 
-function createLocalResources() {
+function createResources() {
 
   resources = [];
 
@@ -571,77 +588,159 @@ function createLocalResources() {
 
     resources.push(
       makeResource(
-        `r${i}`
+        `r-${Date.now()}-${i}-${Math.random()}`
       )
     );
+
   }
+
 }
 
 
-/* =========================================================
-   ONLINE RESOURCE INIT
-========================================================= */
+// ============================================================
+// بازی تک نفره
+// ============================================================
 
-async function initOnlineResources() {
+function createSoloGame() {
 
-  for (
-    let i = 0;
-    i < RESOURCE_COUNT;
-    i++
-  ) {
+  multiplayer = false;
 
-    const r =
-      ref(
-        db,
-        `rooms/${roomCode}/currentGame/astra/${roundId}/resources/r${i}`
-      );
+  hudMode.textContent =
+    "🤖 بازی با ربات";
 
-    await runTransaction(
-      r,
-      current => {
-
-        if (
-          current
-        ) {
-          return current;
-        }
-
-        const local =
-          makeResource(
-            `r${i}`
-          );
-
-        return {
-          x: local.x,
-          y: local.y,
-
-          value: local.value,
-
-          active: true,
-
-          respawnAt: 0,
-
-          phase: local.phase
-        };
-      }
+  myPlayer =
+    makePlayer(
+      myUid,
+      myName,
+      0
     );
-  }
+
+  myPlayer.color =
+    "#4F7CFF";
+
+  players = {
+
+    [myUid]:
+      myPlayer,
+
+    ai:
+      makePlayer(
+        "ai",
+        "ربات",
+        1
+      )
+
+  };
+
+  players.ai.color =
+    "#9B5CFF";
+
+  createResources();
+
+  powerups = [];
+
+  startCountdown();
+
 }
 
 
-/* =========================================================
-   ONLINE PLAYER INIT
-========================================================= */
+// ============================================================
+// تشخیص اتاق
+// ============================================================
 
-async function initOnlinePlayer() {
+async function detectMode() {
 
-  const p =
+  roomCode =
+    getSavedRoom();
+
+  if (!roomCode) {
+
+    createSoloGame();
+
+    return;
+
+  }
+
+  multiplayer = true;
+
+  hudMode.textContent =
+    "🌐 بازی آنلاین";
+
+  await joinMultiplayer();
+
+}
+
+
+// ============================================================
+// ورود به Multiplayer
+// ============================================================
+
+async function joinMultiplayer() {
+
+  const playersRef =
     ref(
       db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}/players/${uid}`
+      `rooms/${roomCode}/players`
     );
 
-  const idsSnap =
+  const snap =
+    await get(playersRef);
+
+  const roomPlayers =
+    snap.val() || {};
+
+  const ids =
+    Object.keys(
+      roomPlayers
+    );
+
+  if (!ids.includes(myUid)) {
+
+    overlay.innerHTML = `
+      <div class="big">🚪</div>
+      <div class="sub">
+        اول وارد لابی اتاق شو
+      </div>
+    `;
+
+    return;
+
+  }
+
+  if (ids.length < 2) {
+
+    running = true;
+
+    paused = true;
+
+    resizeCanvas();
+
+    createStars();
+
+    renderWaiting();
+
+    listenRoomPlayers();
+
+    return;
+
+  }
+
+  listenRoomPlayers();
+
+  listenGameState();
+
+  await prepareMultiplayer();
+
+}
+
+
+// ============================================================
+// آماده‌سازی Multiplayer
+// ============================================================
+
+async function prepareMultiplayer() {
+
+  const playersSnap =
     await get(
       ref(
         db,
@@ -650,1162 +749,1799 @@ async function initOnlinePlayer() {
     );
 
   const roomPlayers =
-    idsSnap.val() || {};
+    playersSnap.val() || {};
+
+  let ids =
+    Object.keys(
+      roomPlayers
+    );
+
+  ids =
+    ids.slice(
+      0,
+      MAX_PLAYERS
+    );
+
+  const existing =
+    await get(
+      roomGameRef()
+    );
+
+  if (!existing.exists()) {
+
+    const initialPlayers = {};
+
+    ids.forEach(
+      (uid, index) => {
+
+        initialPlayers[uid] =
+          makePlayer(
+            uid,
+            roomPlayers[uid].name ||
+              `بازیکن ${index + 1}`,
+            index
+          );
+
+      }
+    );
+
+    await set(
+      roomGameRef(),
+      {
+
+        status:
+          "waiting",
+
+        startedAt:
+          0,
+
+        endAt:
+          0,
+
+        winnerUid:
+          "",
+
+        resources:
+          {},
+
+        powerups:
+          {},
+
+        players:
+          initialPlayers
+
+      }
+    );
+
+  }
+
+  await ensureMyPlayer();
+
+  renderWaiting();
+
+}
+
+
+// ============================================================
+// بازیکن من
+// ============================================================
+
+async function ensureMyPlayer() {
+
+  const pRef =
+    roomGameRef(
+      `players/${myUid}`
+    );
+
+  const snap =
+    await get(pRef);
+
+  if (snap.exists()) {
+
+    myPlayer =
+      snap.val();
+
+    return;
+
+  }
+
+  const playersSnap =
+    await get(
+      ref(
+        db,
+        `rooms/${roomCode}/players`
+      )
+    );
+
+  const roomPlayers =
+    playersSnap.val() || {};
 
   const ids =
     Object.keys(
       roomPlayers
-    ).sort();
+    );
 
   const index =
     Math.max(
       0,
-      ids.indexOf(uid)
+      ids.indexOf(myUid)
     );
 
-  const base =
-    baseFor(
-      index,
-      Math.max(
-        1,
-        ids.length
+  myPlayer =
+    makePlayer(
+      myUid,
+      roomPlayers[myUid]?.name ||
+        myName,
+      index
+    );
+
+  await set(
+    pRef,
+    myPlayer
+  );
+
+}
+
+
+// ============================================================
+// Listen players
+// ============================================================
+
+let playersUnsubscribe =
+  null;
+
+function listenRoomPlayers() {
+
+  if (playersUnsubscribe) return;
+
+  playersUnsubscribe =
+    onValue(
+      ref(
+        db,
+        `rooms/${roomCode}/players`
+      ),
+      snapshot => {
+
+        const roomPlayers =
+          snapshot.val() || {};
+
+        updateRoomPlayerNames(
+          roomPlayers
+        );
+
+      }
+    );
+
+}
+
+
+function updateRoomPlayerNames(
+  roomPlayers
+) {
+
+  const ids =
+    Object.keys(
+      roomPlayers
+    ).slice(
+      0,
+      MAX_PLAYERS
+    );
+
+  ids.forEach(
+    uid => {
+
+      if (
+        players[uid]
+      ) {
+
+        players[uid].name =
+          roomPlayers[uid].name ||
+          players[uid].name;
+
+      }
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// Listen Game State
+// ============================================================
+
+let gameUnsubscribe =
+  null;
+
+function listenGameState() {
+
+  if (gameUnsubscribe) return;
+
+  gameUnsubscribe =
+    onValue(
+      roomGameRef(),
+      snapshot => {
+
+        const state =
+          snapshot.val();
+
+        if (!state) return;
+
+        if (
+          state.players
+        ) {
+
+          players =
+            state.players;
+
+          myPlayer =
+            players[myUid] ||
+            myPlayer;
+
+        }
+
+        resources =
+          state.resources
+            ? Object.entries(
+                state.resources
+              ).map(
+                ([id, r]) => ({
+                  id,
+                  ...r
+                })
+              )
+            : [];
+
+        powerups =
+          state.powerups
+            ? Object.entries(
+                state.powerups
+              ).map(
+                ([id, p]) => ({
+                  id,
+                  ...p
+                })
+              )
+            : [];
+
+        if (
+          state.status ===
+          "playing"
+        ) {
+
+          if (
+            !running
+          ) {
+
+            running = true;
+
+            paused = false;
+
+            hideOverlay();
+
+            requestAnimationFrame(
+              gameLoop
+            );
+
+          }
+
+        }
+
+        if (
+          state.status ===
+          "finished"
+        ) {
+
+          finishFromNetwork(
+            state.winnerUid
+          );
+
+        }
+
+        updateHUD();
+
+      }
+    );
+
+}
+
+
+// ============================================================
+// ساخت بازی آنلاین توسط Host
+// ============================================================
+
+async function tryStartRoomGame() {
+
+  if (!multiplayer) return;
+
+  if (countdownRunning) return;
+
+  const playersSnap =
+    await get(
+      ref(
+        db,
+        `rooms/${roomCode}/players`
       )
     );
 
-  await runTransaction(
-    p,
-    current => {
+  const roomPlayers =
+    playersSnap.val() || {};
 
-      if (
-        current
-      ) {
-        return current;
-      }
-
-      return {
-
-        name: username,
-
-        x: base.x,
-        y: base.y,
-
-        fuel: 0,
-        cargo: 0,
-
-        powerup: 0,
-
-        boosting: false,
-
-        launching: false,
-        launchAt: 0,
-
-        won: false,
-
-        updatedAt:
-          Date.now()
-      };
-    }
-  );
-
-  onDisconnect(p)
-    .remove();
-}
-
-
-/* =========================================================
-   ONLINE LISTENERS
-========================================================= */
-
-function listenOnline() {
-
-  onValue(
-    onlinePlayers,
-    snap => {
-
-      remotePlayers =
-        snap.val() || {};
-
-      playerCountEl.textContent =
-        String(
-          Math.max(
-            1,
-            Object.keys(
-              remotePlayers
-            ).length
-          )
-        );
-
-      updatePlayerCards();
-    }
-  );
-
-
-  onValue(
-    onlineResources,
-    snap => {
-
-      const data =
-        snap.val() || {};
-
-      resources =
-        Object.entries(
-          data
-        )
-          .map(
-            ([id, value]) => ({
-              id,
-              ...value
-            })
-          );
-    }
-  );
-
-
-  onValue(
-    onlineWinner,
-    snap => {
-
-      const value =
-        snap.val();
-
-      if (
-        value &&
-        !ended
-      ) {
-
-        winner =
-          value;
-
-        finishOnline(
-          value === uid
-        );
-      }
-    }
-  );
-}
-
-
-/* =========================================================
-   SYNC PLAYER
-========================================================= */
-
-function syncPlayer() {
+  const ids =
+    Object.keys(
+      roomPlayers
+    )
+      .slice(
+        0,
+        MAX_PLAYERS
+      );
 
   if (
-    !online ||
-    !player ||
-    !uid
+    ids.length < 2
   ) {
+
+    renderWaiting();
+
     return;
+
+  }
+
+  const sorted =
+    [...ids].sort();
+
+  const hostUid =
+    sorted[0];
+
+  if (
+    hostUid !== myUid
+  ) {
+
+    renderWaiting();
+
+    return;
+
+  }
+
+  const stateSnap =
+    await get(
+      roomGameRef()
+    );
+
+  const state =
+    stateSnap.val();
+
+  if (
+    state &&
+    state.status ===
+    "playing"
+  ) {
+
+    return;
+
+  }
+
+  const initialPlayers = {};
+
+  ids.forEach(
+    (uid, index) => {
+
+      initialPlayers[uid] =
+        players[uid] ||
+        makePlayer(
+          uid,
+          roomPlayers[uid].name ||
+            `بازیکن ${index + 1}`,
+          index
+        );
+
+    }
+  );
+
+  const resourceMap = {};
+
+  for (
+    let i = 0;
+    i < RESOURCE_COUNT;
+    i++
+  ) {
+
+    const r =
+      makeResource(
+        `r-${Date.now()}-${i}-${Math.random()}`
+      );
+
+    resourceMap[r.id] =
+      r;
+
   }
 
   const now =
-    performance.now();
+    Date.now();
 
-  if (
-    now - lastSync <
-    SYNC_EVERY
-  ) {
-    return;
-  }
-
-  lastSync =
-    now;
-
-  update(
-    ref(
-      db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}/players/${uid}`
-    ),
+  await set(
+    roomGameRef(),
     {
 
-      name: username,
+      status:
+        "playing",
 
-      x: player.x,
-      y: player.y,
+      startedAt:
+        now,
 
-      fuel:
-        Math.round(
-          player.fuel
-        ),
+      endAt:
+        now +
+        MATCH_TIME * 1000,
 
-      cargo:
-        Math.round(
-          player.cargo
-        ),
+      winnerUid:
+        "",
 
-      powerup:
-        player.powerup,
+      resources:
+        resourceMap,
 
-      boosting:
-        player.boosting,
+      powerups:
+        {},
 
-      launching:
-        player.launching,
+      players:
+        initialPlayers
 
-      launchAt:
-        player.launchAt || 0,
-
-      won:
-        player.won,
-
-      updatedAt:
-        Date.now()
     }
-  ).catch(
-    console.warn
   );
+
 }
 
 
-/* =========================================================
-   JOYSTICK
-========================================================= */
+// ============================================================
+// انتظار
+// ============================================================
 
-let joyX = 0;
-
-let joyY = 0;
-
-let pointerId = null;
-
-
-function moveJoystick(
-  x,
-  y
-) {
-
-  const rect =
-    joystick.getBoundingClientRect();
-
-  const cx =
-    rect.left +
-    rect.width / 2;
-
-  const cy =
-    rect.top +
-    rect.height / 2;
-
-  let dx =
-    x - cx;
-
-  let dy =
-    y - cy;
-
-  const max =
-    rect.width * .34;
-
-  const len =
-    Math.hypot(
-      dx,
-      dy
-    );
+function renderWaiting() {
 
   if (
-    len > max
+    !multiplayer
+  ) return;
+
+  running = true;
+
+  paused = true;
+
+  const count =
+    Object.keys(
+      players
+    ).length;
+
+  overlay.innerHTML = `
+
+    <div class="big">
+      🚀 ASTRA
+    </div>
+
+    <div class="sub">
+      ${count < 2
+        ? "منتظر بازیکن دوم هستیم..."
+        : `${count} بازیکن آماده‌اند`
+      }
+    </div>
+
+  `;
+
+  overlay.classList.remove(
+    "hidden"
+  );
+
+  if (
+    count >= 2
   ) {
 
-    dx =
-      dx / len * max;
+    tryStartRoomGame();
 
-    dy =
-      dy / len * max;
   }
 
-  joyX =
-    dx / max;
-
-  joyY =
-    dy / max;
-
-  knob.style.transform =
-    `translate(${dx}px,${dy}px)`;
 }
 
 
-function resetJoystick() {
+// ============================================================
+// Solo Countdown
+// ============================================================
 
-  joyX = 0;
-  joyY = 0;
+async function startCountdown() {
 
-  knob.style.transform =
-    "translate(0,0)";
+  if (
+    countdownRunning
+  ) return;
+
+  countdownRunning = true;
+
+  running = true;
+
+  paused = true;
+
+  const steps = [
+    "۳",
+    "۲",
+    "۱",
+    "🚀 ASTRA!"
+  ];
+
+  for (
+    const step of steps
+  ) {
+
+    overlay.innerHTML = `
+      <div class="big">
+        ${step}
+      </div>
+    `;
+
+    overlay.classList.remove(
+      "hidden"
+    );
+
+    tone(
+      step.includes("ASTRA")
+        ? 1100
+        : 500,
+      .12
+    );
+
+    await delay(650);
+
+  }
+
+  hideOverlay();
+
+  paused = false;
+
+  countdownRunning = false;
+
+  lastFrame =
+    performance.now();
+
+  requestAnimationFrame(
+    gameLoop
+  );
+
 }
 
 
-joystick.addEventListener(
-  "pointerdown",
-  e => {
+// ============================================================
+// Delay
+// ============================================================
 
-    pointerId =
-      e.pointerId;
+function delay(ms) {
 
-    joystick.setPointerCapture(
-      e.pointerId
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
+
+}
+
+
+// ============================================================
+// Game loop
+// ============================================================
+
+function gameLoop(timestamp) {
+
+  if (!running) return;
+
+  const dt =
+    Math.min(
+      .05,
+      (timestamp - lastFrame) /
+        1000
     );
 
-    moveJoystick(
-      e.clientX,
-      e.clientY
+  lastFrame =
+    timestamp;
+
+  worldTime =
+    timestamp / 1000;
+
+  if (!paused) {
+
+    updateGame(
+      dt,
+      timestamp
     );
+
   }
-);
+
+  drawGame(
+    timestamp
+  );
+
+  requestAnimationFrame(
+    gameLoop
+  );
+
+}
 
 
-joystick.addEventListener(
-  "pointermove",
-  e => {
+// ============================================================
+// Update
+// ============================================================
 
-    if (
-      e.pointerId !==
-      pointerId
-    ) {
-      return;
-    }
-
-    moveJoystick(
-      e.clientX,
-      e.clientY
-    );
-  }
-);
-
-
-joystick.addEventListener(
-  "pointerup",
-  resetJoystick
-);
-
-
-joystick.addEventListener(
-  "pointercancel",
-  resetJoystick
-);
-
-
-/* =========================================================
-   MOVEMENT
-========================================================= */
-
-function updatePlayer(
+function updateGame(
   dt,
-  now
+  timestamp
 ) {
 
+  if (!myPlayer) return;
+
   if (
-    !player ||
-    player.launching
+    multiplayer
   ) {
-    return;
+
+    updateMyOnlinePlayer(
+      dt,
+      timestamp
+    );
+
+  } else {
+
+    updateSoloPlayer(
+      dt,
+      timestamp
+    );
+
+    updateAI(
+      dt,
+      timestamp
+    );
+
   }
 
-  const length =
-    Math.hypot(
-      joyX,
-      joyY
+  updateEffects(
+    dt
+  );
+
+  checkResources();
+
+  checkLaunch();
+
+  updateCombo(
+    dt
+  );
+
+  updateTimer();
+
+  syncPlayer(
+    timestamp
+  );
+
+}
+
+
+// ============================================================
+// حرکت بازیکن
+// ============================================================
+
+function updateMyOnlinePlayer(
+  dt,
+  timestamp
+) {
+
+  const control =
+    getMyControl();
+
+  const magnitude =
+    Math.min(
+      1,
+      Math.hypot(
+        control.x,
+        control.y
+      )
     );
 
   if (
-    length > .02
+    magnitude > .01
   ) {
+
+    const length =
+      Math.hypot(
+        control.x,
+        control.y
+      ) || 1;
+
+    const nx =
+      control.x / length;
+
+    const ny =
+      control.y / length;
 
     const speed =
-      player.boosting
+      myPlayer.boostUntil >
+      Date.now()
         ? BOOST_SPEED
         : PLAYER_SPEED;
 
-    player.x +=
-      joyX /
-      length *
+    myPlayer.x +=
+      nx *
+      magnitude *
       speed *
       dt;
 
-    player.y +=
-      joyY /
-      length *
+    myPlayer.y +=
+      ny *
+      magnitude *
       speed *
       dt;
 
-    player.trail.push({
-      x: player.x,
-      y: player.y
-    });
-
-    if (
-      player.trail.length >
-      10
-    ) {
-      player.trail.shift();
-    }
-  }
-
-  player.x =
-    clamp(
-      player.x,
-      PLAYER_RADIUS,
-      W - PLAYER_RADIUS
+    clampPlayer(
+      myPlayer
     );
 
-  player.y =
-    clamp(
-      player.y,
-      PLAYER_RADIUS,
-      H - PLAYER_RADIUS
-    );
-
-  if (
-    player.boosting &&
-    now >
-      player.boostUntil
-  ) {
-
-    player.boosting =
-      false;
   }
+
 }
 
 
-/* =========================================================
-   RESOURCE CLAIM
-========================================================= */
+// ============================================================
+// Solo player
+// ============================================================
 
-async function claimOnline(
-  resource
+function updateSoloPlayer(
+  dt,
+  timestamp
 ) {
 
-  if (
-    !resource.active ||
-    !player
-  ) {
-    return;
-  }
+  const control =
+    controls.p1;
 
-  if (
-    distance(
-      player,
-      resource
-    ) >
-    PLAYER_RADIUS +
-    RESOURCE_RADIUS +
-    14
-  ) {
-    return;
-  }
-
-  const r =
-    ref(
-      db,
-      `rooms/${roomCode}/currentGame/astra/${roundId}/resources/${resource.id}`
+  const magnitude =
+    Math.min(
+      1,
+      Math.hypot(
+        control.x,
+        control.y
+      )
     );
 
-  let claimed = false;
+  if (
+    magnitude < .01
+  ) return;
 
-  await runTransaction(
-    r,
-    current => {
+  const length =
+    Math.hypot(
+      control.x,
+      control.y
+    ) || 1;
 
-      if (
-        !current ||
-        current.active !== true
-      ) {
-        return;
+  const nx =
+    control.x / length;
+
+  const ny =
+    control.y / length;
+
+  const speed =
+    myPlayer.boostUntil >
+    Date.now()
+      ? BOOST_SPEED
+      : PLAYER_SPEED;
+
+  myPlayer.x +=
+    nx *
+    magnitude *
+    speed *
+    dt;
+
+  myPlayer.y +=
+    ny *
+    magnitude *
+    speed *
+    dt;
+
+  clampPlayer(
+    myPlayer
+  );
+
+}
+
+
+// ============================================================
+// ربات
+// ============================================================
+
+let aiTarget = null;
+
+function updateAI(
+  dt
+) {
+
+  const ai =
+    players.ai;
+
+  if (!ai) return;
+
+  if (
+    !aiTarget ||
+    !resources.find(
+      r =>
+        r.id ===
+        aiTarget.id
+    )
+  ) {
+
+    let best =
+      null;
+
+    let bestScore =
+      -Infinity;
+
+    resources.forEach(
+      resource => {
+
+        const d =
+          distance(
+            ai,
+            resource
+          );
+
+        const value =
+          resource.value /
+          (d + 30);
+
+        if (
+          value >
+          bestScore
+        ) {
+
+          bestScore =
+            value;
+
+          best =
+            resource;
+
+        }
+
       }
-
-      claimed =
-        true;
-
-      return {
-        ...current,
-
-        active: false,
-
-        claimedBy: uid,
-
-        respawnAt:
-          Date.now() +
-          RESOURCE_RESPAWN
-      };
-    }
-  );
-
-  if (
-    claimed
-  ) {
-
-    player.cargo +=
-      Number(
-        resource.value || 10
-      );
-
-    /*
-      شانس گرفتن توربو
-    */
-
-    if (
-      Math.random() <
-      .2
-    ) {
-
-      player.powerup =
-        Math.min(
-          3,
-          player.powerup + 1
-        );
-    }
-
-    sound(
-      760,
-      .08
     );
-  }
-}
 
+    aiTarget =
+      best;
 
-function claimLocal(
-  resource
-) {
-
-  if (
-    !resource.active ||
-    !player
-  ) {
-    return;
   }
 
-  if (
+  if (!aiTarget) return;
+
+  const d =
     distance(
-      player,
-      resource
-    ) >
-    PLAYER_RADIUS +
-    RESOURCE_RADIUS +
-    14
-  ) {
-    return;
-  }
-
-  resource.active =
-    false;
-
-  resource.respawnAt =
-    Date.now() +
-    RESOURCE_RESPAWN;
-
-  player.cargo +=
-    resource.value;
+      ai,
+      aiTarget
+    );
 
   if (
-    Math.random() <
-    .2
-  ) {
+    d < 2
+  ) return;
 
-    player.powerup =
-      Math.min(
-        3,
-        player.powerup + 1
-      );
-  }
+  ai.x +=
+    (
+      aiTarget.x -
+      ai.x
+    ) /
+    d *
+    PLAYER_SPEED *
+    .72 *
+    dt;
 
-  sound(
-    760,
-    .08
+  ai.y +=
+    (
+      aiTarget.y -
+      ai.y
+    ) /
+    d *
+    PLAYER_SPEED *
+    .72 *
+    dt;
+
+  clampPlayer(
+    ai
   );
+
 }
 
 
-/* =========================================================
-   RESPAWN
-========================================================= */
+// ============================================================
+// کنترل فعال
+// ============================================================
 
-function updateLocalRespawns() {
-
-  for (
-    const r of resources
-  ) {
-
-    if (
-      !r.active &&
-      r.respawnAt &&
-      Date.now() >=
-        r.respawnAt
-    ) {
-
-      r.active =
-        true;
-
-      r.respawnAt =
-        0;
-    }
-  }
-}
-
-
-function updateOnlineRespawns() {
+function getMyControl() {
 
   if (
-    !online
+    !multiplayer
   ) {
-    return;
+
+    return controls.p1;
+
   }
+
+  const ids =
+    Object.keys(
+      players
+    );
+
+  const index =
+    Math.max(
+      0,
+      ids.indexOf(
+        myUid
+      )
+    );
+
+  return index === 0
+    ? controls.p1
+    : controls.p2;
+
+}
+
+
+// ============================================================
+// منابع
+// ============================================================
+
+let resourceLock =
+  false;
+
+function checkResources() {
+
+  if (!myPlayer) return;
+
+  if (
+    myPlayer.finished
+  ) return;
 
   for (
     const resource of resources
   ) {
 
     if (
-      resource.active ||
-      !resource.respawnAt ||
-      Date.now() <
-        Number(
-          resource.respawnAt
-        )
-    ) {
-      continue;
-    }
+      distance(
+        myPlayer,
+        resource
+      ) >
+      30
+    ) continue;
 
-    const r =
-      ref(
-        db,
-        `rooms/${roomCode}/currentGame/astra/${roundId}/resources/${resource.id}`
+    if (
+      multiplayer
+    ) {
+
+      claimOnlineResource(
+        resource
       );
 
-    runTransaction(
-      r,
-      current => {
+    } else {
 
-        if (
-          !current ||
-          current.active ||
-          Date.now() <
-            Number(
-              current.respawnAt || 0
-            )
-        ) {
-          return;
-        }
+      collectLocalResource(
+        resource
+      );
 
-        return {
-          ...current,
+    }
 
-          active: true,
+    break;
 
-          claimedBy: null,
-
-          respawnAt: 0
-        };
-      }
-    ).catch(
-      () => {}
-    );
   }
+
 }
 
 
-/* =========================================================
-   BASE / FUEL
-========================================================= */
+// ============================================================
+// Solo collect
+// ============================================================
 
-function atBase() {
+function collectLocalResource(
+  resource
+) {
+
+  const index =
+    resources.findIndex(
+      r =>
+        r.id ===
+        resource.id
+    );
 
   if (
-    !player
-  ) {
-    return false;
-  }
+    index === -1
+  ) return;
 
-  return Math.hypot(
-    player.x -
-      player.baseX,
+  resources.splice(
+    index,
+    1
+  );
 
-    player.y -
-      player.baseY
-  ) <
-    BASE_RADIUS + 20;
+  myPlayer.cargo++;
+
+  myPlayer.score +=
+    resource.value;
+
+  combo++;
+
+  comboTimer = 3;
+
+  burst(
+    resource.x,
+    resource.y,
+    myPlayer.color,
+    16
+  );
+
+  tone(
+    650 +
+    combo * 30,
+    .07
+  );
+
+  setTimeout(
+    () => {
+
+      resources.push(
+        makeResource(
+          `r-${Date.now()}-${Math.random()}`
+        )
+      );
+
+    },
+    RESOURCE_RESPAWN
+  );
+
 }
 
 
-function convertFuel(
-  dt
+// ============================================================
+// Multiplayer collect
+// ============================================================
+
+async function claimOnlineResource(
+  resource
 ) {
 
   if (
-    !player ||
-    player.cargo <= 0 ||
-    player.fuel >= MAX_FUEL
-  ) {
-    return;
+    resourceLock
+  ) return;
+
+  resourceLock = true;
+
+  try {
+
+    const resourceRef =
+      roomGameRef(
+        `resources/${resource.id}`
+      );
+
+    const transaction =
+      await runTransaction(
+        resourceRef,
+        current => {
+
+          if (
+            !current
+          ) {
+
+            return;
+
+          }
+
+          return null;
+
+        }
+      );
+
+    if (
+      transaction.committed
+    ) {
+
+      myPlayer.cargo++;
+
+      myPlayer.score +=
+        Number(
+          resource.value || 10
+        );
+
+      combo++;
+
+      comboTimer = 3;
+
+      burst(
+        resource.x,
+        resource.y,
+        myPlayer.color,
+        16
+      );
+
+      tone(
+        650 +
+        combo * 30,
+        .07
+      );
+
+      await syncMyPlayer();
+
+      spawnResourceLater();
+
+    }
+
+  } catch (error) {
+
+    console.warn(
+      "Resource claim:",
+      error
+    );
+
   }
 
+  resourceLock = false;
+
+}
+
+
+// ============================================================
+// ساخت منبع جدید
+// ============================================================
+
+function spawnResourceLater() {
+
+  if (!multiplayer) return;
+
+  setTimeout(
+    async () => {
+
+      try {
+
+        const state =
+          await get(
+            roomGameRef(
+              "resources"
+            )
+          );
+
+        const map =
+          state.val() || {};
+
+        if (
+          Object.keys(map)
+            .length >=
+          RESOURCE_COUNT
+        ) return;
+
+        const r =
+          makeResource(
+            `r-${Date.now()}-${Math.random()}`
+          );
+
+        await update(
+          roomGameRef(
+            "resources"
+          ),
+          {
+            [r.id]: r
+          }
+        );
+
+      } catch {}
+
+    },
+    RESOURCE_RESPAWN
+  );
+
+}
+
+
+// ============================================================
+// تبدیل Cargo به Fuel
+// ============================================================
+
+function processCargo() {
+
   if (
-    !atBase()
+    myPlayer.cargo <= 0
+  ) return;
+
+  const pad =
+    getBasePosition(
+      myPlayer.uid
+    );
+
+  if (
+    Math.hypot(
+      myPlayer.x - pad.x,
+      myPlayer.y - pad.y
+    ) > 65
   ) {
+
     return;
+
   }
 
   const amount =
     Math.min(
-      player.cargo,
-      28 * dt,
-      MAX_FUEL -
-        player.fuel
+      myPlayer.cargo,
+      Math.ceil(
+        (100 -
+          myPlayer.fuel) /
+        10
+      )
     );
 
-  player.cargo -=
+  if (
+    amount <= 0
+  ) return;
+
+  myPlayer.cargo -=
     amount;
 
-  player.fuel +=
-    amount;
+  myPlayer.fuel =
+    Math.min(
+      100,
+      myPlayer.fuel +
+        amount * 10
+    );
+
+  tone(
+    850,
+    .08
+  );
+
 }
 
 
-/* =========================================================
-   BOOST
-========================================================= */
+// ============================================================
+// Launch
+// ============================================================
 
-boostButton.addEventListener(
-  "click",
-  () => {
+function checkLaunch() {
 
-    if (
-      !player ||
-      player.powerup <= 0 ||
-      ended
-    ) {
-      return;
-    }
+  processCargo();
 
-    player.powerup--;
+  if (
+    myPlayer.fuel < 100
+  ) return;
 
-    player.boosting =
-      true;
+  if (
+    myPlayer.launched ||
+    myPlayer.finished
+  ) return;
 
-    player.boostUntil =
-      performance.now() +
-      BOOST_DURATION;
-
-    sound(
-      1050,
-      .1
+  const pad =
+    getLaunchPad(
+      myPlayer.uid
     );
-  }
-);
-
-
-/* =========================================================
-   BOT
-========================================================= */
-
-function createBot() {
-
-  bot =
-    makePlayer(
-      "bot",
-      "ربات",
-      1,
-      2
-    );
-
-  bot.color =
-    "#a968ff";
-}
-
-
-function updateBot(
-  dt,
-  now
-) {
-
-  if (
-    !bot ||
-    bot.launching
-  ) {
-    return;
-  }
-
-  let target = null;
-
-  if (
-    bot.cargo > 0
-  ) {
-
-    target = {
-      x: bot.baseX,
-      y: bot.baseY
-    };
-
-  } else {
-
-    let best =
-      Infinity;
-
-    for (
-      const r of resources
-    ) {
-
-      if (
-        !r.active
-      ) {
-        continue;
-      }
-
-      const d =
-        distance(
-          bot,
-          r
-        );
-
-      if (
-        d < best
-      ) {
-
-        best = d;
-        target = r;
-      }
-    }
-  }
-
-  if (
-    bot.fuel >= MAX_FUEL
-  ) {
-
-    target = {
-      x: bot.baseX,
-      y: bot.baseY
-    };
-  }
-
-  if (
-    !target
-  ) {
-    return;
-  }
-
-  const dx =
-    target.x -
-    bot.x;
-
-  const dy =
-    target.y -
-    bot.y;
 
   const d =
     Math.hypot(
-      dx,
-      dy
-    ) || 1;
-
-  const speed =
-    bot.boosting
-      ? BOOST_SPEED
-      : PLAYER_SPEED * .8;
-
-  bot.x +=
-    dx / d *
-    speed *
-    dt;
-
-  bot.y +=
-    dy / d *
-    speed *
-    dt;
-
-  bot.x =
-    clamp(
-      bot.x,
-      PLAYER_RADIUS,
-      W - PLAYER_RADIUS
+      myPlayer.x - pad.x,
+      myPlayer.y - pad.y
     );
 
-  bot.y =
-    clamp(
-      bot.y,
-      PLAYER_RADIUS,
-      H - PLAYER_RADIUS
-    );
+  if (
+    d > 70
+  ) return;
+
+  launchPlayer();
+
+}
 
 
-  for (
-    const r of resources
-  ) {
+// ============================================================
+// Launch player
+// ============================================================
 
-    if (
-      r.active &&
-      distance(
-        bot,
-        r
-      ) <
-      PLAYER_RADIUS +
-      RESOURCE_RADIUS +
-      12
-    ) {
+let launching =
+  false;
 
-      r.active =
-        false;
+async function launchPlayer() {
 
-      r.respawnAt =
-        Date.now() +
-        RESOURCE_RESPAWN;
+  if (launching) return;
 
-      bot.cargo +=
-        r.value;
+  launching = true;
 
-      break;
-    }
-  }
+  myPlayer.launched = true;
 
-  convertBotFuel(
-    dt
+  myPlayer.finished = true;
+
+  burst(
+    myPlayer.x,
+    myPlayer.y,
+    myPlayer.color,
+    45
+  );
+
+  tone(
+    1200,
+    .35
   );
 
   if (
-    bot.powerup > 0 &&
-    Math.random() <
-      dt * .015
+    multiplayer
   ) {
 
-    bot.powerup--;
+    await syncMyPlayer();
 
-    bot.boosting =
-      true;
+    try {
 
-    bot.boostUntil =
-      now +
-      BOOST_DURATION;
+      await runTransaction(
+        roomGameRef(
+          "winnerUid"
+        ),
+        current => {
+
+          if (
+            current
+          ) return;
+
+          return myUid;
+
+        }
+      );
+
+    } catch {}
+
+  } else {
+
+    showSoloWin();
+
   }
 
-  if (
-    bot.boosting &&
-    now >
-      bot.boostUntil
-  ) {
+  launching = false;
 
-    bot.boosting =
-      false;
-  }
-
-  if (
-    bot.fuel >= MAX_FUEL &&
-    nearBotBase()
-  ) {
-
-    bot.launching =
-      true;
-
-    bot.launchAt =
-      now;
-  }
 }
 
 
-function nearBotBase() {
+// ============================================================
+// جایگاه Base
+// ============================================================
 
-  return Math.hypot(
-    bot.x -
-      bot.baseX,
+function getBasePosition(
+  uid
+) {
 
-    bot.y -
-      bot.baseY
-  ) <
-    BASE_RADIUS + 20;
+  const index =
+    Object.keys(
+      players
+    )
+      .indexOf(uid);
+
+  const positions = [
+
+    {
+      x: W * .18,
+      y: H * .50
+    },
+
+    {
+      x: W * .82,
+      y: H * .50
+    },
+
+    {
+      x: W * .50,
+      y: H * .25
+    },
+
+    {
+      x: W * .50,
+      y: H * .75
+    }
+
+  ];
+
+  return positions[
+    Math.max(
+      0,
+      index
+    ) % positions.length
+  ];
+
 }
 
 
-function convertBotFuel(
-  dt
+function getLaunchPad(
+  uid
+) {
+
+  const base =
+    getBasePosition(
+      uid
+    );
+
+  return {
+
+    x:
+      base.x,
+
+    y:
+      base.y
+
+  };
+
+}
+
+
+// ============================================================
+// Multiplayer sync
+// ============================================================
+
+async function syncPlayer(
+  timestamp
 ) {
 
   if (
-    bot.cargo <= 0 ||
-    bot.fuel >= MAX_FUEL ||
-    !nearBotBase()
-  ) {
-    return;
-  }
+    !multiplayer
+  ) return;
 
-  const amount =
-    Math.min(
-      bot.cargo,
-      28 * dt,
-      MAX_FUEL -
-        bot.fuel
-    );
+  if (
+    timestamp -
+    lastSync <
+    SYNC_INTERVAL
+  ) return;
 
-  bot.cargo -=
-    amount;
+  lastSync =
+    timestamp;
 
-  bot.fuel +=
-    amount;
+  await syncMyPlayer();
+
 }
 
 
-/* =========================================================
-   LAUNCH
-========================================================= */
-
-launchButton.addEventListener(
-  "click",
-  () => {
-
-    if (
-      !player ||
-      ended ||
-      player.launching
-    ) {
-      return;
-    }
-
-    if (
-      player.fuel <
-        MAX_FUEL ||
-      !atBase()
-    ) {
-      return;
-    }
-
-    player.launching =
-      true;
-
-    player.launchAt =
-      performance.now();
-
-    sound(
-      450,
-      .15
-    );
-
-    syncPlayer();
-  }
-);
-
-
-/* =========================================================
-   WINNER
-========================================================= */
-
-async function declareWinner() {
+async function syncMyPlayer() {
 
   if (
-    !online ||
-    !player ||
-    player.fuel <
-      MAX_FUEL
-  ) {
-    return;
-  }
+    !myPlayer ||
+    !myUid ||
+    !roomCode
+  ) return;
 
-  await runTransaction(
-    onlineWinner,
-    current => {
+  try {
 
-      if (
-        current
-      ) {
-        return;
+    await update(
+      roomGameRef(
+        `players/${myUid}`
+      ),
+      {
+
+        x:
+          myPlayer.x,
+
+        y:
+          myPlayer.y,
+
+        fuel:
+          myPlayer.fuel,
+
+        cargo:
+          myPlayer.cargo,
+
+        score:
+          myPlayer.score,
+
+        combo:
+          myPlayer.combo,
+
+        powerup:
+          myPlayer.powerup,
+
+        boostUntil:
+          myPlayer.boostUntil,
+
+        launched:
+          myPlayer.launched,
+
+        finished:
+          myPlayer.finished,
+
+        lastUpdate:
+          Date.now()
+
       }
+    );
 
-      return uid;
-    }
-  );
+  } catch (error) {
+
+    console.warn(
+      "Astra sync error:",
+      error
+    );
+
+  }
+
 }
 
 
-async function finishOnline(
-  won
+// ============================================================
+// Timer
+// ============================================================
+
+function updateTimer() {
+
+  if (
+    !multiplayer
+  ) {
+
+    if (
+      !window.soloStartedAt
+    ) {
+
+      window.soloStartedAt =
+        Date.now();
+
+    }
+
+    const elapsed =
+      (
+        Date.now() -
+        window.soloStartedAt
+      ) / 1000;
+
+    const left =
+      Math.max(
+        0,
+        MATCH_TIME -
+        elapsed
+      );
+
+    hudTimer.textContent =
+      formatTime(
+        left
+      );
+
+    if (
+      left <= 0
+    ) {
+
+      showSoloTimeUp();
+
+    }
+
+    return;
+
+  }
+
+  get(
+    roomGameRef()
+  )
+    .then(
+      snap => {
+
+        const state =
+          snap.val();
+
+        if (!state) return;
+
+        const left =
+          Math.max(
+            0,
+            (
+              Number(
+                state.endAt
+              ) -
+              Date.now()
+            ) / 1000
+          );
+
+        hudTimer.textContent =
+          formatTime(
+            left
+          );
+
+        if (
+          left <= 0 &&
+          state.status ===
+          "playing"
+        ) {
+
+          if (
+            Object.keys(
+              players
+            ).length
+          ) {
+
+            finishByTimeout();
+
+          }
+
+        }
+
+      }
+    )
+    .catch(() => {});
+
+}
+
+
+function formatTime(
+  seconds
+) {
+
+  seconds =
+    Math.max(
+      0,
+      Math.ceil(
+        seconds
+      )
+    );
+
+  const min =
+    Math.floor(
+      seconds / 60
+    );
+
+  const sec =
+    seconds % 60;
+
+  return `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+
+}
+
+
+// ============================================================
+// Timeout
+// ============================================================
+
+async function finishByTimeout() {
+
+  if (
+    !multiplayer
+  ) return;
+
+  try {
+
+    await runTransaction(
+      roomGameRef(
+        "status"
+      ),
+      current => {
+
+        if (
+          current !==
+          "playing"
+        ) return;
+
+        return "finished";
+
+      }
+    );
+
+  } catch {}
+
+}
+
+
+// ============================================================
+// نتیجه از شبکه
+// ============================================================
+
+function finishFromNetwork(
+  winnerUid
 ) {
 
   if (
-    ended
-  ) {
-    return;
-  }
+    gameFinished
+  ) return;
 
-  ended =
-    true;
+  gameFinished = true;
 
-  running =
-    false;
+  running = false;
 
-  await showResult(
+  paused = true;
+
+  const winner =
+    players[winnerUid];
+
+  const winnerName =
+    winner?.name ||
+    "برنده";
+
+  const won =
+    winnerUid ===
+    myUid;
+
+  tone(
+    won
+      ? 1300
+      : 300,
+    .3
+  );
+
+  showResult(
+    won,
+    winnerName
+  );
+
+  saveResult(
+    won
+  );
+
+}
+
+
+// ============================================================
+// نتیجه Solo
+// ============================================================
+
+function showSoloWin() {
+
+  if (
+    gameFinished
+  ) return;
+
+  gameFinished = true;
+
+  running = false;
+
+  paused = true;
+
+  tone(
+    1400,
+    .35
+  );
+
+  showResult(
+    true,
+    myName
+  );
+
+  saveResult(
+    true
+  );
+
+}
+
+
+function showSoloTimeUp() {
+
+  if (
+    gameFinished
+  ) return;
+
+  gameFinished = true;
+
+  running = false;
+
+  paused = true;
+
+  const won =
+    myPlayer.score >
+    players.ai.score;
+
+  showResult(
     won,
     won
-      ? "تو زودتر از همه وارد World 2 شدی! 🚀"
-      : "یک بازیکن دیگر زودتر به World 2 رسید."
+      ? myName
+      : "ربات"
   );
+
+  saveResult(
+    won
+  );
+
 }
 
 
-/* =========================================================
-   RESULT
-========================================================= */
+// ============================================================
+// ذخیره نتیجه
+// ============================================================
 
 let resultSaved =
   false;
 
-
-async function showResult(
-  won,
-  text
+async function saveResult(
+  won
 ) {
 
   if (
     resultSaved
-  ) {
-    return;
-  }
+  ) return;
 
-  resultSaved =
-    true;
-
-  ended =
-    true;
-
-  running =
-    false;
-
-  resultIcon.textContent =
-    won
-      ? "🏆"
-      : "💫";
-
-  resultTitle.textContent =
-    won
-      ? "WORLD 2"
-      : "مسابقه تمام شد";
-
-  resultText.textContent =
-    text;
-
-  resultStats.innerHTML = `
-
-    <div class="stat">
-      <b>${Math.floor(
-        player?.fuel || 0
-      )}%</b>
-      <span>سوخت</span>
-    </div>
-
-    <div class="stat">
-      <b>${Math.floor(
-        player?.cargo || 0
-      )}</b>
-      <span>Cargo</span>
-    </div>
-
-    <div class="stat">
-      <b>${online ? "🌐" : "🤖"}</b>
-      <span>${online ? "آنلاین" : "ربات"}</span>
-    </div>
-
-  `;
-
-  result.classList.remove(
-    "hidden"
-  );
+  resultSaved = true;
 
   try {
 
     await recordRoundResult(
-      username,
-      "astra",
+      myName,
+      GAME_ID,
       {
         won
       }
@@ -1819,375 +2555,520 @@ async function showResult(
       "Astra result error:",
       error
     );
+
   }
+
 }
 
 
-/* =========================================================
-   CHECK LAUNCH
-========================================================= */
+// ============================================================
+// Result UI
+// ============================================================
 
-function checkLaunch(
-  now
+function showResult(
+  won,
+  winnerName
 ) {
 
-  if (
-    !player ||
-    !player.launching
-  ) {
-    return;
-  }
-
-  if (
-    now -
-      player.launchAt <
-    3500
-  ) {
-    return;
-  }
-
-  if (
-    online
-  ) {
-
-    declareWinner();
-
-  } else {
-
-    showResult(
-      true,
-      "موشکت وارد World 2 شد! 🚀"
-    );
-  }
-}
-
-
-/* =========================================================
-   BOT WIN
-========================================================= */
-
-function checkBotWin(
-  now
-) {
-
-  if (
-    online ||
-    !bot ||
-    !bot.launching ||
-    ended
-  ) {
-    return;
-  }
-
-  if (
-    now -
-      bot.launchAt >=
-    3500
-  ) {
-
-    showResult(
-      false,
-      "ربات زودتر وارد World 2 شد!"
-    );
-  }
-}
-
-
-/* =========================================================
-   HUD
-========================================================= */
-
-function updateHUD() {
-
-  if (
-    !player
-  ) {
-    return;
-  }
-
-  fuelEl.textContent =
-    `${Math.floor(
-      player.fuel
-    )}%`;
-
-  cargoEl.textContent =
-    String(
-      Math.floor(
-        player.cargo
-      )
-    );
-
-  powerupEl.textContent =
-    String(
-      player.powerup
-    );
-
-
-  if (
-    player.launching
-  ) {
-
-    const left =
-      Math.max(
-        0,
-        4 -
-          Math.floor(
-            (performance.now() -
-              player.launchAt) /
-            1000
-          )
-      );
-
-    objectiveEl.textContent =
-      `🚀 پرتاب در ${left}...`;
-
-  } else if (
-    player.fuel >=
-      MAX_FUEL &&
-    atBase()
-  ) {
-
-    objectiveEl.textContent =
-      "🚀 پرتاب آماده است!";
-
-  } else if (
-    player.cargo > 0 &&
-    atBase()
-  ) {
-
-    objectiveEl.textContent =
-      "⛽ در حال تبدیل Cargo به سوخت";
-
-  } else if (
-    player.cargo > 0
-  ) {
-
-    objectiveEl.textContent =
-      "🏠 به Launch Pad برگرد";
-
-  } else {
-
-    objectiveEl.textContent =
-      "💎 منابع انرژی را جمع کن";
-  }
-
-
-  launchButton.classList.toggle(
-    "disabled",
-    !(
-      player.fuel >= MAX_FUEL &&
-      atBase() &&
-      !player.launching
+  const allPlayers =
+    Object.values(
+      players
     )
-  );
-}
-
-
-/* =========================================================
-   PLAYER CARDS
-========================================================= */
-
-function updatePlayerCards() {
-
-  playersEl.innerHTML =
-    "";
-
-  if (
-    !online
-  ) {
-
-    addPlayerCard(
-      player,
-      true
-    );
-
-    addPlayerCard(
-      bot,
-      false
-    );
-
-    return;
-  }
-
-  const entries =
-    Object.entries(
-      remotePlayers
-    );
-
-  entries.forEach(
-    ([id, p], index) => {
-
-      addPlayerCard(
-        {
-          ...p,
-          color:
-            colorFor(index)
-        },
-        id === uid
+      .filter(
+        p =>
+          p &&
+          p.uid !== "ai"
+      )
+      .sort(
+        (a,b) =>
+          b.score -
+          a.score
       );
-    }
-  );
-}
 
+  const cards =
+    allPlayers
+      .map(
+        p => `
 
-function addPlayerCard(
-  p,
-  mine
-) {
+          <div class="result-player">
 
-  if (
-    !p
-  ) {
-    return;
-  }
+            <div class="name">
+              ${p.uid === myUid ? "🔵 " : ""}
+              ${escapeHtml(p.name)}
+            </div>
 
-  const div =
-    document.createElement(
-      "div"
-    );
+            <div class="score">
+              ⭐ ${Math.round(
+                p.score || 0
+              )}
+            </div>
 
-  div.className =
-    "player-card";
+            <div>
+              ⛽ ${Math.round(
+                p.fuel || 0
+              )}%
+            </div>
 
-  div.innerHTML = `
+          </div>
 
-    <div
-      class="player-name"
-      style="color:${p.color || "#55eaff"}"
+        `
+      )
+      .join("");
+
+  result.innerHTML = `
+
+    <div class="result-title">
+      ${won
+        ? "🏆 تو برنده شدی!"
+        : "😅 بازی تمام شد"
+      }
+    </div>
+
+    <div class="result-sub">
+      🚀 ${escapeHtml(
+        winnerName
+      )} وارد World 2 شد
+    </div>
+
+    <div class="result-players">
+      ${cards}
+    </div>
+
+    <button
+      class="result-button"
+      id="astraAgain"
     >
-      ${mine ? "🚀 " : "🛸 "}
-      ${escapeHtml(
-        p.name || "بازیکن"
-      )}
-    </div>
+      🔄 دوباره بازی کن
+    </button>
 
-    <div class="fuel-bar">
-      <i
-        style="width:${clamp(
-          Number(
-            p.fuel || 0
-          ),
-          0,
-          100
-        )}%"
-      ></i>
-    </div>
-
-    <div
-      style="
-        margin-top:3px;
-        color:#8792b0;
-      "
+    <button
+      class="result-button secondary"
+      id="astraHome"
     >
-      ⛽ ${Math.floor(
-        Number(
-          p.fuel || 0
-        )
-      )}%
-    </div>
+      🏠 بازگشت به خانه
+    </button>
 
   `;
 
-  playersEl.appendChild(
-    div
+  result.classList.add(
+    "show"
   );
+
+  document
+    .getElementById(
+      "astraAgain"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+
+        window.location.reload();
+
+      }
+    );
+
+  document
+    .getElementById(
+      "astraHome"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+
+        window.location.href =
+          "../index.html";
+
+      }
+    );
+
 }
 
 
-/* =========================================================
-   DRAW BACKGROUND
-========================================================= */
+// ============================================================
+// Escape
+// ============================================================
 
-function drawBackground(
-  time
+function escapeHtml(
+  text
 ) {
 
-  ctx.fillStyle =
-    "#02040b";
-
-  ctx.fillRect(
-    0,
-    0,
-    W,
-    H
-  );
-
-
-  const glow =
-    ctx.createRadialGradient(
-      W * .25,
-      H * .25,
-      0,
-      W * .25,
-      H * .25,
-      Math.max(W,H) * .6
+  return String(
+    text || ""
+  )
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
     );
 
-  glow.addColorStop(
-    0,
-    "rgba(90,70,255,.18)"
-  );
-
-  glow.addColorStop(
-    1,
-    "rgba(90,70,255,0)"
-  );
-
-  ctx.fillStyle =
-    glow;
-
-  ctx.fillRect(
-    0,
-    0,
-    W,
-    H
-  );
+}
 
 
-  for (
-    const star of stars
+// ============================================================
+// HUD
+// ============================================================
+
+function updateHUD() {
+
+  const list =
+    Object.values(
+      players
+    )
+      .filter(
+        p =>
+          p &&
+          p.uid !== "ai"
+      );
+
+  playersHud.innerHTML =
+    list
+      .map(
+        p => `
+
+          <div
+            class="player-card ${
+              p.uid === myUid
+                ? "me"
+                : ""
+            }"
+          >
+
+            <div class="player-name">
+              ${p.uid === myUid
+                ? "🔵 "
+                : ""
+              }
+              ${escapeHtml(
+                p.name
+              )}
+            </div>
+
+            <div class="player-stats">
+              ⛽ ${Math.round(
+                p.fuel || 0
+              )}%
+              &nbsp;
+              📦 ${p.cargo || 0}
+              &nbsp;
+              ⭐ ${Math.round(
+                p.score || 0
+              )}
+            </div>
+
+          </div>
+
+        `
+      )
+      .join("");
+
+}
+
+
+// ============================================================
+// Combo
+// ============================================================
+
+function updateCombo(
+  dt
+) {
+
+  if (
+    comboTimer > 0
   ) {
 
-    ctx.globalAlpha =
-      star.a +
-      Math.sin(
-        time * .002 +
-        star.x
-      ) * .12;
+    comboTimer -= dt;
 
-    ctx.fillStyle =
-      "#ffffff";
+  } else {
 
-    ctx.beginPath();
+    combo = 0;
 
-    ctx.arc(
-      star.x,
-      star.y,
-      star.r,
-      0,
-      Math.PI * 2
+  }
+
+  myPlayer.combo =
+    combo;
+
+}
+
+
+// ============================================================
+// Effects
+// ============================================================
+
+function burst(
+  x,
+  y,
+  color,
+  count = 12
+) {
+
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
+
+    const angle =
+      Math.random() *
+      Math.PI *
+      2;
+
+    const speed =
+      50 +
+      Math.random() *
+      160;
+
+    particles.push({
+
+      x,
+
+      y,
+
+      vx:
+        Math.cos(
+          angle
+        ) *
+        speed,
+
+      vy:
+        Math.sin(
+          angle
+        ) *
+        speed,
+
+      life:
+        1,
+
+      color
+
+    });
+
+  }
+
+}
+
+
+function updateEffects(
+  dt
+) {
+
+  particles.forEach(
+    p => {
+
+      p.x +=
+        p.vx *
+        dt;
+
+      p.y +=
+        p.vy *
+        dt;
+
+      p.vx *=
+        .92;
+
+      p.vy *=
+        .92;
+
+      p.life -=
+        dt *
+        1.5;
+
+    }
+  );
+
+  particles =
+    particles.filter(
+      p =>
+        p.life > 0
     );
 
-    ctx.fill();
-  }
+}
+
+
+// ============================================================
+// Drawing
+// ============================================================
+
+function drawGame(
+  timestamp
+) {
+
+  drawBackground(
+    timestamp / 1000
+  );
+
+  drawLaunchPads();
+
+  drawResources();
+
+  drawPowerups();
+
+  drawPlayers();
+
+  drawEffects();
+
+}
+
+
+// ============================================================
+// Background
+// ============================================================
+
+function drawBackground(
+  t
+) {
+
+  ctx.clearRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+  ctx.fillStyle =
+    "#03040b";
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+  const glow1 =
+    ctx.createRadialGradient(
+      W * .2,
+      H * .25,
+      0,
+      W * .2,
+      H * .25,
+      Math.max(W,H) * .5
+    );
+
+  glow1.addColorStop(
+    0,
+    "rgba(79,124,255,.18)"
+  );
+
+  glow1.addColorStop(
+    1,
+    "rgba(79,124,255,0)"
+  );
+
+  ctx.fillStyle =
+    glow1;
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  const glow2 =
+    ctx.createRadialGradient(
+      W * .8,
+      H * .75,
+      0,
+      W * .8,
+      H * .75,
+      Math.max(W,H) * .45
+    );
+
+  glow2.addColorStop(
+    0,
+    "rgba(155,92,255,.16)"
+  );
+
+  glow2.addColorStop(
+    1,
+    "rgba(155,92,255,0)"
+  );
+
+  ctx.fillStyle =
+    glow2;
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  stars.forEach(
+    s => {
+
+      const a =
+        s.alpha +
+        Math.sin(
+          t * 2 +
+          s.x
+        ) *
+        .15;
+
+      ctx.globalAlpha =
+        Math.max(
+          .1,
+          a
+        );
+
+      ctx.beginPath();
+
+      ctx.arc(
+        s.x,
+        s.y,
+        s.r,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        "#fff";
+
+      ctx.fill();
+
+    }
+  );
 
   ctx.globalAlpha =
     1;
 
 
-  /*
-    شبکه فضایی
-  */
-
   ctx.strokeStyle =
-    "rgba(100,140,255,.045)";
+    "rgba(255,255,255,.035)";
 
-  const grid = 50;
+  ctx.lineWidth =
+    1;
+
+  const gap =
+    Math.max(
+      35,
+      Math.min(
+        W,
+        H
+      ) / 10
+    );
 
   for (
     let x = 0;
     x < W;
-    x += grid
+    x += gap
   ) {
 
     ctx.beginPath();
@@ -2203,12 +3084,13 @@ function drawBackground(
     );
 
     ctx.stroke();
+
   }
 
   for (
     let y = 0;
     y < H;
-    y += grid
+    y += gap
   ) {
 
     ctx.beginPath();
@@ -2224,892 +3106,939 @@ function drawBackground(
     );
 
     ctx.stroke();
+
   }
 
+}
 
-  /*
-    سیارات
-  */
 
-  const planets = [
-    [
-      W * .18,
-      H * .18,
-      Math.min(W,H) * .1,
-      "#5540d9"
-    ],
+// ============================================================
+// Launch Pads
+// ============================================================
 
-    [
-      W * .83,
-      H * .75,
-      Math.min(W,H) * .08,
-      "#19579d"
-    ]
-  ];
+function drawLaunchPads() {
 
-  for (
-    const [
-      x,
-      y,
-      r,
-      color
-    ] of planets
-  ) {
+  Object.values(
+    players
+  )
+    .filter(
+      p =>
+        p &&
+        p.uid !== "ai"
+    )
+    .forEach(
+      p => {
 
-    const g =
-      ctx.createRadialGradient(
-        x-r*.3,
-        y-r*.3,
+        const pad =
+          getLaunchPad(
+            p.uid
+          );
+
+        ctx.beginPath();
+
+        ctx.arc(
+          pad.x,
+          pad.y,
+          30,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fillStyle =
+          "rgba(255,255,255,.035)";
+
+        ctx.fill();
+
+        ctx.beginPath();
+
+        ctx.arc(
+          pad.x,
+          pad.y,
+          25,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.strokeStyle =
+          p.fuel >= 100
+            ? "#ffd34f"
+            : p.color;
+
+        ctx.globalAlpha =
+          p.fuel >= 100
+            ? .95
+            : .4;
+
+        ctx.lineWidth =
+          3;
+
+        ctx.stroke();
+
+        ctx.globalAlpha =
+          1;
+
+        ctx.fillStyle =
+          "#fff";
+
+        ctx.font =
+          "bold 10px Arial";
+
+        ctx.textAlign =
+          "center";
+
+        ctx.fillText(
+          p.fuel >= 100
+            ? "LAUNCH"
+            : "BASE",
+          pad.x,
+          pad.y + 4
+        );
+
+      }
+    );
+
+}
+
+
+// ============================================================
+// Resources
+// ============================================================
+
+function drawResources() {
+
+  resources.forEach(
+    r => {
+
+      const rare =
+        r.value >= 25;
+
+      const radius =
+        rare
+          ? 14
+          : 10;
+
+      const pulse =
+        1 +
+        Math.sin(
+          worldTime * 3 +
+          r.x
+        ) *
+        .12;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        r.x,
+        r.y,
+        radius * pulse,
         0,
-        x,
-        y,
-        r
+        Math.PI * 2
       );
 
-    g.addColorStop(
-      0,
-      "#ffffff"
+      ctx.fillStyle =
+        rare
+          ? "#ffd34f"
+          : "#4fd1ff";
+
+      ctx.shadowColor =
+        ctx.fillStyle;
+
+      ctx.shadowBlur =
+        rare
+          ? 22
+          : 12;
+
+      ctx.fill();
+
+      ctx.shadowBlur =
+        0;
+
+      ctx.fillStyle =
+        "#05060f";
+
+      ctx.font =
+        "bold 8px Arial";
+
+      ctx.textAlign =
+        "center";
+
+      ctx.fillText(
+        r.value,
+        r.x,
+        r.y + 3
+      );
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// Powerups
+// ============================================================
+
+function drawPowerups() {
+
+  powerups.forEach(
+    p => {
+
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        13,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        "#3ecf8e";
+
+      ctx.shadowColor =
+        "#3ecf8e";
+
+      ctx.shadowBlur =
+        18;
+
+      ctx.fill();
+
+      ctx.shadowBlur =
+        0;
+
+      ctx.fillStyle =
+        "#05060f";
+
+      ctx.font =
+        "bold 14px Arial";
+
+      ctx.textAlign =
+        "center";
+
+      ctx.fillText(
+        "⚡",
+        p.x,
+        p.y + 5
+      );
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// Players
+// ============================================================
+
+function drawPlayers() {
+
+  Object.values(
+    players
+  )
+    .filter(Boolean)
+    .forEach(
+      p => {
+
+        drawShip(
+          p
+        );
+
+      }
     );
 
-    g.addColorStop(
-      .2,
-      color
-    );
+}
 
-    g.addColorStop(
-      1,
-      "rgba(0,0,0,0)"
-    );
 
-    ctx.globalAlpha =
-      .25;
+function drawShip(
+  p
+) {
 
-    ctx.fillStyle =
-      g;
+  const now =
+    Date.now();
+
+  const boosted =
+    Number(
+      p.boostUntil || 0
+    ) > now;
+
+  const size =
+    18;
+
+  ctx.save();
+
+  ctx.translate(
+    p.x,
+    p.y
+  );
+
+  ctx.rotate(
+    Math.sin(
+      worldTime
+    ) *
+    .05
+  );
+
+
+  // Trail
+  ctx.globalAlpha =
+    .22;
+
+  ctx.fillStyle =
+    p.color;
+
+  for (
+    let i = 1;
+    i <= 5;
+    i++
+  ) {
 
     ctx.beginPath();
 
     ctx.arc(
-      x,
-      y,
-      r,
+      -i * 5,
+      0,
+      Math.max(
+        2,
+        8 - i
+      ),
       0,
       Math.PI * 2
     );
 
     ctx.fill();
 
-    ctx.globalAlpha =
-      1;
-  }
-}
-
-
-/* =========================================================
-   DRAW BASE
-========================================================= */
-
-function drawBase(
-  p,
-  color,
-  label
-) {
-
-  if (
-    !p
-  ) {
-    return;
   }
 
-  ctx.save();
+  ctx.globalAlpha =
+    1;
 
-  ctx.shadowColor =
-    color;
 
-  ctx.shadowBlur =
-    20;
-
-  ctx.strokeStyle =
-    color;
-
-  ctx.lineWidth =
-    3;
-
-  ctx.beginPath();
-
-  ctx.arc(
-    p.x,
-    p.y,
-    BASE_RADIUS,
-    0,
-    Math.PI * 2
-  );
-
-  ctx.stroke();
-
-  ctx.shadowBlur =
-    0;
-
-  ctx.fillStyle =
-    "rgba(255,255,255,.04)";
-
-  ctx.beginPath();
-
-  ctx.arc(
-    p.x,
-    p.y,
-    24,
-    0,
-    Math.PI * 2
-  );
-
-  ctx.fill();
-
-  ctx.strokeStyle =
-    color;
-
-  for (
-    let i = 0;
-    i < 4;
-    i++
-  ) {
-
-    const a =
-      i *
-      Math.PI / 2;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      p.x +
-        Math.cos(a) *
-        18,
-
-      p.y +
-        Math.sin(a) *
-        18
-    );
-
-    ctx.lineTo(
-      p.x +
-        Math.cos(a) *
-        32,
-
-      p.y +
-        Math.sin(a) *
-        32
-    );
-
-    ctx.stroke();
-  }
-
-  ctx.fillStyle =
-    "#dce7ff";
-
-  ctx.font =
-    "bold 9px Tahoma";
-
-  ctx.textAlign =
-    "center";
-
-  ctx.fillText(
-    label,
-    p.x,
-    p.y +
-      BASE_RADIUS +
-      14
-  );
-
-  ctx.restore();
-}
-
-
-/* =========================================================
-   DRAW RESOURCE
-========================================================= */
-
-function drawResource(
-  r,
-  time
-) {
-
-  if (
-    !r.active
-  ) {
-    return;
-  }
-
-  const pulse =
-    1 +
-    Math.sin(
-      time * .004 +
-      (r.phase || 0)
-    ) * .12;
-
-  ctx.save();
-
-  ctx.translate(
-    r.x,
-    r.y
-  );
-
-  ctx.scale(
-    pulse,
-    pulse
-  );
-
-  ctx.shadowColor =
-    "#4deaff";
-
-  ctx.shadowBlur =
-    18;
-
-  ctx.fillStyle =
-    "#4deaff";
-
-  ctx.beginPath();
-
-  for (
-    let i = 0;
-    i < 6;
-    i++
-  ) {
-
-    const angle =
-      -Math.PI/2 +
-      i *
-        Math.PI/3;
-
-    const radius =
-      i % 2 === 0
-        ? 10
-        : 6;
-
-    const x =
-      Math.cos(angle) *
-      radius;
-
-    const y =
-      Math.sin(angle) *
-      radius;
-
-    if (
-      i === 0
-    ) {
-      ctx.moveTo(
-        x,
-        y
-      );
-    } else {
-      ctx.lineTo(
-        x,
-        y
-      );
-    }
-  }
-
-  ctx.closePath();
-
-  ctx.fill();
-
-  ctx.restore();
-}
-
-
-/* =========================================================
-   DRAW SHIP
-========================================================= */
-
-function drawShip(
-  p,
-  mine
-) {
-
-  if (
-    !p
-  ) {
-    return;
-  }
-
-  ctx.save();
-
-  /*
-    Trail
-  */
-
-  if (
-    p.trail
-  ) {
-
-    p.trail.forEach(
-      (point, index) => {
-
-        ctx.globalAlpha =
-          index /
-          p.trail.length *
-          .3;
-
-        ctx.fillStyle =
-          p.color ||
-          "#55eaff";
-
-        ctx.beginPath();
-
-        ctx.arc(
-          point.x,
-          point.y,
-          2 + index / 4,
-          0,
-          Math.PI * 2
-        );
-
-        ctx.fill();
-      }
-    );
-
-    ctx.globalAlpha =
-      1;
-  }
-
-
-  /*
-    شعله موشک
-  */
-
-  if (
-    p.launching
-  ) {
-
-    const flame =
-      20 +
-      Math.random() * 12;
-
-    const g =
-      ctx.createLinearGradient(
-        p.x,
-        p.y + 8,
-        p.x,
-        p.y + flame
-      );
-
-    g.addColorStop(
-      0,
-      "#ffffff"
-    );
-
-    g.addColorStop(
-      .3,
-      "#4deaff"
-    );
-
-    g.addColorStop(
-      1,
-      "rgba(80,80,255,0)"
-    );
-
-    ctx.fillStyle =
-      g;
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      p.x - 6,
-      p.y + 7
-    );
-
-    ctx.lineTo(
-      p.x,
-      p.y + flame
-    );
-
-    ctx.lineTo(
-      p.x + 6,
-      p.y + 7
-    );
-
-    ctx.closePath();
-
-    ctx.fill();
-  }
-
-
-  ctx.shadowColor =
-    p.color ||
-    "#55eaff";
-
-  ctx.shadowBlur =
-    mine ? 24 : 13;
-
-  ctx.fillStyle =
-    p.color ||
-    "#55eaff";
-
+  // Engine
   ctx.beginPath();
 
   ctx.moveTo(
-    p.x,
-    p.y - 16
+    -size,
+    0
   );
 
   ctx.lineTo(
-    p.x - 11,
-    p.y + 11
+    -size - 15 -
+      (
+        boosted
+          ? Math.random() * 8
+          : 0
+      ),
+    -6
   );
 
   ctx.lineTo(
-    p.x,
-    p.y + 6
-  );
-
-  ctx.lineTo(
-    p.x + 11,
-    p.y + 11
+    -size - 15 -
+      (
+        boosted
+          ? Math.random() * 8
+          : 0
+      ),
+    6
   );
 
   ctx.closePath();
+
+  ctx.fillStyle =
+    boosted
+      ? "#ffd34f"
+      : "#ff7a59";
+
+  ctx.shadowColor =
+    ctx.fillStyle;
+
+  ctx.shadowBlur =
+    boosted
+      ? 20
+      : 10;
 
   ctx.fill();
 
   ctx.shadowBlur =
     0;
 
-  ctx.fillStyle =
-    "#e8ffff";
 
+  // Ship body
+  ctx.beginPath();
+
+  ctx.moveTo(
+    size + 8,
+    0
+  );
+
+  ctx.lineTo(
+    -size,
+    -size * .65
+  );
+
+  ctx.lineTo(
+    -size * .65,
+    0
+  );
+
+  ctx.lineTo(
+    -size,
+    size * .65
+  );
+
+  ctx.closePath();
+
+  ctx.fillStyle =
+    p.color;
+
+  ctx.shadowColor =
+    p.color;
+
+  ctx.shadowBlur =
+    boosted
+      ? 25
+      : 12;
+
+  ctx.fill();
+
+  ctx.shadowBlur =
+    0;
+
+
+  // Cockpit
   ctx.beginPath();
 
   ctx.arc(
-    p.x,
-    p.y - 4,
     4,
+    0,
+    5,
     0,
     Math.PI * 2
   );
 
+  ctx.fillStyle =
+    "#eaf0ff";
+
   ctx.fill();
 
 
-  /*
-    اسم
-  */
+  // Shield
+  if (
+    boosted
+  ) {
 
+    ctx.beginPath();
+
+    ctx.arc(
+      0,
+      0,
+      size + 8,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.strokeStyle =
+      "#3ecf8e";
+
+    ctx.globalAlpha =
+      .65;
+
+    ctx.lineWidth =
+      2;
+
+    ctx.stroke();
+
+    ctx.globalAlpha =
+      1;
+
+  }
+
+  ctx.restore();
+
+
+  // Name
   ctx.fillStyle =
-    "#eaf2ff";
+    "#fff";
 
   ctx.font =
-    "bold 9px Tahoma";
+    "bold 11px Arial";
 
   ctx.textAlign =
     "center";
 
   ctx.fillText(
-    p.name || "بازیکن",
+    p.name,
     p.x,
-    p.y - 24
+    p.y - 27
   );
 
 
-  /*
-    سوخت کوچک
-  */
+  // Cargo
+  ctx.font =
+    "9px Arial";
 
   ctx.fillStyle =
-    "rgba(255,255,255,.12)";
+    "#aeb7df";
 
-  ctx.fillRect(
-    p.x - 18,
-    p.y + 18,
-    36,
-    4
+  ctx.fillText(
+    `⛽ ${Math.round(
+      p.fuel || 0
+    )}%  📦 ${
+      p.cargo || 0
+    }`,
+    p.x,
+    p.y + 32
   );
 
-  ctx.fillStyle =
-    "#55eaff";
+}
 
-  ctx.fillRect(
-    p.x - 18,
-    p.y + 18,
-    36 *
-      clamp(
-        Number(
-          p.fuel || 0
-        ) / 100,
+
+// ============================================================
+// Effects
+// ============================================================
+
+function drawEffects() {
+
+  particles.forEach(
+    p => {
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          p.life
+        );
+
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        2.5,
         0,
-        1
-      ),
-    4
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        p.color;
+
+      ctx.fill();
+
+    }
   );
 
-  ctx.restore();
+  ctx.globalAlpha =
+    1;
+
 }
 
 
-/* =========================================================
-   DRAW
-========================================================= */
+// ============================================================
+// Boost
+// ============================================================
 
-function draw(
-  time
-) {
+function activateBoost() {
 
-  drawBackground(
-    time
+  if (
+    !myPlayer
+  ) return;
+
+  myPlayer.boostUntil =
+    Date.now() +
+    BOOST_TIME *
+    1000;
+
+  powerupIndicator.classList.add(
+    "active"
   );
 
-
-  /*
-    پایگاه‌ها
-  */
-
-  if (
-    online
-  ) {
-
-    const ids =
-      playerIds();
-
-    ids.forEach(
-      (id, index) => {
-
-        const p =
-          remotePlayers[id];
-
-        const base =
-          baseFor(
-            index,
-            Math.max(
-              1,
-              ids.length
-            )
-          );
-
-        drawBase(
-          base,
-          colorFor(index),
-          id === uid
-            ? "Launch Pad تو"
-            : "Launch Pad"
-        );
-      }
-    );
-
-  } else {
-
-    drawBase(
-      {
-        x: player.baseX,
-        y: player.baseY
-      },
-      player.color,
-      "Launch Pad تو"
-    );
-
-    drawBase(
-      {
-        x: bot.baseX,
-        y: bot.baseY
-      },
-      bot.color,
-      "Launch Pad ربات"
-    );
-  }
-
-
-  /*
-    منابع
-  */
-
-  resources.forEach(
-    r =>
-      drawResource(
-        r,
-        time
-      )
+  tone(
+    1000,
+    .12
   );
 
-
-  /*
-    بازیکنان آنلاین
-  */
-
-  if (
-    online
-  ) {
-
-    const ids =
-      playerIds();
-
-    ids.forEach(
-      (id, index) => {
-
-        if (
-          id === uid
-        ) {
-          return;
-        }
-
-        const p =
-          remotePlayers[id];
-
-        if (
-          !p
-        ) {
-          return;
-        }
-
-        drawShip(
-          {
-            ...p,
-
-            color:
-              colorFor(index),
-
-            trail: []
-          },
-          false
-        );
-      }
-    );
-  }
-
-
-  /*
-    ربات
-  */
-
-  if (
-    !online &&
-    bot
-  ) {
-
-    drawShip(
-      bot,
-      false
-    );
-  }
-
-
-  /*
-    بازیکن خودمان
-  */
-
-  if (
-    player
-  ) {
-
-    drawShip(
-      player,
-      true
-    );
-  }
-}
-
-
-/* =========================================================
-   GAME LOOP
-========================================================= */
-
-function update(
-  dt,
-  now
-) {
-
-  if (
-    !running ||
-    ended ||
-    !player
-  ) {
-    return;
-  }
-
-
-  updatePlayer(
-    dt,
-    now
-  );
-
-
-  if (
-    online
-  ) {
-
-    for (
-      const r of resources
-    ) {
+  setTimeout(
+    () => {
 
       if (
-        r.active
+        Date.now() >=
+        myPlayer.boostUntil
       ) {
 
-        claimOnline(
-          r
+        powerupIndicator.classList.remove(
+          "active"
         );
+
       }
-    }
 
-    updateOnlineRespawns();
-
-  } else {
-
-    updateLocalRespawns();
-
-    for (
-      const r of resources
-    ) {
-
-      claimLocal(
-        r
-      );
-    }
-
-    updateBot(
-      dt,
-      now
-    );
-  }
-
-
-  convertFuel(
-    dt
+    },
+    BOOST_TIME *
+      1000
   );
-
-
-  syncPlayer();
-
-  checkLaunch(
-    now
-  );
-
-  checkBotWin(
-    now
-  );
-
-  updateHUD();
-
-  updatePlayerCards();
-}
-
-
-function loop(
-  time
-) {
-
-  const dt =
-    Math.min(
-      .05,
-      (time -
-        lastFrame) /
-        1000
-    );
-
-  lastFrame =
-    time;
-
-  update(
-    dt,
-    time
-  );
-
-  draw(
-    time
-  );
-
-  requestAnimationFrame(
-    loop
-  );
-}
-
-
-/* =========================================================
-   AUDIO
-========================================================= */
-
-function sound(
-  frequency,
-  duration
-) {
 
   if (
-    muted
+    multiplayer
   ) {
-    return;
+
+    syncMyPlayer();
+
   }
 
-  try {
-
-    if (
-      !audio
-    ) {
-
-      audio =
-        new (
-          window.AudioContext ||
-          window.webkitAudioContext
-        )();
-    }
-
-    const oscillator =
-      audio.createOscillator();
-
-    const gain =
-      audio.createGain();
-
-    oscillator.frequency.value =
-      frequency;
-
-    oscillator.type =
-      "sine";
-
-    gain.gain.setValueAtTime(
-      .07,
-      audio.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      .001,
-      audio.currentTime +
-        duration
-    );
-
-    oscillator.connect(
-      gain
-    );
-
-    gain.connect(
-      audio.destination
-    );
-
-    oscillator.start();
-
-    oscillator.stop(
-      audio.currentTime +
-        duration
-    );
-
-  } catch {}
 }
 
 
-muteButton.addEventListener(
-  "click",
-  () => {
+// ============================================================
+// Buttons
+// ============================================================
 
-    muted =
-      !muted;
+document
+  .getElementById("p1Boost")
+  .addEventListener(
+    "pointerdown",
+    e => {
 
-    muteButton.textContent =
-      muted
-        ? "🔇"
-        : "🔊";
+      e.preventDefault();
+
+      activateBoost();
+
+    }
+  );
+
+document
+  .getElementById("p2Boost")
+  .addEventListener(
+    "pointerdown",
+    e => {
+
+      e.preventDefault();
+
+      activateBoost();
+
+    }
+  );
+
+
+// ============================================================
+// Joystick
+// ============================================================
+
+function setupJoystick(
+  baseId,
+  knobId,
+  control
+) {
+
+  const base =
+    document.getElementById(
+      baseId
+    );
+
+  const knob =
+    document.getElementById(
+      knobId
+    );
+
+  let active =
+    false;
+
+  let pointerId =
+    null;
+
+  let origin = {
+    x: 0,
+    y: 0
+  };
+
+
+  function start(e) {
+
+    if (
+      active
+    ) return;
+
+    active =
+      true;
+
+    pointerId =
+      e.pointerId;
+
+    base.setPointerCapture(
+      pointerId
+    );
+
+    const rect =
+      base.getBoundingClientRect();
+
+    origin.x =
+      rect.left +
+      rect.width / 2;
+
+    origin.y =
+      rect.top +
+      rect.height / 2;
+
+    base.classList.add(
+      "pressed"
+    );
+
+    move(e);
+
+  }
+
+
+  function move(e) {
+
+    if (
+      !active ||
+      e.pointerId !==
+      pointerId
+    ) return;
+
+    e.preventDefault();
+
+    const rect =
+      base.getBoundingClientRect();
+
+    const max =
+      rect.width *
+      .38;
+
+    let dx =
+      e.clientX -
+      origin.x;
+
+    let dy =
+      e.clientY -
+      origin.y;
+
+    const distanceValue =
+      Math.hypot(
+        dx,
+        dy
+      );
+
+    if (
+      distanceValue >
+      max
+    ) {
+
+      dx =
+        dx /
+        distanceValue *
+        max;
+
+      dy =
+        dy /
+        distanceValue *
+        max;
+
+    }
+
+    const dead =
+      max *
+      .12;
+
+    if (
+      distanceValue <
+      dead
+    ) {
+
+      control.x =
+        0;
+
+      control.y =
+        0;
+
+      knob.style.transform =
+        "translate(0,0)";
+
+      return;
+
+    }
+
+    control.x =
+      dx / max;
+
+    control.y =
+      dy / max;
+
+    knob.style.transform =
+      `translate(${dx}px, ${dy}px)`;
+
+  }
+
+
+  function end(e) {
+
+    if (
+      e.pointerId !==
+      pointerId
+    ) return;
+
+    active =
+      false;
+
+    pointerId =
+      null;
+
+    control.x =
+      0;
+
+    control.y =
+      0;
+
+    knob.style.transform =
+      "translate(0,0)";
+
+    base.classList.remove(
+      "pressed"
+    );
+
+  }
+
+
+  base.addEventListener(
+    "pointerdown",
+    start,
+    {
+      passive: false
+    }
+  );
+
+  base.addEventListener(
+    "pointermove",
+    move,
+    {
+      passive: false
+    }
+  );
+
+  base.addEventListener(
+    "pointerup",
+    end
+  );
+
+  base.addEventListener(
+    "pointercancel",
+    end
+  );
+
+  base.addEventListener(
+    "lostpointercapture",
+    () => {
+
+      active =
+        false;
+
+      pointerId =
+        null;
+
+      control.x =
+        0;
+
+      control.y =
+        0;
+
+      knob.style.transform =
+        "translate(0,0)";
+
+      base.classList.remove(
+        "pressed"
+      );
+
+    }
+  );
+
+  base.style.touchAction =
+    "none";
+
+}
+
+
+setupJoystick(
+  "p1JoyBase",
+  "p1JoyKnob",
+  controls.p1
+);
+
+setupJoystick(
+  "p2JoyBase",
+  "p2JoyKnob",
+  controls.p2
+);
+
+
+// ============================================================
+// Keyboard
+// ============================================================
+
+const keys = {};
+
+window.addEventListener(
+  "keydown",
+  e => {
+
+    keys[e.key.toLowerCase()] =
+      true;
+
+    updateKeyboard();
+
+  }
+);
+
+window.addEventListener(
+  "keyup",
+  e => {
+
+    keys[e.key.toLowerCase()] =
+      false;
+
+    updateKeyboard();
+
   }
 );
 
 
-/* =========================================================
-   FULLSCREEN
-========================================================= */
+function updateKeyboard() {
 
-fullscreenButton.addEventListener(
+  let x = 0;
+
+  let y = 0;
+
+  if (
+    keys["a"] ||
+    keys["arrowleft"]
+  ) x--;
+
+  if (
+    keys["d"] ||
+    keys["arrowright"]
+  ) x++;
+
+  if (
+    keys["w"] ||
+    keys["arrowup"]
+  ) y--;
+
+  if (
+    keys["s"] ||
+    keys["arrowdown"]
+  ) y++;
+
+  controls.p1.x =
+    x;
+
+  controls.p1.y =
+    y;
+
+}
+
+
+// ============================================================
+// Fullscreen
+// ============================================================
+
+fullscreenBtn.addEventListener(
   "click",
   async () => {
 
@@ -3125,349 +4054,187 @@ fullscreenButton.addEventListener(
       } else {
 
         await document.exitFullscreen();
+
       }
 
     } catch {}
+
   }
 );
 
 
-/* =========================================================
-   BACK
-========================================================= */
+// ============================================================
+// Landscape
+// ============================================================
 
-backButton.addEventListener(
-  "click",
-  () => {
+function checkOrientation() {
 
-    if (
-      online
-    ) {
+  const width =
+    window.innerWidth;
 
-      location.href =
-        "../lobby.html";
+  const height =
+    window.innerHeight;
 
-    } else {
-
-      location.href =
-        "../index.html";
-    }
-  }
-);
-
-
-/* =========================================================
-   ORIENTATION
-========================================================= */
-
-function orientation() {
+  const mobileLike =
+    Math.min(
+      width,
+      height
+    ) < 800;
 
   const portrait =
-    innerHeight >
-    innerWidth;
+    height >
+    width;
+
+  const isPortraitMobile =
+    mobileLike &&
+    portrait;
 
   rotateScreen.classList.toggle(
     "show",
-    portrait
+    isPortraitMobile
   );
 
   if (
-    portrait
+    isPortraitMobile
   ) {
 
-    running =
-      false;
+    paused = true;
 
   } else if (
-    player &&
-    !ended
+    running &&
+    !countdownRunning
   ) {
 
-    running =
-      true;
+    paused = false;
 
-    lastFrame =
-      performance.now();
   }
+
+}
+
+
+function handleResize() {
+
+  checkOrientation();
+
+  requestAnimationFrame(
+    resizeCanvas
+  );
+
 }
 
 
 window.addEventListener(
   "resize",
-  orientation
+  handleResize
 );
 
 window.addEventListener(
   "orientationchange",
-  orientation
+  handleResize
 );
 
-
-/* =========================================================
-   START
-========================================================= */
-
-async function start() {
-
-  try {
-
-    const user =
-      await waitForUser();
-
-    if (
-      !user
-    ) {
-
-      location.href =
-        "../index.html";
-
-      return;
-    }
-
-
-    uid =
-      currentUid();
-
-    username =
-      getSavedName() ||
-      user.displayName ||
-      "بازیکن";
-
-
-    resize();
-
-
-    if (
-      online
-    ) {
-
-      /*
-        ONLINE
-      */
-
-      messageTitle.textContent =
-        "🌐 بازی آنلاین";
-
-      messageText.textContent =
-        "همه بازیکنان وارد میدان می‌شوند";
-
-      await initOnlineResources();
-
-      await initOnlinePlayer();
-
-      /*
-        بعد از ساخت player، snapshot فعلی
-        را هم می‌گیریم.
-      */
-
-      const snap =
-        await get(
-          onlinePlayers
-        );
-
-      remotePlayers =
-        snap.val() || {};
-
-      const ids =
-        playerIds();
-
-      const index =
-        Math.max(
-          0,
-          ids.indexOf(uid)
-        );
-
-      const base =
-        baseFor(
-          index,
-          Math.max(
-            1,
-            ids.length
-          )
-        );
-
-      player =
-        makePlayer(
-          uid,
-          username,
-          index,
-          Math.max(
-            1,
-            ids.length
-          )
-        );
-
-      /*
-        موقعیت را از Firebase می‌گیریم
-        تا هنگام ورود بازیکن جابه‌جا نشود.
-      */
-
-      const own =
-        remotePlayers[uid];
-
-      if (
-        own
-      ) {
-
-        player.x =
-          Number(
-            own.x ??
-            base.x
-          );
-
-        player.y =
-          Number(
-            own.y ??
-            base.y
-          );
-
-        player.baseX =
-          base.x;
-
-        player.baseY =
-          base.y;
-
-        player.fuel =
-          Number(
-            own.fuel || 0
-          );
-
-        player.cargo =
-          Number(
-            own.cargo || 0
-          );
-
-        player.powerup =
-          Number(
-            own.powerup || 0
-          );
-      }
-
-      listenOnline();
-
-      hideMessage(
-        "💎 منابع را جمع کن!"
-      );
-
-    } else {
-
-      /*
-        SOLO
-      */
-
-      messageTitle.textContent =
-        "🤖 تک‌نفره";
-
-      messageText.textContent =
-        "از ربات زودتر به World 2 برس";
-
-      createLocalResources();
-
-      player =
-        makePlayer(
-          "me",
-          username,
-          0,
-          2
-        );
-
-      player.color =
-        "#4f8cff";
-
-      createBot();
-
-      hideMessage(
-        "💎 منابع را جمع کن!"
-      );
-    }
-
-
-    running =
-      true;
-
-    orientation();
-
-    updatePlayerCards();
-
-    requestAnimationFrame(
-      loop
-    );
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "ASTRA ERROR:",
-      error
-    );
-
-    messageTitle.textContent =
-      "⚠️ خطا";
-
-    messageText.textContent =
-      "Astra اجرا نشد. صفحه را دوباره باز کن.";
-
-  }
-}
-
-
-function hideMessage(
-  text
+if (
+  window.visualViewport
 ) {
 
-  messageText.textContent =
-    text;
-
-  setTimeout(
-    () => {
-
-      startMessage.classList.add(
-        "hidden"
-      );
-
-    },
-    1700
+  window.visualViewport.addEventListener(
+    "resize",
+    handleResize
   );
+
 }
 
 
-/* =========================================================
-   VISIBILITY
-========================================================= */
+// ============================================================
+// Hide overlay
+// ============================================================
 
-document.addEventListener(
-  "visibilitychange",
-  () => {
+function hideOverlay() {
 
-    if (
-      document.hidden
-    ) {
+  overlay.classList.add(
+    "hidden"
+  );
 
-      running =
-        false;
+}
 
-    } else if (
-      player &&
-      !ended &&
-      innerWidth >
-        innerHeight
-    ) {
 
-      running =
-        true;
+// ============================================================
+// Waiting
+// ============================================================
 
-      lastFrame =
-        performance.now();
-    }
+function startWaitingLoop() {
+
+  if (
+    !multiplayer
+  ) return;
+
+  setInterval(
+    async () => {
+
+      if (
+        !countdownRunning
+      ) {
+
+        try {
+
+          await tryStartRoomGame();
+
+        } catch {}
+
+      }
+
+    },
+    1200
+  );
+
+}
+
+
+// ============================================================
+// Init
+// ============================================================
+
+async function init() {
+
+  const user =
+    await waitForUser();
+
+  myName =
+    getSavedName();
+
+  myUid =
+    currentUid();
+
+  if (
+    !user ||
+    !myName ||
+    !myUid
+  ) {
+
+    window.location.href =
+      "../index.html";
+
+    return;
+
   }
-);
+
+  resizeCanvas();
+
+  checkOrientation();
+
+  await detectMode();
+
+  if (
+    multiplayer
+  ) {
+
+    startWaitingLoop();
+
+  }
+
+  updateHUD();
+
+}
 
 
-/* =========================================================
-   BOOT
-========================================================= */
-
-orientation();
-
-start();
+init();
