@@ -6,261 +6,1107 @@
 <title>دومیتو</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">🁢</div>
-      <h1>دومیتو</h1>
-      <p>سالن مینی‌گیم‌های آنلاین</p>
-    </div>
 
-    <div class="card" id="authCard">
-      <div style="display:flex; gap:8px; margin-bottom:16px;">
-        <button id="tabRegister" class="btn-full" style="margin:0;">ثبت‌نام</button>
-        <button id="tabLogin" class="btn-full btn-ghost" style="margin:0;">ورود</button>
-      </div>
-      <input type="text" id="userInput" placeholder="نام‌کاربری (فقط حروف انگلیسی/عدد)" maxlength="20" style="margin-bottom:10px;" />
-      <input type="password" id="passInput" placeholder="رمز عبور (حداقل ۶ کاراکتر)" maxlength="40" />
-      <button id="authBtn" class="btn-full">ثبت‌نام و ورود</button>
-      <p class="status-line" id="authStatus"></p>
-    </div>
+<div class="wrap">
 
-    <div id="homeContent" style="display:none">
-
-      <div class="top-wallet-bar">
-        <a href="wallet.html" class="coin-badge">🪙 <span id="coinCount">0</span> سکه ←</a>
-        <a href="profile.html" class="btn-ghost" style="text-decoration:none; padding:8px 14px; font-size:12.5px;">پروفایل من</a>
-      </div>
-
-      <div class="card">
-        <h2>👥 دوستان آنلاین</h2>
-        <div id="requestList"></div>
-        <div id="onlineFriendsList"></div>
-        <p class="muted" id="noFriendsMsg" style="display:none;">هنوز دوستی اضافه نکردی</p>
-        <a href="friends.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">مدیریت دوستان ←</a>
-      </div>
-
-      <div class="hero">
-        <div class="hero-emojis">🎮🕹️👾</div>
-        <h1>بازی کن. رقابت کن. لذت ببر.</h1>
-        <p>خوش اومدی <span id="helloName" style="color:var(--gold); font-weight:700;"></span></p>
-        <div class="hero-btns">
-          <button id="createRoomBtn">➕ ساخت اتاق جدید</button>
-          <button id="scrollToJoin" class="btn-ghost">🔑 ورود با کد اتاق</button>
-        </div>
-      </div>
-
-      <div class="card" id="invitesCard" style="display:none;">
-        <h2>📩 دعوت‌های اتاق</h2>
-        <div id="inviteList"></div>
-      </div>
-
-      <div class="section-title"><h2>🎮 بازی تک‌نفره — همین الان بازی کن</h2></div>
-      <div class="game-scroll" id="gameScroll"></div>
-
-      <div class="section-title"><h2>🏆 لیدربورد</h2></div>
-      <div class="leader-card" id="leaderCard">
-        <p class="muted" id="leaderLoading">در حال بارگذاری...</p>
-      </div>
-
-      <div class="card" id="roomCard" style="margin-top:22px;">
-        <h2>ورود با کد اتاق</h2>
-        <input type="text" id="roomInput" placeholder="مثلاً: A7K2P" maxlength="8" style="text-align:center; letter-spacing:3px;" />
-        <button id="joinRoomBtn" class="btn-full btn-ghost">ورود به اتاق</button>
-        <p class="status-line" id="roomStatus"></p>
-      </div>
-
-      <button id="logoutBtn" class="btn-full btn-ghost">خروج از حساب</button>
-    </div>
+  <div class="brand">
+    <div class="brand-mark">🁢</div>
+    <h1>دومیتو</h1>
+    <p>سالن مینی‌گیم‌های آنلاین</p>
   </div>
 
+  <!-- ورود / ثبت نام -->
+  <div class="card" id="authCard">
+
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <button id="tabRegister" class="btn-full" style="margin:0;">
+        ثبت‌نام
+      </button>
+
+      <button id="tabLogin" class="btn-full btn-ghost" style="margin:0;">
+        ورود
+      </button>
+    </div>
+
+    <input
+      type="text"
+      id="userInput"
+      placeholder="نام‌کاربری (فقط حروف انگلیسی/عدد)"
+      maxlength="20"
+      style="margin-bottom:10px;"
+    />
+
+    <input
+      type="password"
+      id="passInput"
+      placeholder="رمز عبور (حداقل ۶ کاراکتر)"
+      maxlength="40"
+    />
+
+    <button id="authBtn" class="btn-full">
+      ثبت‌نام و ورود
+    </button>
+
+    <p class="status-line" id="authStatus"></p>
+
+  </div>
+
+
+  <!-- خانه -->
+  <div id="homeContent" style="display:none">
+
+    <div class="top-wallet-bar">
+
+      <a href="wallet.html" class="coin-badge">
+        🪙 <span id="coinCount">0</span> سکه ←
+      </a>
+
+      <a
+        href="profile.html"
+        class="btn-ghost"
+        style="text-decoration:none; padding:8px 14px; font-size:12.5px;"
+      >
+        پروفایل من
+      </a>
+
+    </div>
+
+
+    <!-- دوستان -->
+    <div class="card">
+
+      <h2>👥 دوستان آنلاین</h2>
+
+      <div id="requestList"></div>
+
+      <div id="onlineFriendsList"></div>
+
+      <p
+        class="muted"
+        id="noFriendsMsg"
+        style="display:none;"
+      >
+        هنوز دوستی اضافه نکردی
+      </p>
+
+      <a
+        href="friends.html"
+        class="btn-full btn-ghost"
+        style="display:block; text-decoration:none; text-align:center; margin-top:10px;"
+      >
+        مدیریت دوستان ←
+      </a>
+
+    </div>
+
+
+    <!-- دعوت‌ها -->
+    <div
+      class="card"
+      id="invitesCard"
+      style="display:none;"
+    >
+
+      <h2>📩 دعوت‌های اتاق</h2>
+
+      <div id="inviteList"></div>
+
+    </div>
+
+
+    <!-- بازی کن -->
+    <div class="hero">
+
+      <div class="hero-emojis">
+        🎮🕹️👾
+      </div>
+
+      <h1>
+        بازی کن. رقابت کن. لذت ببر.
+      </h1>
+
+      <p>
+        خوش اومدی
+        <span
+          id="helloName"
+          style="color:var(--gold); font-weight:700;"
+        ></span>
+      </p>
+
+      <div class="hero-btns">
+
+        <button id="createRoomBtn">
+          ➕ ساخت اتاق جدید
+        </button>
+
+        <button
+          id="openJoinRoomBtn"
+          class="btn-ghost"
+        >
+          🔑 ورود با کد اتاق
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- بازی‌های تک نفره -->
+    <div class="section-title">
+      <h2>
+        🎮 بازی تک‌نفره — همین الان بازی کن
+      </h2>
+    </div>
+
+    <div
+      class="game-scroll"
+      id="gameScroll"
+    ></div>
+
+
+    <!-- لیدربورد -->
+    <div class="section-title">
+      <h2>🏆 لیدربورد</h2>
+    </div>
+
+    <div
+      class="leader-card"
+      id="leaderCard"
+    >
+      <p
+        class="muted"
+        id="leaderLoading"
+      >
+        در حال بارگذاری...
+      </p>
+    </div>
+
+
+    <button
+      id="logoutBtn"
+      class="btn-full btn-ghost"
+    >
+      خروج از حساب
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- صفحه ورود با کد -->
+<div
+  id="joinRoomOverlay"
+  class="room-overlay"
+  style="display:none;"
+>
+
+  <div class="room-overlay-card">
+
+    <button
+      id="closeJoinRoom"
+      class="room-close"
+      aria-label="بازگشت"
+    >
+      ×
+    </button>
+
+    <div class="room-overlay-icon">
+      🔑
+    </div>
+
+    <h2>
+      ورود به اتاق
+    </h2>
+
+    <p class="muted">
+      کد اتاق را وارد کنید
+    </p>
+
+    <input
+      type="text"
+      id="roomInput"
+      placeholder="مثلاً: A7K2P"
+      maxlength="8"
+      autocomplete="off"
+      style="text-align:center; letter-spacing:3px; text-transform:uppercase;"
+    />
+
+    <button
+      id="joinRoomBtn"
+      class="btn-full"
+    >
+      ورود به اتاق
+    </button>
+
+    <p
+      class="status-line"
+      id="roomStatus"
+    ></p>
+
+  </div>
+
+</div>
+
+
 <script type="module">
-  import {
-    registerUser, loginUser, waitForUser, getSavedName,
-    createRoom, joinRoomByCode, logoutUser, getLeaderboard, GAMES,
-    listenInvites, dismissInvite, listenProfile,
-    listenFriendRequests, acceptFriendRequest, rejectFriendRequest, listenFriends
-  } from "./js/app.js";
 
-  const authCard = document.getElementById("authCard");
-  const homeContent = document.getElementById("homeContent");
-  const userInput = document.getElementById("userInput");
-  const passInput = document.getElementById("passInput");
-  const authBtn = document.getElementById("authBtn");
-  const authStatus = document.getElementById("authStatus");
-  const tabRegister = document.getElementById("tabRegister");
-  const tabLogin = document.getElementById("tabLogin");
+import {
+  registerUser,
+  loginUser,
+  waitForUser,
+  getSavedName,
+  createRoom,
+  joinRoomByCode,
+  logoutUser,
+  getLeaderboard,
+  GAMES,
+  listenInvites,
+  dismissInvite,
+  listenProfile,
+  listenFriendRequests,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  listenFriends
+} from "./js/app.js";
 
-  let mode = "register";
-  tabRegister.addEventListener("click", () => {
-    mode = "register"; tabRegister.classList.remove("btn-ghost"); tabLogin.classList.add("btn-ghost");
-    authBtn.textContent = "ثبت‌نام و ورود";
-  });
-  tabLogin.addEventListener("click", () => {
-    mode = "login"; tabLogin.classList.remove("btn-ghost"); tabRegister.classList.add("btn-ghost");
-    authBtn.textContent = "ورود";
-  });
 
-  authBtn.addEventListener("click", async () => {
-    const username = userInput.value.trim();
-    const password = passInput.value;
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) { authStatus.textContent = "نام‌کاربری باید ۳ تا ۲۰ حرف انگلیسی/عدد باشه"; return; }
-    if (password.length < 6) { authStatus.textContent = "رمز باید حداقل ۶ کاراکتر باشه"; return; }
-    authBtn.disabled = true;
-    authStatus.textContent = "در حال اتصال...";
-    try {
-      if (mode === "register") await registerUser(username, password);
-      else await loginUser(username, password);
-      showHome();
-    } catch (e) {
-      console.error(e);
-      if (e.code === "auth/email-already-in-use") authStatus.textContent = "این نام‌کاربری قبلاً گرفته شده. برو تب ورود.";
-      else if (e.code === "auth/invalid-credential" || e.code === "auth/wrong-password") authStatus.textContent = "رمز اشتباهه یا حسابی با این اسم نیست.";
-      else authStatus.textContent = "خطا: " + e.code;
-      authBtn.disabled = false;
+const authCard =
+  document.getElementById("authCard");
+
+const homeContent =
+  document.getElementById("homeContent");
+
+const userInput =
+  document.getElementById("userInput");
+
+const passInput =
+  document.getElementById("passInput");
+
+const authBtn =
+  document.getElementById("authBtn");
+
+const authStatus =
+  document.getElementById("authStatus");
+
+const tabRegister =
+  document.getElementById("tabRegister");
+
+const tabLogin =
+  document.getElementById("tabLogin");
+
+
+let mode = "register";
+
+
+tabRegister.addEventListener("click", () => {
+
+  mode = "register";
+
+  tabRegister.classList.remove("btn-ghost");
+  tabLogin.classList.add("btn-ghost");
+
+  authBtn.textContent =
+    "ثبت‌نام و ورود";
+
+});
+
+
+tabLogin.addEventListener("click", () => {
+
+  mode = "login";
+
+  tabLogin.classList.remove("btn-ghost");
+  tabRegister.classList.add("btn-ghost");
+
+  authBtn.textContent =
+    "ورود";
+
+});
+
+
+authBtn.addEventListener("click", async () => {
+
+  const username =
+    userInput.value.trim();
+
+  const password =
+    passInput.value;
+
+  if (
+    !/^[a-zA-Z0-9_]{3,20}$/.test(username)
+  ) {
+
+    authStatus.textContent =
+      "نام‌کاربری باید ۳ تا ۲۰ حرف انگلیسی/عدد باشه";
+
+    return;
+
+  }
+
+
+  if (password.length < 6) {
+
+    authStatus.textContent =
+      "رمز باید حداقل ۶ کاراکتر باشه";
+
+    return;
+
+  }
+
+
+  authBtn.disabled = true;
+
+  authStatus.textContent =
+    "در حال اتصال...";
+
+
+  try {
+
+    if (mode === "register") {
+
+      await registerUser(
+        username,
+        password
+      );
+
+    } else {
+
+      await loginUser(
+        username,
+        password
+      );
+
     }
-  });
 
-  function renderGameCards() {
-    const scroll = document.getElementById("gameScroll");
-    scroll.innerHTML = "";
-    GAMES.forEach((g) => {
-      const card = document.createElement("div");
-      card.className = "game-card";
-      card.innerHTML = `
-        <div class="game-thumb" style="background:linear-gradient(160deg, rgba(79,124,255,.3), rgba(155,92,255,.2));">
-          ${g.icon}<span class="solo-badge">تک‌نفره</span>
-        </div>
-        <div class="game-body"><div class="name">${g.name}</div><div class="meta">${g.desc}</div></div>
-      `;
-      card.addEventListener("click", () => { window.location.href = `games/${g.id}.html?solo=1`; });
-      scroll.appendChild(card);
-    });
+    showHome();
+
+  } catch (e) {
+
+    console.error(e);
+
+    if (
+      e.code ===
+      "auth/email-already-in-use"
+    ) {
+
+      authStatus.textContent =
+        "این نام‌کاربری قبلاً گرفته شده. برو تب ورود.";
+
+    } else if (
+      e.code === "auth/invalid-credential" ||
+      e.code === "auth/wrong-password"
+    ) {
+
+      authStatus.textContent =
+        "رمز اشتباهه یا حسابی با این اسم نیست.";
+
+    } else {
+
+      authStatus.textContent =
+        "خطا: " + e.code;
+
+    }
+
+    authBtn.disabled = false;
+
   }
 
-  async function showHome() {
-    authCard.style.display = "none";
-    homeContent.style.display = "block";
-    const myName = getSavedName();
-    document.getElementById("helloName").textContent = myName;
-    renderGameCards();
-    renderLeaderboard();
+});
 
-    listenProfile(myName, (p) => {
-      document.getElementById("coinCount").textContent = (p && p.coins) || 0;
-    });
 
-    listenFriendRequests(myName, (requesters) => {
-      const list = document.getElementById("requestList");
+function renderGameCards() {
+
+  const scroll =
+    document.getElementById(
+      "gameScroll"
+    );
+
+  scroll.innerHTML = "";
+
+  GAMES.forEach((g) => {
+
+    const card =
+      document.createElement("div");
+
+    card.className =
+      "game-card";
+
+    card.innerHTML = `
+
+      <div
+        class="game-thumb"
+        style="
+          background:
+          linear-gradient(
+            160deg,
+            rgba(79,124,255,.3),
+            rgba(155,92,255,.2)
+          );
+        "
+      >
+        ${g.icon}
+
+        <span class="solo-badge">
+          تک‌نفره
+        </span>
+
+      </div>
+
+      <div class="game-body">
+
+        <div class="name">
+          ${g.name}
+        </div>
+
+        <div class="meta">
+          ${g.desc}
+        </div>
+
+      </div>
+
+    `;
+
+    card.addEventListener(
+      "click",
+      () => {
+
+        window.location.href =
+          `games/${g.id}.html?solo=1`;
+
+      }
+    );
+
+    scroll.appendChild(card);
+
+  });
+
+}
+
+
+async function showHome() {
+
+  authCard.style.display =
+    "none";
+
+  homeContent.style.display =
+    "block";
+
+
+  const myName =
+    getSavedName();
+
+
+  document.getElementById(
+    "helloName"
+  ).textContent =
+    myName;
+
+
+  renderGameCards();
+
+  renderLeaderboard();
+
+
+  listenProfile(
+    myName,
+    (p) => {
+
+      document.getElementById(
+        "coinCount"
+      ).textContent =
+        (p && p.coins) || 0;
+
+    }
+  );
+
+
+  listenFriendRequests(
+    myName,
+    (requesters) => {
+
+      const list =
+        document.getElementById(
+          "requestList"
+        );
+
       list.innerHTML = "";
-      requesters.forEach((fromName) => {
-        const row = document.createElement("div");
-        row.className = "request-row";
-        row.innerHTML = `<span class="txt">${fromName} درخواست دوستی داد</span>`;
-        const actions = document.createElement("div");
-        actions.className = "actions";
-        const acceptBtn = document.createElement("button");
-        acceptBtn.textContent = "قبول";
-        acceptBtn.addEventListener("click", async () => { await acceptFriendRequest(myName, fromName); });
-        const rejectBtn = document.createElement("button");
-        rejectBtn.textContent = "رد";
-        rejectBtn.className = "btn-ghost";
-        rejectBtn.addEventListener("click", async () => { await rejectFriendRequest(myName, fromName); });
-        actions.appendChild(acceptBtn);
-        actions.appendChild(rejectBtn);
-        row.appendChild(actions);
-        list.appendChild(row);
-      });
-    });
 
-    listenFriends(myName, (friends) => {
-      const listEl = document.getElementById("onlineFriendsList");
-      const noMsg = document.getElementById("noFriendsMsg");
-      const online = friends.filter((f) => f.online);
-      if (friends.length === 0) { noMsg.style.display = "block"; listEl.innerHTML = ""; return; }
-      noMsg.style.display = "none";
-      if (online.length === 0) { listEl.innerHTML = '<p class="muted">الان هیچ‌کدوم از دوستات آنلاین نیستن</p>'; return; }
-      listEl.innerHTML = "";
-      online.forEach((f) => {
-        const row = document.createElement("div");
-        row.className = "friend-row";
-        row.innerHTML = `<a href="profile.html?user=${encodeURIComponent(f.name)}" class="friend-name-link">${f.name}</a><span class="fdot"></span>`;
-        listEl.appendChild(row);
-      });
-    });
+      requesters.forEach(
+        (fromName) => {
 
-    listenInvites(myName, (list) => {
-      const card = document.getElementById("invitesCard");
-      const listEl = document.getElementById("inviteList");
-      if (list.length === 0) { card.style.display = "none"; return; }
-      card.style.display = "block";
-      listEl.innerHTML = "";
+          const row =
+            document.createElement(
+              "div"
+            );
+
+          row.className =
+            "request-row";
+
+          row.innerHTML =
+            `<span class="txt">
+              ${fromName} درخواست دوستی داد
+            </span>`;
+
+          const actions =
+            document.createElement(
+              "div"
+            );
+
+          actions.className =
+            "actions";
+
+
+          const acceptBtn =
+            document.createElement(
+              "button"
+            );
+
+          acceptBtn.textContent =
+            "قبول";
+
+          acceptBtn.addEventListener(
+            "click",
+            async () => {
+
+              await acceptFriendRequest(
+                myName,
+                fromName
+              );
+
+            }
+          );
+
+
+          const rejectBtn =
+            document.createElement(
+              "button"
+            );
+
+          rejectBtn.textContent =
+            "رد";
+
+          rejectBtn.className =
+            "btn-ghost";
+
+          rejectBtn.addEventListener(
+            "click",
+            async () => {
+
+              await rejectFriendRequest(
+                myName,
+                fromName
+              );
+
+            }
+          );
+
+
+          actions.appendChild(
+            acceptBtn
+          );
+
+          actions.appendChild(
+            rejectBtn
+          );
+
+          row.appendChild(
+            actions
+          );
+
+          list.appendChild(
+            row
+          );
+
+        }
+      );
+
+    }
+  );
+
+
+  // دوستان آنلاین
+  listenFriends(
+    myName,
+    (friends) => {
+
+      const listEl =
+        document.getElementById(
+          "onlineFriendsList"
+        );
+
+      const noMsg =
+        document.getElementById(
+          "noFriendsMsg"
+        );
+
+
+      if (friends.length === 0) {
+
+        noMsg.style.display =
+          "block";
+
+        listEl.innerHTML =
+          "";
+
+        return;
+
+      }
+
+
+      noMsg.style.display =
+        "none";
+
+      listEl.innerHTML =
+        "";
+
+
+      friends.forEach((f) => {
+
+        const row =
+          document.createElement(
+            "div"
+          );
+
+        row.className =
+          "friend-row";
+
+
+        row.innerHTML = `
+
+          <a
+            href="profile.html?user=${encodeURIComponent(f.name)}"
+            class="friend-name-link"
+          >
+            ${f.name}
+          </a>
+
+          <span
+            class="fdot ${f.online ? "" : "off"}"
+          ></span>
+
+        `;
+
+        listEl.appendChild(
+          row
+        );
+
+      });
+
+    }
+  );
+
+
+  // دعوت‌های اتاق
+  listenInvites(
+    myName,
+    (list) => {
+
+      const card =
+        document.getElementById(
+          "invitesCard"
+        );
+
+      const listEl =
+        document.getElementById(
+          "inviteList"
+        );
+
+
+      if (list.length === 0) {
+
+        card.style.display =
+          "none";
+
+        return;
+
+      }
+
+
+      card.style.display =
+        "block";
+
+      listEl.innerHTML =
+        "";
+
+
       list.forEach((inv) => {
-        const row = document.createElement("div");
-        row.className = "invite-row";
-        row.innerHTML = `<span class="txt">${inv.from} تو رو به اتاقش دعوت کرد</span>`;
-        const actions = document.createElement("div");
-        actions.className = "actions";
-        const acceptBtn = document.createElement("button");
-        acceptBtn.textContent = "ورود";
-        acceptBtn.addEventListener("click", async () => {
-          const res = await joinRoomByCode(inv.roomCode);
-          await dismissInvite(myName, inv.id);
-          if (res.ok) window.location.href = "lobby.html";
-        });
-        const declineBtn = document.createElement("button");
-        declineBtn.textContent = "رد کردن";
-        declineBtn.className = "btn-ghost";
-        declineBtn.addEventListener("click", async () => { await dismissInvite(myName, inv.id); });
-        actions.appendChild(acceptBtn);
-        actions.appendChild(declineBtn);
-        row.appendChild(actions);
-        listEl.appendChild(row);
+
+        const row =
+          document.createElement(
+            "div"
+          );
+
+        row.className =
+          "invite-row";
+
+
+        const text =
+          document.createElement(
+            "span"
+          );
+
+        text.className =
+          "txt";
+
+        text.textContent =
+          `${inv.from} تو رو به اتاقش دعوت کرد`;
+
+
+        const actions =
+          document.createElement(
+            "div"
+          );
+
+        actions.className =
+          "actions";
+
+
+        const acceptBtn =
+          document.createElement(
+            "button"
+          );
+
+        acceptBtn.textContent =
+          "ورود";
+
+
+        acceptBtn.addEventListener(
+          "click",
+          async () => {
+
+            const res =
+              await joinRoomByCode(
+                inv.roomCode
+              );
+
+            if (res.ok) {
+
+              await dismissInvite(
+                myName,
+                inv.id
+              );
+
+              window.location.href =
+                "lobby.html";
+
+            }
+
+          }
+        );
+
+
+        const declineBtn =
+          document.createElement(
+            "button"
+          );
+
+        declineBtn.textContent =
+          "رد کردن";
+
+        declineBtn.className =
+          "btn-ghost";
+
+
+        declineBtn.addEventListener(
+          "click",
+          async () => {
+
+            await dismissInvite(
+              myName,
+              inv.id
+            );
+
+          }
+        );
+
+
+        actions.appendChild(
+          acceptBtn
+        );
+
+        actions.appendChild(
+          declineBtn
+        );
+
+        row.appendChild(
+          text
+        );
+
+        row.appendChild(
+          actions
+        );
+
+        listEl.appendChild(
+          row
+        );
+
       });
-    });
+
+    }
+  );
+
+}
+
+
+async function renderLeaderboard() {
+
+  const leaderCard =
+    document.getElementById(
+      "leaderCard"
+    );
+
+  try {
+
+    const list =
+      await getLeaderboard(5);
+
+    if (list.length === 0) {
+
+      leaderCard.innerHTML =
+        '<p class="muted">هنوز کسی برد ثبت نکرده</p>';
+
+      return;
+
+    }
+
+
+    const medals =
+      ["🥇", "🥈", "🥉"];
+
+
+    leaderCard.innerHTML =
+      list.map(
+        (p, i) => `
+
+          <div class="leader-row">
+
+            <span class="rank">
+              ${medals[i] || i + 1}
+            </span>
+
+            <a
+              href="profile.html?user=${encodeURIComponent(p.name)}"
+              class="who friend-name-link"
+            >
+              ${p.name}
+            </a>
+
+            <span class="score">
+              ${p.wins} برد
+            </span>
+
+          </div>
+
+        `
+      ).join("");
+
+  } catch (e) {
+
+    leaderCard.innerHTML =
+      '<p class="muted">خطا در بارگذاری لیدربورد</p>';
+
   }
 
-  async function renderLeaderboard() {
-    const leaderCard = document.getElementById("leaderCard");
-    try {
-      const list = await getLeaderboard(5);
-      if (list.length === 0) { leaderCard.innerHTML = '<p class="muted">هنوز کسی برد ثبت نکرده</p>'; return; }
-      const medals = ["🥇", "🥈", "🥉"];
-      leaderCard.innerHTML = list.map((p, i) => `
-        <div class="leader-row">
-          <span class="rank">${medals[i] || i + 1}</span>
-          <a href="profile.html?user=${encodeURIComponent(p.name)}" class="who friend-name-link">${p.name}</a>
-          <span class="score">${p.wins} برد</span>
-        </div>
-      `).join("");
-    } catch (e) { leaderCard.innerHTML = '<p class="muted">خطا در بارگذاری لیدربورد</p>'; }
-  }
+}
 
-  document.getElementById("createRoomBtn").addEventListener("click", async () => {
-    await createRoom();
-    window.location.href = "lobby.html";
-  });
 
-  document.getElementById("scrollToJoin").addEventListener("click", () => {
-    document.getElementById("roomCard").scrollIntoView({ behavior: "smooth" });
-  });
+/* ساخت اتاق */
 
-  document.getElementById("joinRoomBtn").addEventListener("click", async () => {
-    const val = document.getElementById("roomInput").value;
-    const roomStatus = document.getElementById("roomStatus");
-    if (!val.trim()) { roomStatus.textContent = "کد اتاق رو بنویس"; return; }
-    roomStatus.textContent = "در حال بررسی...";
-    const res = await joinRoomByCode(val);
-    if (res.ok) window.location.href = "lobby.html";
-    else roomStatus.textContent = "همچین اتاقی پیدا نشد";
-  });
+document
+  .getElementById("createRoomBtn")
+  .addEventListener(
+    "click",
+    async () => {
 
-  document.getElementById("logoutBtn").addEventListener("click", async () => {
-    await logoutUser();
-    window.location.reload();
-  });
+      await createRoom();
 
-  waitForUser().then((user) => { if (user) showHome(); });
+      window.location.href =
+        "lobby.html";
+
+    }
+  );
+
+
+/* باز کردن صفحه ورود با کد */
+
+const overlay =
+  document.getElementById(
+    "joinRoomOverlay"
+  );
+
+
+document
+  .getElementById("openJoinRoomBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      overlay.style.display =
+        "flex";
+
+      setTimeout(
+        () => {
+
+          document
+            .getElementById(
+              "roomInput"
+            )
+            .focus();
+
+        },
+        50
+      );
+
+    }
+  );
+
+
+/* بستن صفحه ورود */
+
+document
+  .getElementById("closeJoinRoom")
+  .addEventListener(
+    "click",
+    () => {
+
+      overlay.style.display =
+        "none";
+
+      document.getElementById(
+        "roomStatus"
+      ).textContent = "";
+
+    }
+  );
+
+
+/* ورود با کد */
+
+document
+  .getElementById("joinRoomBtn")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const input =
+        document.getElementById(
+          "roomInput"
+        );
+
+      const roomStatus =
+        document.getElementById(
+          "roomStatus"
+        );
+
+
+      const val =
+        input.value
+          .trim()
+          .toUpperCase();
+
+
+      if (!val) {
+
+        roomStatus.textContent =
+          "کد اتاق رو بنویس";
+
+        return;
+
+      }
+
+
+      roomStatus.textContent =
+        "در حال بررسی...";
+
+
+      try {
+
+        const res =
+          await joinRoomByCode(
+            val
+          );
+
+
+        if (res.ok) {
+
+          window.location.href =
+            "lobby.html";
+
+        } else {
+
+          roomStatus.textContent =
+            "همچین اتاقی پیدا نشد";
+
+        }
+
+      } catch (e) {
+
+        console.error(e);
+
+        roomStatus.textContent =
+          "خطا در ورود به اتاق";
+
+      }
+
+    }
+  );
+
+
+/* ورود با Enter */
+
+document
+  .getElementById("roomInput")
+  .addEventListener(
+    "keydown",
+    (e) => {
+
+      if (e.key === "Enter") {
+
+        document
+          .getElementById(
+            "joinRoomBtn"
+          )
+          .click();
+
+      }
+
+    }
+  );
+
+
+/* خروج */
+
+document
+  .getElementById("logoutBtn")
+  .addEventListener(
+    "click",
+    async () => {
+
+      await logoutUser();
+
+      window.location.reload();
+
+    }
+  );
+
+
+waitForUser()
+  .then(
+    (user) => {
+
+      if (user) {
+
+        showHome();
+
+      }
+
+    }
+  );
+
 </script>
+
 </body>
 </html>
