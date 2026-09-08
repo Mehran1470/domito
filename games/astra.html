@@ -11,25 +11,37 @@
   <div class="astra-rotate-screen" id="astraRotateScreen">
     <div class="icon">📱</div>
     <h2>گوشیتو بچرخون</h2>
-    <p>Domito Astra فقط در حالت افقی (landscape) بازی می‌شه</p>
+    <p>Domito Astra فقط در حالت افقی (landscape) بازی می‌شه — دو نفره روی یه گوشی</p>
   </div>
 
   <div class="astra-game-root">
     <div class="astra-hud-top">
-      <span class="astra-title">🚀 ASTRA</span>
-      <span class="astra-hud-item" id="hudRound">راند ۱/۳</span>
-      <span class="astra-hud-item" id="hudTimer">۳۰</span>
-      <span class="astra-hud-item combo" id="hudCombo">بدون کمبو</span>
-      <span class="astra-hud-item">🪙 <span id="hudScore">0</span></span>
+      <div class="astra-hud-player p1">
+        <div class="astra-hud-name p1">🔵 نفر ۱</div>
+        <div class="astra-fuel-bar"><div class="astra-fuel-fill p1" id="fuelP1" style="width:0%"></div></div>
+        <div class="astra-hud-sub">📦 <span id="cargoP1">0</span></div>
+      </div>
+      <div class="astra-hud-center">
+        <div class="astra-title">🚀 RACE TO WORLD 2</div>
+      </div>
+      <div class="astra-hud-player p2">
+        <div class="astra-hud-name p2">🟣 نفر ۲</div>
+        <div class="astra-fuel-bar"><div class="astra-fuel-fill p2" id="fuelP2" style="width:0%"></div></div>
+        <div class="astra-hud-sub">📦 <span id="cargoP2">0</span></div>
+      </div>
     </div>
 
     <div class="astra-arena-box" id="astraArenaBox">
       <canvas id="astraCanvas"></canvas>
       <div class="astra-overlay-msg" id="astraOverlayMsg" style="display:none;"></div>
-      <div class="astra-joystick-base" id="astraJoyBase">
-        <div class="astra-joystick-knob" id="astraJoyKnob"></div>
+
+      <div class="astra-joystick-base left" id="astraJoyBaseP1">
+        <div class="astra-joystick-knob left" id="astraJoyKnobP1"></div>
       </div>
-      <div class="astra-powerup-slot" id="astraPowerupSlot">⚡</div>
+      <div class="astra-joystick-base right" id="astraJoyBaseP2">
+        <div class="astra-joystick-knob right" id="astraJoyKnobP2"></div>
+      </div>
+
       <button class="astra-fullscreen-btn" id="astraFullscreenBtn">⛶ تمام‌صفحه</button>
       <button class="astra-mute-btn" id="astraMuteBtn">🔊</button>
       <div class="astra-result" id="astraResult" style="display:none;"></div>
