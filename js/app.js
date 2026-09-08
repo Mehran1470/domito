@@ -110,6 +110,7 @@ async function ensureProfile(username) {
 
 
 export async function ensureOwnerLinks(username, uid) {
+
   const ownerRef = ref(
     db,
     `profiles/${encodeURIComponent(username)}/ownerUid`
@@ -138,11 +139,12 @@ export async function registerUser(username, password) {
 
   username = username.trim();
 
-  const cred = await createUserWithEmailAndPassword(
-    auth,
-    usernameToEmail(username),
-    password
-  );
+  const cred =
+    await createUserWithEmailAndPassword(
+      auth,
+      usernameToEmail(username),
+      password
+    );
 
   saveName(username);
 
@@ -168,11 +170,12 @@ export async function loginUser(username, password) {
 
   username = username.trim();
 
-  const cred = await signInWithEmailAndPassword(
-    auth,
-    usernameToEmail(username),
-    password
-  );
+  const cred =
+    await signInWithEmailAndPassword(
+      auth,
+      usernameToEmail(username),
+      password
+    );
 
   saveName(username);
 
@@ -196,18 +199,36 @@ export async function loginUser(username, password) {
 
 export async function logoutUser() {
 
-  const name = getSavedName();
+  const name =
+    getSavedName();
 
   if (name) {
+
     try {
-      await setPresence(name, false);
+
+      await setPresence(
+        name,
+        false
+      );
+
     } catch (e) {
-      console.warn("Presence logout error:", e);
+
+      console.warn(
+        "Presence logout error:",
+        e
+      );
+
     }
+
   }
 
-  localStorage.removeItem("domito_name");
-  localStorage.removeItem("domito_room");
+  localStorage.removeItem(
+    "domito_name"
+  );
+
+  localStorage.removeItem(
+    "domito_room"
+  );
 
   await signOut(auth);
 }
@@ -221,13 +242,17 @@ export function waitForUser() {
 
   return new Promise((resolve) => {
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        unsubscribe();
-        resolve(user);
-      }
-    );
+    const unsubscribe =
+      onAuthStateChanged(
+        auth,
+        (user) => {
+
+          unsubscribe();
+
+          resolve(user);
+
+        }
+      );
 
   });
 
@@ -247,25 +272,37 @@ export function currentUid() {
 // حضور آنلاین
 // ============================================================
 
-export async function setPresence(name, online) {
+export async function setPresence(
+  name,
+  online
+) {
 
   if (!name) return;
 
-  const pRef = ref(
-    db,
-    `profiles/${encodeURIComponent(name)}/presence`
+  const pRef =
+    ref(
+      db,
+      `profiles/${encodeURIComponent(name)}/presence`
+    );
+
+  await update(
+    pRef,
+    {
+      online: !!online,
+      lastSeen: Date.now()
+    }
   );
 
-  await update(pRef, {
-    online: !!online,
-    lastSeen: Date.now()
-  });
 
   if (online) {
 
-    await onDisconnect(pRef).update({
+    await onDisconnect(
+      pRef
+    ).update({
+
       online: false,
       lastSeen: Date.now()
+
     });
 
   }
@@ -284,10 +321,17 @@ function randomRoomCode() {
 
   let code = "";
 
-  for (let i = 0; i < 5; i++) {
+  for (
+    let i = 0;
+    i < 5;
+    i++
+  ) {
 
     code += chars[
-      Math.floor(Math.random() * chars.length)
+      Math.floor(
+        Math.random() *
+        chars.length
+      )
     ];
 
   }
@@ -297,21 +341,39 @@ function randomRoomCode() {
 
 
 export function getSavedRoom() {
-  return localStorage.getItem("domito_room") || "";
+
+  return (
+    localStorage.getItem(
+      "domito_room"
+    ) || ""
+  );
+
 }
 
 
 export function saveRoom(code) {
-  localStorage.setItem("domito_room", code);
+
+  localStorage.setItem(
+    "domito_room",
+    code
+  );
+
 }
 
 
 export function clearRoom() {
-  localStorage.removeItem("domito_room");
+
+  localStorage.removeItem(
+    "domito_room"
+  );
+
 }
 
 
-export function roomRef(code, path = "") {
+export function roomRef(
+  code,
+  path = ""
+) {
 
   return ref(
     db,
@@ -329,36 +391,60 @@ export async function createRoom() {
 
   let code;
 
-  // جلوگیری از برخورد تصادفی کد اتاق
-  for (let i = 0; i < 10; i++) {
+  for (
+    let i = 0;
+    i < 10;
+    i++
+  ) {
 
-    const candidate = randomRoomCode();
+    const candidate =
+      randomRoomCode();
 
-    const snap = await get(
-      roomRef(candidate, "meta")
-    );
+    const snap =
+      await get(
+        roomRef(
+          candidate,
+          "meta"
+        )
+      );
 
     if (!snap.exists()) {
-      code = candidate;
+
+      code =
+        candidate;
+
       break;
+
     }
 
   }
+
 
   if (!code) {
-    throw new Error("room-code-generation-failed");
+
+    throw new Error(
+      "room-code-generation-failed"
+    );
+
   }
 
+
   await set(
-    roomRef(code, "meta"),
+    roomRef(
+      code,
+      "meta"
+    ),
     {
-      createdAt: serverTimestamp()
+      createdAt:
+        serverTimestamp()
     }
   );
+
 
   saveRoom(code);
 
   return code;
+
 }
 
 
@@ -366,22 +452,34 @@ export async function createRoom() {
 // ورود به اتاق
 // ============================================================
 
-export async function joinRoomByCode(rawCode) {
+export async function joinRoomByCode(
+  rawCode
+) {
 
-  const code = String(rawCode)
-    .trim()
-    .toUpperCase();
+  const code =
+    String(rawCode)
+      .trim()
+      .toUpperCase();
+
 
   if (!code) {
+
     return {
       ok: false,
       reason: "invalid-code"
     };
+
   }
 
-  const snap = await get(
-    roomRef(code, "meta")
-  );
+
+  const snap =
+    await get(
+      roomRef(
+        code,
+        "meta"
+      )
+    );
+
 
   if (!snap.exists()) {
 
@@ -392,7 +490,9 @@ export async function joinRoomByCode(rawCode) {
 
   }
 
+
   saveRoom(code);
+
 
   return {
     ok: true,
@@ -406,40 +506,66 @@ export async function joinRoomByCode(rawCode) {
 // ورود بازیکن به لابی
 // ============================================================
 
-export async function joinLobby(name) {
+export async function joinLobby(
+  name
+) {
 
-  const code = getSavedRoom();
-  const uid = currentUid();
+  const code =
+    getSavedRoom();
+
+  const uid =
+    currentUid();
+
 
   if (!code) {
     throw new Error("no-room");
   }
 
+
   if (!uid) {
     throw new Error("not-authenticated");
   }
 
+
   await set(
-    roomRef(code, `players/${uid}`),
+    roomRef(
+      code,
+      `players/${uid}`
+    ),
     {
       name,
-      joinedAt: serverTimestamp()
+      joinedAt:
+        serverTimestamp()
     }
   );
 
-  onDisconnect(
-    roomRef(code, `players/${uid}`)
-  ).remove();
 
   onDisconnect(
-    roomRef(code, `votes/${uid}`)
+    roomRef(
+      code,
+      `players/${uid}`
+    )
   ).remove();
 
+
   onDisconnect(
-    roomRef(code, `results/${uid}`)
+    roomRef(
+      code,
+      `votes/${uid}`
+    )
   ).remove();
+
+
+  onDisconnect(
+    roomRef(
+      code,
+      `results/${uid}`
+    )
+  ).remove();
+
 
   return uid;
+
 }
 
 
@@ -449,17 +575,29 @@ export async function joinLobby(name) {
 
 export async function leaveLobby() {
 
-  const code = getSavedRoom();
-  const uid = currentUid();
+  const code =
+    getSavedRoom();
+
+  const uid =
+    currentUid();
+
 
   if (!code || !uid) return;
 
-  await remove(
-    roomRef(code, `players/${uid}`)
-  );
 
   await remove(
-    roomRef(code, `votes/${uid}`)
+    roomRef(
+      code,
+      `players/${uid}`
+    )
+  );
+
+
+  await remove(
+    roomRef(
+      code,
+      `votes/${uid}`
+    )
   );
 
 }
@@ -519,17 +657,36 @@ export const GAMES = [
     soloThreshold: 60
   },
 
-  
-{ id: "snake", name: "بازی مار", desc: "غذا بخور، بزرگ شو، به خودت نخور", icon: "🐍", soloThreshold: 8 },
-  { id: "astra", name: "دومیتو استرا", desc: "تسخیر تایل‌های فضایی، کمبو بگیر، ربات رو شکست بده", icon: "🚀", soloThreshold: 1 },
+  {
+    id: "snake",
+    name: "بازی مار",
+    desc: "غذا بخور، بزرگ شو، به خودت نخور",
+    icon: "🐍",
+    soloThreshold: 8
+  },
+
+  {
+    id: "astra",
+    name: "دومیتو استرا",
+    desc: "تسخیر تایل‌های فضایی، کمبو بگیر، ربات رو شکست بده",
+    icon: "🚀",
+    soloThreshold: 1
+  }
+
 ];
 
 
-export function soloWon(gameId, score) {
+export function soloWon(
+  gameId,
+  score
+) {
 
-  const game = GAMES.find(
-    (x) => x.id === gameId
-  );
+  const game =
+    GAMES.find(
+      (x) =>
+        x.id === gameId
+    );
+
 
   return game
     ? score >= game.soloThreshold
@@ -542,27 +699,39 @@ export function soloWon(gameId, score) {
 // پروفایل عمومی
 // ============================================================
 
-export async function getPublicProfile(name) {
+export async function getPublicProfile(
+  name
+) {
 
-  const snap = await get(
-    profileRef(name)
-  );
+  const snap =
+    await get(
+      profileRef(name)
+    );
+
 
   if (!snap.exists()) {
     return null;
   }
+
 
   return snap.val();
 
 }
 
 
-export function listenProfile(name, callback) {
+export function listenProfile(
+  name,
+  callback
+) {
 
   return onValue(
     profileRef(name),
     (snap) => {
-      callback(snap.val());
+
+      callback(
+        snap.val()
+      );
+
     }
   );
 
@@ -580,14 +749,20 @@ export async function submitResult(
   score
 ) {
 
-  const code = getSavedRoom();
+  const code =
+    getSavedRoom();
+
 
   if (!code) {
     throw new Error("no-room");
   }
 
+
   await set(
-    roomRef(code, `results/${uid}`),
+    roomRef(
+      code,
+      `results/${uid}`
+    ),
     {
       name,
       score,
@@ -604,22 +779,36 @@ export async function submitResult(
 
 export async function resetSessionForNextRound() {
 
-  const code = getSavedRoom();
+  const code =
+    getSavedRoom();
+
 
   if (!code) return;
 
+
   await set(
-    roomRef(code, "currentGame"),
+    roomRef(
+      code,
+      "currentGame"
+    ),
     null
   );
 
+
   await set(
-    roomRef(code, "votes"),
+    roomRef(
+      code,
+      "votes"
+    ),
     null
   );
 
+
   await set(
-    roomRef(code, "results"),
+    roomRef(
+      code,
+      "results"
+    ),
     null
   );
 
@@ -656,22 +845,32 @@ export async function getTransactions(
   limitN = 20
 ) {
 
-  const snap = await get(
-    ref(
-      db,
-      `profiles/${encodeURIComponent(name)}/transactions`
-    )
-  );
-
-  const val = snap.val() || {};
-
-  const list = Object.values(val)
-    .sort(
-      (a, b) =>
-        (b.at || 0) - (a.at || 0)
+  const snap =
+    await get(
+      ref(
+        db,
+        `profiles/${encodeURIComponent(name)}/transactions`
+      )
     );
 
-  return list.slice(0, limitN);
+
+  const val =
+    snap.val() || {};
+
+
+  const list =
+    Object.values(val)
+      .sort(
+        (a, b) =>
+          (b.at || 0) -
+          (a.at || 0)
+      );
+
+
+  return list.slice(
+    0,
+    limitN
+  );
 
 }
 
@@ -694,61 +893,90 @@ export async function recordRoundResult(
     profileRef(name),
     (curr) => {
 
-      curr = curr || blankProfile();
+      curr =
+        curr ||
+        blankProfile();
 
-      curr.wins = curr.wins || 0;
-      curr.losses = curr.losses || 0;
+
+      curr.wins =
+        curr.wins || 0;
+
+      curr.losses =
+        curr.losses || 0;
+
       curr.gamesPlayed =
         curr.gamesPlayed || 0;
+
 
       curr.byGame =
         curr.byGame || {};
 
+
       curr.purchased =
         curr.purchased || [];
 
+
       curr.equippedTheme =
-        curr.equippedTheme || "default";
+        curr.equippedTheme ||
+        "default";
+
 
       curr.claimedMissions =
         curr.claimedMissions || [];
 
+
       curr.friends =
         curr.friends || {};
+
 
       curr.friendRequests =
         curr.friendRequests || {};
 
+
       curr.coins =
         curr.coins || 0;
 
+
       curr.gamesPlayed++;
+
 
       if (won) {
 
         curr.wins++;
-        curr.coins += COIN_WIN;
+
+        curr.coins +=
+          COIN_WIN;
 
       } else {
 
         curr.losses++;
-        curr.coins += COIN_PLAY;
+
+        curr.coins +=
+          COIN_PLAY;
 
       }
 
+
       const game =
         curr.byGame[gameId] || {
+
           wins: 0,
           plays: 0
+
         };
 
+
       game.plays++;
+
 
       if (won) {
         game.wins++;
       }
 
-      curr.byGame[gameId] = game;
+
+      curr.byGame[gameId] =
+        game;
+
 
       return curr;
 
@@ -759,13 +987,20 @@ export async function recordRoundResult(
   await logTransaction(
     name,
     {
-      type: won ? "win" : "play",
-      amount: won
-        ? COIN_WIN
-        : COIN_PLAY,
-      note: won
-        ? "برد در بازی"
-        : "شرکت در بازی"
+      type:
+        won
+          ? "win"
+          : "play",
+
+      amount:
+        won
+          ? COIN_WIN
+          : COIN_PLAY,
+
+      note:
+        won
+          ? "برد در بازی"
+          : "شرکت در بازی"
     }
   );
 
@@ -782,70 +1017,100 @@ export const SHOP_ITEMS = [
     id: "theme-sunset",
     name: "تم غروب",
     price: 30,
-    colors: ["#FF7A59", "#FFC845"]
+    colors: [
+      "#FF7A59",
+      "#FFC845"
+    ]
   },
 
   {
     id: "theme-ocean",
     name: "تم اقیانوس",
     price: 30,
-    colors: ["#4FD1FF", "#7C4DFF"]
+    colors: [
+      "#4FD1FF",
+      "#7C4DFF"
+    ]
   },
 
   {
     id: "theme-forest",
     name: "تم جنگل",
     price: 30,
-    colors: ["#4CD97B", "#1F9E56"]
+    colors: [
+      "#4CD97B",
+      "#1F9E56"
+    ]
   },
 
   {
     id: "theme-gold",
     name: "تم طلایی",
     price: 60,
-    colors: ["#FFD700", "#FF8C00"]
+    colors: [
+      "#FFD700",
+      "#FF8C00"
+    ]
   },
 
   {
     id: "theme-neon",
     name: "تم نئون",
     price: 80,
-    colors: ["#39FF14", "#00E5FF"]
+    colors: [
+      "#39FF14",
+      "#00E5FF"
+    ]
   },
 
   {
     id: "theme-galaxy",
     name: "تم کهکشانی",
     price: 120,
-    colors: ["#7C4DFF", "#FF4F81"]
+    colors: [
+      "#7C4DFF",
+      "#FF4F81"
+    ]
   },
 
   {
     id: "theme-fire",
     name: "تم آتشین",
     price: 150,
-    colors: ["#FF3D00", "#FFC107"]
+    colors: [
+      "#FF3D00",
+      "#FFC107"
+    ]
   },
 
   {
     id: "theme-royal",
     name: "تم سلطنتی",
     price: 250,
-    colors: ["#5B2C82", "#D4AF37"]
+    colors: [
+      "#5B2C82",
+      "#D4AF37"
+    ]
   },
 
   {
     id: "theme-diamond",
     name: "تم الماس",
     price: 500,
-    colors: ["#B9F2FF", "#5FD3F3"]
+    colors: [
+      "#B9F2FF",
+      "#5FD3F3"
+    ]
   },
 
   {
     id: "theme-legend",
     name: "تم افسانه‌ای",
     price: 1000,
-    colors: ["#FFD700", "#FF1744"]
+    colors: [
+      "#FFD700",
+      "#FF1744"
+    ]
   }
 
 ];
@@ -862,8 +1127,10 @@ export async function buyItem(
 
   const item =
     SHOP_ITEMS.find(
-      (i) => i.id === itemId
+      (i) =>
+        i.id === itemId
     );
+
 
   if (!item) {
 
@@ -873,6 +1140,7 @@ export async function buyItem(
     };
 
   }
+
 
   let result = {
     ok: false,
@@ -884,16 +1152,23 @@ export async function buyItem(
     profileRef(name),
     (curr) => {
 
-      curr = curr || blankProfile();
+      curr =
+        curr ||
+        blankProfile();
+
 
       curr.purchased =
         curr.purchased || [];
 
+
       curr.coins =
         curr.coins || 0;
 
+
       if (
-        curr.purchased.includes(itemId)
+        curr.purchased.includes(
+          itemId
+        )
       ) {
 
         result = {
@@ -901,30 +1176,41 @@ export async function buyItem(
           reason: "owned"
         };
 
+
         return curr;
 
       }
 
 
-      if (curr.coins < item.price) {
+      if (
+        curr.coins <
+        item.price
+      ) {
 
         result = {
           ok: false,
           reason: "insufficient"
         };
 
+
         return curr;
 
       }
 
 
-      curr.coins -= item.price;
+      curr.coins -=
+        item.price;
 
-      curr.purchased.push(itemId);
+
+      curr.purchased.push(
+        itemId
+      );
+
 
       result = {
         ok: true
       };
+
 
       return curr;
 
@@ -938,12 +1224,15 @@ export async function buyItem(
       name,
       {
         type: "purchase",
-        amount: -item.price,
-        note: `خرید ${item.name}`
+        amount:
+          -item.price,
+        note:
+          `خرید ${item.name}`
       }
     );
 
   }
+
 
   return result;
 
@@ -963,10 +1252,14 @@ export async function equipTheme(
     profileRef(name),
     (curr) => {
 
-      curr = curr || blankProfile();
+      curr =
+        curr ||
+        blankProfile();
+
 
       curr.equippedTheme =
         itemId;
+
 
       return curr;
 
@@ -1016,14 +1309,18 @@ export async function claimMission(
 
   const mission =
     MISSIONS.find(
-      (m) => m.id === missionId
+      (m) =>
+        m.id === missionId
     );
 
+
   if (!mission) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
 
@@ -1036,14 +1333,19 @@ export async function claimMission(
     profileRef(name),
     (curr) => {
 
-      curr = curr || blankProfile();
+      curr =
+        curr ||
+        blankProfile();
+
 
       curr.claimedMissions =
         curr.claimedMissions || [];
 
+
       if (
-        curr.claimedMissions
-          .includes(missionId)
+        curr.claimedMissions.includes(
+          missionId
+        )
       ) {
 
         result = {
@@ -1051,17 +1353,21 @@ export async function claimMission(
           reason: "claimed"
         };
 
+
         return curr;
 
       }
 
 
       const progressVal =
-        curr[mission.statKey] || 0;
+        curr[
+          mission.statKey
+        ] || 0;
 
 
       if (
-        progressVal < mission.target
+        progressVal <
+        mission.target
       ) {
 
         result = {
@@ -1069,23 +1375,28 @@ export async function claimMission(
           reason: "incomplete"
         };
 
+
         return curr;
 
       }
 
 
       curr.coins =
-        (curr.coins || 0)
-        + mission.reward;
+        (curr.coins || 0) +
+        mission.reward;
+
 
       curr.claimedMissions.push(
         missionId
       );
 
+
       result = {
         ok: true,
-        reward: mission.reward
+        reward:
+          mission.reward
       };
+
 
       return curr;
 
@@ -1099,12 +1410,15 @@ export async function claimMission(
       name,
       {
         type: "mission",
-        amount: result.reward,
-        note: mission.label
+        amount:
+          result.reward,
+        note:
+          mission.label
       }
     );
 
   }
+
 
   return result;
 
@@ -1120,8 +1434,15 @@ export async function sendFriendRequest(
   targetName
 ) {
 
+  myName =
+    String(
+      myName || ""
+    ).trim();
+
   targetName =
-    targetName.trim();
+    String(
+      targetName || ""
+    ).trim();
 
 
   if (
@@ -1139,7 +1460,9 @@ export async function sendFriendRequest(
 
   const targetSnap =
     await get(
-      profileRef(targetName)
+      profileRef(
+        targetName
+      )
     );
 
 
@@ -1157,6 +1480,7 @@ export async function sendFriendRequest(
     targetSnap.val() || {};
 
 
+  // قبلاً دوست هستند
   if (
     targetVal.friends &&
     targetVal.friends[myName]
@@ -1170,13 +1494,42 @@ export async function sendFriendRequest(
   }
 
 
+  // درخواست قبلاً ارسال شده
+  if (
+    targetVal.friendRequests &&
+    targetVal.friendRequests[myName]
+  ) {
+
+    return {
+      ok: false,
+      reason: "request-pending"
+    };
+
+  }
+
+
+  // اگر طرف مقابل قبلاً برای ما درخواست فرستاده
+  if (
+    targetVal.friendRequests &&
+    targetVal.friendRequests[myName]
+  ) {
+
+    return {
+      ok: false,
+      reason: "request-pending"
+    };
+
+  }
+
+
   await update(
     profileRef(
       targetName,
       "friendRequests"
     ),
     {
-      [myName]: Date.now()
+      [myName]:
+        Date.now()
     }
   );
 
@@ -1187,6 +1540,108 @@ export async function sendFriendRequest(
 
 }
 
+
+// ============================================================
+// بررسی وضعیت دوستی
+// ============================================================
+
+export async function getFriendStatus(
+  myName,
+  targetName
+) {
+
+  myName =
+    String(
+      myName || ""
+    ).trim();
+
+  targetName =
+    String(
+      targetName || ""
+    ).trim();
+
+
+  if (
+    !myName ||
+    !targetName
+  ) {
+
+    return {
+      isFriend: false,
+      requestPending: false,
+      isSelf: false
+    };
+
+  }
+
+
+  if (
+    myName === targetName
+  ) {
+
+    return {
+      isFriend: false,
+      requestPending: false,
+      isSelf: true
+    };
+
+  }
+
+
+  const myProfileSnap =
+    await get(
+      profileRef(
+        myName
+      )
+    );
+
+
+  const targetProfileSnap =
+    await get(
+      profileRef(
+        targetName
+      )
+    );
+
+
+  const myProfile =
+    myProfileSnap.val() || {};
+
+
+  const targetProfile =
+    targetProfileSnap.val() || {};
+
+
+  const isFriend =
+    !!(
+      myProfile.friends &&
+      myProfile.friends[
+        targetName
+      ]
+    );
+
+
+  const requestPending =
+    !!(
+      targetProfile.friendRequests &&
+      targetProfile.friendRequests[
+        myName
+      ]
+    );
+
+
+  return {
+    isFriend,
+    requestPending,
+    isSelf: false
+  };
+
+}
+
+
+// ============================================================
+// درخواست‌های دوستی
+// ============================================================
 
 export function listenFriendRequests(
   myName,
@@ -1203,6 +1658,7 @@ export function listenFriendRequests(
       const val =
         snap.val() || {};
 
+
       callback(
         Object.keys(val)
       );
@@ -1212,6 +1668,10 @@ export function listenFriendRequests(
 
 }
 
+
+// ============================================================
+// قبول درخواست دوستی
+// ============================================================
 
 export async function acceptFriendRequest(
   myName,
@@ -1224,7 +1684,8 @@ export async function acceptFriendRequest(
       "friends"
     ),
     {
-      [fromName]: true
+      [fromName]:
+        true
     }
   );
 
@@ -1235,7 +1696,8 @@ export async function acceptFriendRequest(
       "friends"
     ),
     {
-      [myName]: true
+      [myName]:
+        true
     }
   );
 
@@ -1249,6 +1711,10 @@ export async function acceptFriendRequest(
 
 }
 
+
+// ============================================================
+// رد درخواست دوستی
+// ============================================================
 
 export async function rejectFriendRequest(
   myName,
@@ -1265,25 +1731,37 @@ export async function rejectFriendRequest(
 }
 
 
+// ============================================================
+// لیست دوستان
+// آنلاین + آفلاین + آخرین حضور
+// ============================================================
+
 export function listenFriends(
   myName,
   callback
 ) {
 
   return onValue(
-    profileRef(myName, "friends"),
+    profileRef(
+      myName,
+      "friends"
+    ),
     async (snap) => {
 
       const val =
         snap.val() || {};
 
+
       const names =
         Object.keys(val);
+
 
       const results = [];
 
 
-      for (const name of names) {
+      for (
+        const name of names
+      ) {
 
         try {
 
@@ -1295,6 +1773,7 @@ export function listenFriends(
               )
             );
 
+
           const presence =
             pSnap.val() || {
               online: false,
@@ -1303,15 +1782,37 @@ export function listenFriends(
 
 
           results.push({
+
             name,
-            online: !!presence.online
+
+            online:
+              !!presence.online,
+
+            lastSeen:
+              Number(
+                presence.lastSeen ||
+                0
+              )
+
           });
+
 
         } catch (e) {
 
+          console.warn(
+            "Friend presence error:",
+            e
+          );
+
+
           results.push({
+
             name,
-            online: false
+
+            online: false,
+
+            lastSeen: 0
+
           });
 
         }
@@ -1319,7 +1820,9 @@ export function listenFriends(
       }
 
 
-      callback(results);
+      callback(
+        results
+      );
 
     }
   );
@@ -1352,6 +1855,10 @@ export async function inviteFriendToRoom(
 }
 
 
+// ============================================================
+// دریافت دعوت‌ها
+// ============================================================
+
 export function listenInvites(
   myName,
   callback
@@ -1367,6 +1874,7 @@ export function listenInvites(
       const val =
         snap.val() || {};
 
+
       const list =
         Object.entries(val)
           .map(
@@ -1381,6 +1889,7 @@ export function listenInvites(
               (a.at || 0)
           );
 
+
       callback(list);
 
     }
@@ -1388,6 +1897,10 @@ export function listenInvites(
 
 }
 
+
+// ============================================================
+// حذف دعوت
+// ============================================================
 
 export async function dismissInvite(
   myName,
@@ -1432,7 +1945,9 @@ export async function sendChatMessage(
       .slice(0, 200)
       .trim();
 
+
   if (!clean) return;
+
 
   const msgsRef =
     chatRef(
@@ -1454,16 +1969,22 @@ export async function sendChatMessage(
   try {
 
     const snap =
-      await get(msgsRef);
+      await get(
+        msgsRef
+      );
+
 
     const val =
       snap.val() || {};
+
 
     const keys =
       Object.keys(val);
 
 
-    if (keys.length > 60) {
+    if (
+      keys.length > 60
+    ) {
 
       const sorted =
         keys.sort(
@@ -1480,7 +2001,9 @@ export async function sendChatMessage(
         );
 
 
-      for (const key of oldKeys) {
+      for (
+        const key of oldKeys
+      ) {
 
         await remove(
           chatRef(
@@ -1520,6 +2043,7 @@ export function listenChat(
       const val =
         snap.val() || {};
 
+
       const list =
         Object.entries(val)
           .map(
@@ -1533,6 +2057,7 @@ export function listenChat(
               (a.at || 0) -
               (b.at || 0)
           );
+
 
       callback(list);
 
@@ -1552,8 +2077,12 @@ export async function getLeaderboard(
 
   const snap =
     await get(
-      ref(db, "profiles")
+      ref(
+        db,
+        "profiles"
+      )
     );
+
 
   const val =
     snap.val() || {};
@@ -1563,17 +2092,23 @@ export async function getLeaderboard(
     Object.entries(val)
       .map(
         ([encodedName, profile]) => ({
-          name: decodeURIComponent(
-            encodedName
-          ),
-          wins: profile.wins || 0
+
+          name:
+            decodeURIComponent(
+              encodedName
+            ),
+
+          wins:
+            profile.wins || 0
+
         })
       );
 
 
   list.sort(
     (a, b) =>
-      b.wins - a.wins
+      b.wins -
+      a.wins
   );
 
 
@@ -1582,4 +2117,4 @@ export async function getLeaderboard(
     limitN
   );
 
-    }
+  }
