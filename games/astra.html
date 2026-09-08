@@ -5,161 +5,173 @@
 
   <meta
     name="viewport"
-    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>دومیتو استرا</title>
+  <title>Domito Astra</title>
 
   <link rel="stylesheet" href="astra.css">
 </head>
 
-<body>
+<body class="astra-body">
 
   <!-- حالت عمودی -->
-  <div id="rotateScreen" class="rotate-screen">
-    <div class="rotate-icon">📱</div>
-    <h2>گوشی را بچرخان</h2>
-    <p>دومیتو استرا در حالت افقی اجرا می‌شود</p>
+  <div class="astra-rotate-screen" id="astraRotateScreen">
+    <div class="icon">📱</div>
+    <h2>گوشیتو بچرخون</h2>
+    <p>Domito Astra فقط در حالت افقی (Landscape) بازی می‌شه</p>
   </div>
 
-  <main class="astra">
+
+  <main class="astra-game-root">
 
     <!-- HUD -->
-    <header class="hud">
+    <header class="astra-hud">
 
-      <div class="logo">
+      <div class="astra-brand">
         🚀 ASTRA
       </div>
 
-      <div class="hud-box">
-        <span>⛽</span>
-        <b id="fuel">0%</b>
+      <div class="astra-mode" id="hudMode">
+        تک‌نفره
       </div>
 
-      <div class="hud-box">
-        <span>📦</span>
-        <b id="cargo">0</b>
+      <div class="astra-time">
+        ⏱ <span id="hudTimer">--</span>
       </div>
 
-      <div class="hud-box">
-        <span>⚡</span>
-        <b id="powerup">0</b>
+      <div class="astra-race-title">
+        RACE TO WORLD 2
       </div>
 
-      <div class="hud-box">
-        <span>👥</span>
-        <b id="playerCount">1</b>
-      </div>
-
-      <div id="objective" class="objective">
-        💎 منابع را جمع کن
-      </div>
-
-    </header>
-
-
-    <!-- بازی -->
-    <section id="arena" class="arena">
-
-      <canvas id="canvas"></canvas>
-
-
-      <!-- پیام شروع -->
-      <div id="startMessage" class="start-message">
-        <strong id="messageTitle">
-          🚀 آماده‌ای؟
-        </strong>
-
-        <span id="messageText">
-          منابع انرژی را جمع کن
-        </span>
-      </div>
-
-
-      <!-- بازیکنان -->
-      <div id="players" class="players"></div>
-
-
-      <!-- جوی‌استیک -->
-      <div id="joystick" class="joystick">
-        <div id="knob" class="knob"></div>
-      </div>
-
-
-      <!-- توربو -->
       <button
-        id="boost"
-        class="boost"
-        type="button"
-      >
-        ⚡
-        <small>توربو</small>
-      </button>
-
-
-      <!-- پرتاب -->
-      <button
-        id="launch"
-        class="launch"
-        type="button"
-      >
-        🚀 پرتاب
-      </button>
-
-
-      <!-- فول‌اسکرین -->
-      <button
-        id="fullscreen"
-        class="small-btn fullscreen"
-        type="button"
-      >
-        ⛶
-      </button>
-
-
-      <!-- صدا -->
-      <button
-        id="mute"
-        class="small-btn mute"
+        id="astraMuteBtn"
+        class="hud-button"
         type="button"
       >
         🔊
       </button>
 
+      <button
+        id="astraFullscreenBtn"
+        class="hud-button"
+        type="button"
+      >
+        ⛶
+      </button>
 
-      <!-- نتیجه -->
+    </header>
+
+
+    <!-- اطلاعات بازیکنان -->
+    <section
+      class="players-hud"
+      id="playersHud"
+    ></section>
+
+
+    <!-- Arena -->
+    <section
+      class="astra-arena-box"
+      id="astraArenaBox"
+    >
+
+      <canvas id="astraCanvas"></canvas>
+
+
+      <!-- پیام وسط -->
       <div
-        id="result"
-        class="result hidden"
+        class="astra-overlay-msg"
+        id="astraOverlayMsg"
+      >
+        <div class="big">🚀 ASTRA</div>
+        <div class="sub">
+          در حال آماده‌سازی بازی...
+        </div>
+      </div>
+
+
+      <!-- کنترل P1 -->
+      <div
+        class="astra-control p1-control"
+        id="p1Control"
       >
 
-        <div id="resultIcon" class="result-icon">
-          🏆
+        <div
+          class="astra-joystick-base"
+          id="p1JoyBase"
+        >
+          <div
+            class="astra-joystick-knob"
+            id="p1JoyKnob"
+          ></div>
         </div>
 
-        <h1 id="resultTitle">
-          WORLD 2
-        </h1>
-
-        <p id="resultText">
-          برنده شدی!
-        </p>
-
-        <div id="resultStats" class="result-stats"></div>
+        <div class="player-control-label">
+          🔵 P1
+        </div>
 
         <button
-          id="back"
-          class="back"
+          class="action-button"
+          id="p1Boost"
           type="button"
         >
-          برگشت
+          🚀
         </button>
 
       </div>
 
+
+      <!-- کنترل P2 -->
+      <div
+        class="astra-control p2-control"
+        id="p2Control"
+      >
+
+        <div
+          class="astra-joystick-base"
+          id="p2JoyBase"
+        >
+          <div
+            class="astra-joystick-knob"
+            id="p2JoyKnob"
+          ></div>
+        </div>
+
+        <div class="player-control-label">
+          🟣 P2
+        </div>
+
+        <button
+          class="action-button"
+          id="p2Boost"
+          type="button"
+        >
+          🚀
+        </button>
+
+      </div>
+
+
+      <!-- اسلات پاورآپ -->
+      <div
+        class="powerup-indicator"
+        id="powerupIndicator"
+      >
+        ⚡
+      </div>
+
+
+      <!-- نتیجه -->
+      <div
+        class="astra-result"
+        id="astraResult"
+      ></div>
+
     </section>
 
   </main>
+
 
   <script
     type="module"
