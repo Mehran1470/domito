@@ -1,13 +1,8 @@
 import { waitForUser, getSavedName, recordRoundResult } from "../js/app.js";
 
-const ROUND_TIME = 30;
-const TOTAL_ROUNDS = 3;
-const COMBO_WINDOW = 3;
-const COMBO_LEVELS = [1, 2, 3, 4, 5, 6, 8];
-const BASE_SPEED_FACTOR = 0.42;
-const BOOST_MULT = 1.6;
-const BOOST_DURATION = 4;
+const FUEL_PER_RESOURCE = 100 / 8; // ۸ منبع برای پر شدن سوخت
 const TRAIL_LEN = 14;
+const BASE_SPEED_FACTOR = 0.4;
 
 const canvas = document.getElementById("astraCanvas");
 const ctx = canvas.getContext("2d");
@@ -16,24 +11,22 @@ const arenaBox = document.getElementById("astraArenaBox");
 const rotateScreen = document.getElementById("astraRotateScreen");
 const overlayMsg = document.getElementById("astraOverlayMsg");
 const resultScreen = document.getElementById("astraResult");
-const scoreHud = document.getElementById("hudScore");
-const roundHud = document.getElementById("hudRound");
-const timerHud = document.getElementById("hudTimer");
-const comboHud = document.getElementById("hudCombo");
-const powerupSlot = document.getElementById("astraPowerupSlot");
+const fuelP1El = document.getElementById("fuelP1");
+const fuelP2El = document.getElementById("fuelP2");
+const cargoP1El = document.getElementById("cargoP1");
+const cargoP2El = document.getElementById("cargoP2");
 const fullscreenBtn = document.getElementById("astraFullscreenBtn");
 const muteBtn = document.getElementById("astraMuteBtn");
 
 let W = 900, H = 450;
-let PLAYER_R = 14, TILE_R = 16, POWERUP_R = 14, BASE_SPEED = 190;
+let SHIP_R = 15, RES_R = 12, DOCK_R = 30, BASE_SPEED = 190;
 let stars = [];
-let planets = [];
 
 function recomputeScaledSizes() {
   const minDim = Math.min(W, H);
-  PLAYER_R = Math.max(10, minDim * 0.034);
-  TILE_R = Math.max(11, minDim * 0.038);
-  POWERUP_R = Math.max(11, minDim * 0.034);
+  SHIP_R = Math.max(10, minDim * 0.036);
+  RES_R = Math.max(9, minDim * 0.03);
+  DOCK_R = Math.max(20, minDim * 0.08);
   BASE_SPEED = minDim * BASE_SPEED_FACTOR;
 }
 
@@ -43,10 +36,6 @@ function regenerateBackground() {
   for (let i = 0; i < count; i++) {
     stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.4 + 0.3, tw: Math.random() * Math.PI * 2 });
   }
-  planets = [
-    { x: W * 0.12, y: H * 0.18, r: Math.min(W, H) * 0.09, color: "#4F7CFF" },
-    { x: W * 0.9, y: H * 0.82, r: Math.min(W, H) * 0.07, color: "#9B5CFF" },
-  ];
 }
 
 function resizeCanvasResolution() {
@@ -62,130 +51,95 @@ function resizeCanvasResolution() {
   W = cssW; H = cssH;
   recomputeScaledSizes();
   regenerateBackground();
+  setDocks();
 
   if (entitiesInitialized) {
     const rx = W / oldW, ry = H / oldH;
     if (isFinite(rx) && isFinite(ry) && rx > 0 && ry > 0) {
-      [player, ai].forEach((e) => { e.x *= rx; e.y *= ry; e.trail.forEach((p) => { p.x *= rx; p.y *= ry; }); });
-      tiles.forEach((t) => { t.x *= rx; t.y *= ry; });
-      if (powerup) { powerup.x *= rx; powerup.y *= ry; }
-      clampAllToBounds();
+      [p1, p2].forEach((s) => { s.x *= rx; s.y *= ry; s.trail.forEach((p) => { p.x *= rx; p.y *= ry; }); });
+      resources.forEach((r) => { r.x *= rx; r.y *= ry; });
+      clampAll();
     }
   }
 }
 
-function clampAllToBounds() {
-  [player, ai].forEach((e) => {
-    e.x = Math.max(PLAYER_R, Math.min(W - PLAYER_R, e.x));
-    e.y = Math.max(PLAYER_R, Math.min(H - PLAYER_R, e.y));
+function clampAll() {
+  [p1, p2].forEach((s) => {
+    s.x = Math.max(SHIP_R, Math.min(W - SHIP_R, s.x));
+    s.y = Math.max(SHIP_R, Math.min(H - SHIP_R, s.y));
   });
 }
 
-let player, ai, tiles, powerup, comboIndex, comboTimer, score, aiScore, tilesCapturedTotal;
-let round = 1, timeLeft = ROUND_TIME, running = false, paused = true;
-let myName;
-let joyVec = { x: 0, y: 0 };
+let dockP1, dockP2;
+function setDocks() {
+  dockP1 = { x: SHIP_R * 3, y: H / 2 };
+  dockP2 = { x: W - SHIP_R * 3, y: H / 2 };
+}
+
+let p1, p2, resources, particles, floaters;
 let entitiesInitialized = false;
-let particles = [];
-let floaters = [];
+let running = false, paused = true, raceOver = false;
+let myName;
+let joyVecP1 = { x: 0, y: 0 }, joyVecP2 = { x: 0, y: 0 };
 
 function rand(min, max) { return Math.random() * (max - min) + min; }
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-function makeEntity(x, y, color, label) {
-  return { x, y, boostUntil: 0, retargetAt: 0, targetTile: null, color, label, trail: [] };
+function makeShip(x, y, color, label) {
+  return { x, y, color, label, trail: [], fuel: 0, cargo: 0, launching: false };
 }
 
-function resetEntities() {
-  player = makeEntity(W * 0.25, H / 2, "#4F7CFF", myName || "تو");
-  ai = makeEntity(W * 0.75, H / 2, "#9B5CFF", "ربات");
-  tiles = [];
-  powerup = null;
-  comboIndex = 0;
-  comboTimer = 0;
+function resetGame() {
+  setDocks();
+  p1 = makeShip(dockP1.x, dockP1.y, "#4F7CFF", "نفر ۱");
+  p2 = makeShip(dockP2.x, dockP2.y, "#9B5CFF", "نفر ۲");
+  resources = [];
   particles = [];
   floaters = [];
   entitiesInitialized = true;
-  for (let i = 0; i < 4; i++) spawnTile();
+  raceOver = false;
+  for (let i = 0; i < 3; i++) spawnResource();
+  updateHud();
 }
 
-function tileValue() {
-  const roll = Math.random();
-  if (roll < 0.08) return 100;
-  if (roll < 0.33) return 50;
-  if (roll < 0.66) return 25;
-  return 10;
+function spawnResource() {
+  const margin = RES_R * 3;
+  const x = rand(W * 0.3, W * 0.7);
+  const y = rand(margin, H - margin);
+  resources.push({ x, y, spawnT: 0, pulse: Math.random() * Math.PI * 2 });
 }
 
-function spawnTile() {
-  const margin = TILE_R * 3;
-  tiles.push({ x: rand(margin, W - margin), y: rand(margin, H - margin), value: tileValue(), spawnT: 0, pulse: Math.random() * Math.PI * 2 });
+function maybeSpawnResource(dt) {
+  if (resources.length >= 5) return;
+  if (Math.random() < dt * 0.15) spawnResource();
 }
 
-function maybeSpawnPowerup(dt) {
-  if (powerup) return;
-  if (Math.random() < dt * 0.05) {
-    const margin = POWERUP_R * 3;
-    powerup = { x: rand(margin, W - margin), y: rand(margin, H - margin), spawnT: 0 };
-  }
+function pushTrail(ship) {
+  ship.trail.push({ x: ship.x, y: ship.y });
+  if (ship.trail.length > TRAIL_LEN) ship.trail.shift();
 }
 
-function currentSpeed(entity, now) {
-  return entity.boostUntil > now ? BASE_SPEED * BOOST_MULT : BASE_SPEED;
-}
-
-function pushTrail(entity) {
-  entity.trail.push({ x: entity.x, y: entity.y });
-  if (entity.trail.length > TRAIL_LEN) entity.trail.shift();
-}
-
-function updatePlayer(dt, now) {
+function updateShip(ship, joyVec, dt) {
+  if (ship.launching) return;
   const mag = Math.min(1, Math.hypot(joyVec.x, joyVec.y));
+  if (mag < 0.02) return;
   const len = Math.hypot(joyVec.x, joyVec.y) || 1;
   const nx = joyVec.x / len, ny = joyVec.y / len;
-  const speed = currentSpeed(player, now);
-  player.x += nx * mag * speed * dt;
-  player.y += ny * mag * speed * dt;
-  player.x = Math.max(PLAYER_R, Math.min(W - PLAYER_R, player.x));
-  player.y = Math.max(PLAYER_R, Math.min(H - PLAYER_R, player.y));
-  if (mag > 0.05) pushTrail(player);
+  ship.x += nx * mag * BASE_SPEED * dt;
+  ship.y += ny * mag * BASE_SPEED * dt;
+  ship.x = Math.max(SHIP_R, Math.min(W - SHIP_R, ship.x));
+  ship.y = Math.max(SHIP_R, Math.min(H - SHIP_R, ship.y));
+  pushTrail(ship);
 }
 
-function updateAI(dt, now) {
-  if (now > ai.retargetAt || !ai.targetTile) {
-    let best = null, bestScore = -1;
-    const candidates = [...tiles];
-    if (powerup) candidates.push({ ...powerup, value: 5 });
-    candidates.forEach((t) => {
-      const d = dist(ai, t);
-      const s = t.value / (d + 40);
-      if (s > bestScore) { bestScore = s; best = t; }
-    });
-    ai.targetTile = best;
-    ai.retargetAt = now + 0.4;
-  }
-  if (ai.targetTile) {
-    const d = dist(ai, ai.targetTile) || 1;
-    const speed = currentSpeed(ai, now);
-    ai.x += ((ai.targetTile.x - ai.x) / d) * speed * dt;
-    ai.y += ((ai.targetTile.y - ai.y) / d) * speed * dt;
-    pushTrail(ai);
-  }
-  ai.x = Math.max(PLAYER_R, Math.min(W - PLAYER_R, ai.x));
-  ai.y = Math.max(PLAYER_R, Math.min(H - PLAYER_R, ai.y));
-}
-
-// ---------- ذرات و امتیاز شناور ----------
-function burstParticles(x, y, color, count = 14) {
+function burstParticles(x, y, color, count = 12) {
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
-    const speed = rand(60, 160);
+    const speed = rand(50, 140);
     particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, color });
   }
 }
-function addFloater(x, y, text, color) {
-  floaters.push({ x, y, text, life: 1, color });
-}
+function addFloater(x, y, text, color) { floaters.push({ x, y, text, life: 1, color }); }
 function updateEffects(dt) {
   particles.forEach((p) => { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt * 1.4; });
   particles = particles.filter((p) => p.life > 0);
@@ -193,44 +147,69 @@ function updateEffects(dt) {
   floaters = floaters.filter((f) => f.life > 0);
 }
 
-function grantCombo(entity, isPlayer, value, x, y) {
-  if (isPlayer) {
-    if (comboTimer > 0) comboIndex = Math.min(COMBO_LEVELS.length - 1, comboIndex + 1);
-    else comboIndex = 0;
-    comboTimer = COMBO_WINDOW;
-    const mult = COMBO_LEVELS[comboIndex];
-    const gained = value * mult;
-    score += gained;
-    tilesCapturedTotal++;
-    addFloater(x, y, `+${gained}${mult > 1 ? ` x${mult}` : ""}`, "#FFC845");
-    burstParticles(x, y, "#4F7CFF");
-    playTone(mult > 3 ? 880 : 620, 0.08);
-  } else {
-    aiScore += value;
-    burstParticles(x, y, "#9B5CFF", 8);
-  }
-}
-
-function checkCaptures(now) {
-  tiles = tiles.filter((t) => {
-    if (dist(player, t) < PLAYER_R + TILE_R) { grantCombo(player, true, t.value, t.x, t.y); spawnTile(); return false; }
-    if (dist(ai, t) < PLAYER_R + TILE_R) { grantCombo(ai, false, t.value, t.x, t.y); spawnTile(); return false; }
+function checkResourceCollisions() {
+  resources = resources.filter((r) => {
+    if (dist(p1, r) < SHIP_R + RES_R) { collect(p1, r, "p1"); return false; }
+    if (dist(p2, r) < SHIP_R + RES_R) { collect(p2, r, "p2"); return false; }
     return true;
   });
-  if (powerup) {
-    if (dist(player, powerup) < PLAYER_R + POWERUP_R) {
-      player.boostUntil = now + BOOST_DURATION;
-      burstParticles(powerup.x, powerup.y, "#3ECF8E");
-      playTone(1040, 0.12);
-      powerup = null;
-    } else if (dist(ai, powerup) < PLAYER_R + POWERUP_R) {
-      ai.boostUntil = now + BOOST_DURATION;
-      powerup = null;
-    }
-  }
 }
 
-// ---------- صدای سنتزی (بدون فایل خارجی) ----------
+function collect(ship, res, who) {
+  ship.cargo++;
+  ship.fuel = Math.min(100, ship.fuel + FUEL_PER_RESOURCE);
+  addFloater(res.x, res.y, "+سوخت", who === "p1" ? "#4FD1FF" : "#FF4F81");
+  burstParticles(res.x, res.y, ship.color);
+  playTone(who === "p1" ? 620 : 740, 0.08);
+  updateHud();
+}
+
+function checkLaunch(now) {
+  [{ ship: p1, dock: dockP1, who: "p1" }, { ship: p2, dock: dockP2, who: "p2" }].forEach(({ ship, dock, who }) => {
+    if (raceOver || ship.launching) return;
+    if (ship.fuel >= 100 && dist(ship, dock) < DOCK_R + SHIP_R) {
+      startLaunch(ship, who);
+    }
+  });
+}
+
+async function startLaunch(ship, who) {
+  ship.launching = true;
+  raceOver = true;
+  paused = true;
+  await countdownLaunch(ship, who);
+}
+
+async function countdownLaunch(ship, who) {
+  for (const step of ["۳", "۲", "۱", "🚀 LAUNCH!"]) {
+    overlayMsg.innerHTML = `<div class="big">${step}</div>`;
+    overlayMsg.style.display = "flex";
+    playTone(step === "🚀 LAUNCH!" ? 1300 : 500, 0.08);
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  overlayMsg.style.display = "none";
+  finishRace(who);
+}
+
+async function finishRace(winnerWho) {
+  running = false;
+  const wonAccount = winnerWho === "p1"; // حساب لاگین‌شده همیشه نفر ۱ حساب می‌شه
+  try { await recordRoundResult(myName, "astra", { won: wonAccount }); } catch (e) { console.error(e); }
+
+  resultScreen.style.display = "flex";
+  const label = winnerWho === "p1" ? "نفر ۱" : "نفر ۲";
+  const cls = winnerWho;
+  resultScreen.innerHTML = `
+    <div class="headline ${cls}">🏆 ${label} برنده شد!</div>
+    <div style="color:#8B93B8; font-size:13px; margin-bottom:16px;">🌍 رسیدن به دنیای دوم</div>
+    <button id="rematchBtn">🔄 دوباره بازی کن</button>
+    <button id="homeBtn" class="ghost">🏠 بازگشت به خانه</button>
+  `;
+  document.getElementById("rematchBtn").addEventListener("click", () => window.location.reload());
+  document.getElementById("homeBtn").addEventListener("click", () => { window.location.href = "../index.html"; });
+}
+
+// ---------- صدای سنتزی ----------
 let audioCtx = null;
 let muted = false;
 function playTone(freq, duration) {
@@ -247,167 +226,109 @@ function playTone(freq, duration) {
     osc.start(); osc.stop(audioCtx.currentTime + duration);
   } catch (e) {}
 }
-muteBtn.addEventListener("click", () => {
-  muted = !muted;
-  muteBtn.textContent = muted ? "🔇" : "🔊";
-});
+muteBtn.addEventListener("click", () => { muted = !muted; muteBtn.textContent = muted ? "🔇" : "🔊"; });
 
 // ---------- رسم ----------
 function drawBackground(t) {
   ctx.fillStyle = "#05060f";
   ctx.fillRect(0, 0, W, H);
-
   const neb = ctx.createRadialGradient(W * 0.25, H * 0.2, 0, W * 0.25, H * 0.2, Math.max(W, H) * 0.5);
-  neb.addColorStop(0, "rgba(124,77,255,.14)");
-  neb.addColorStop(1, "rgba(124,77,255,0)");
-  ctx.fillStyle = neb;
-  ctx.fillRect(0, 0, W, H);
+  neb.addColorStop(0, "rgba(124,77,255,.14)"); neb.addColorStop(1, "rgba(124,77,255,0)");
+  ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
   const neb2 = ctx.createRadialGradient(W * 0.8, H * 0.85, 0, W * 0.8, H * 0.85, Math.max(W, H) * 0.45);
-  neb2.addColorStop(0, "rgba(79,124,255,.12)");
-  neb2.addColorStop(1, "rgba(79,124,255,0)");
-  ctx.fillStyle = neb2;
-  ctx.fillRect(0, 0, W, H);
+  neb2.addColorStop(0, "rgba(79,124,255,.12)"); neb2.addColorStop(1, "rgba(79,124,255,0)");
+  ctx.fillStyle = neb2; ctx.fillRect(0, 0, W, H);
 
-  planets.forEach((p) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = p.color;
-    ctx.globalAlpha = 0.18;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  });
-
-  ctx.strokeStyle = "rgba(255,255,255,.03)";
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(255,255,255,.03)"; ctx.lineWidth = 1;
   const gap = Math.max(30, Math.min(W, H) / 12);
   for (let x = 0; x < W; x += gap) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
   for (let y = 0; y < H; y += gap) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
 
   stars.forEach((s) => {
     const alpha = 0.4 + Math.sin(t * 2 + s.tw) * 0.3;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${Math.max(0.1, alpha)})`;
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${Math.max(0.1, alpha)})`; ctx.fill();
   });
 }
 
-function drawTrail(entity) {
-  entity.trail.forEach((p, i) => {
-    const a = (i / entity.trail.length) * 0.35;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, PLAYER_R * (0.3 + (i / entity.trail.length) * 0.5), 0, Math.PI * 2);
-    ctx.fillStyle = entity.color;
-    ctx.globalAlpha = a;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  });
-}
-
-function drawOrb(entity, now) {
-  drawTrail(entity);
-  const boosted = entity.boostUntil > now;
+function drawDock(dock, color, active) {
   ctx.beginPath();
-  ctx.arc(entity.x, entity.y, PLAYER_R, 0, Math.PI * 2);
-  ctx.fillStyle = entity.color;
-  ctx.shadowColor = entity.color;
-  ctx.shadowBlur = boosted ? Math.min(28, PLAYER_R * 1.8) : Math.min(14, PLAYER_R);
-  ctx.fill();
+  ctx.arc(dock.x, dock.y, DOCK_R, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = active ? 0.9 : 0.3;
+  ctx.lineWidth = active ? 3 : 1.5;
+  if (active) { ctx.shadowColor = color; ctx.shadowBlur = 16; }
+  ctx.stroke();
   ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
 
+function drawTrail(ship) {
+  ship.trail.forEach((p, i) => {
+    const a = (i / ship.trail.length) * 0.35;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, SHIP_R * (0.3 + (i / ship.trail.length) * 0.5), 0, Math.PI * 2);
+    ctx.fillStyle = ship.color; ctx.globalAlpha = a; ctx.fill(); ctx.globalAlpha = 1;
+  });
+}
+
+function drawShip(ship) {
+  drawTrail(ship);
+  ctx.beginPath();
+  ctx.arc(ship.x, ship.y, SHIP_R, 0, Math.PI * 2);
+  ctx.fillStyle = ship.color;
+  ctx.shadowColor = ship.color; ctx.shadowBlur = ship.fuel >= 100 ? Math.min(24, SHIP_R * 1.6) : Math.min(12, SHIP_R);
+  ctx.fill(); ctx.shadowBlur = 0;
   ctx.fillStyle = "#EAF0FF";
-  ctx.font = `${Math.max(9, PLAYER_R * 0.7)}px Vazirmatn, sans-serif`;
+  ctx.font = `${Math.max(9, SHIP_R * 0.65)}px Vazirmatn, sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText(entity.label, entity.x, entity.y - PLAYER_R - 6);
-
-  if (boosted) {
-    ctx.beginPath();
-    ctx.arc(entity.x, entity.y, PLAYER_R + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "#3ECF8E";
-    ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
+  ctx.fillText(ship.label, ship.x, ship.y - SHIP_R - 6);
 }
 
-function drawTiles(t) {
-  tiles.forEach((tile) => {
-    tile.spawnT = Math.min(1, tile.spawnT + 0.06);
-    const scale = tile.spawnT < 1 ? tile.spawnT : 1;
-    const pulse = 1 + Math.sin(t * 3 + tile.pulse) * 0.08;
-    const r = TILE_R * scale * pulse;
-    const rare = tile.value >= 100;
-    const near = Math.min(dist(player, tile), dist(ai, tile)) < TILE_R + PLAYER_R + 30;
-
+function drawResources(t) {
+  resources.forEach((r) => {
+    r.spawnT = Math.min(1, r.spawnT + 0.06);
+    const pulse = 1 + Math.sin(t * 3 + r.pulse) * 0.1;
+    const rad = RES_R * r.spawnT * pulse;
     ctx.beginPath();
-    ctx.arc(tile.x, tile.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = rare ? "#FFC845" : tile.value >= 50 ? "#4FD1FF" : tile.value >= 25 ? "#9B5CFF" : "#4F7CFF";
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = near ? Math.min(22, r * 1.4) : (rare ? Math.min(16, r) : 0);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
+    ctx.arc(r.x, r.y, rad, 0, Math.PI * 2);
+    ctx.fillStyle = "#FFC845";
+    ctx.shadowColor = "#FFC845"; ctx.shadowBlur = Math.min(16, rad);
+    ctx.fill(); ctx.shadowBlur = 0;
     ctx.fillStyle = "#05060f";
-    ctx.font = `${Math.max(8, r * 0.6)}px Vazirmatn, sans-serif`;
+    ctx.font = `${Math.max(8, rad * 0.8)}px sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(tile.value, tile.x, tile.y + r * 0.2);
+    ctx.fillText("⚡", r.x, r.y + rad * 0.3);
   });
-}
-
-function drawPowerup() {
-  if (!powerup) { powerupSlot.classList.remove("active"); return; }
-  powerup.spawnT = Math.min(1, (powerup.spawnT || 0) + 0.06);
-  const r = POWERUP_R * powerup.spawnT;
-  ctx.beginPath();
-  ctx.arc(powerup.x, powerup.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = "#3ECF8E";
-  ctx.shadowColor = "#3ECF8E"; ctx.shadowBlur = Math.min(18, r * 1.2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#05060f";
-  ctx.font = `${Math.max(9, r * 0.7)}px Vazirmatn, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.fillText("⚡", powerup.x, powerup.y + r * 0.25);
 }
 
 function drawEffects() {
   particles.forEach((p) => {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
-    ctx.fillStyle = p.color;
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
+    ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.life); ctx.fill(); ctx.globalAlpha = 1;
   });
   floaters.forEach((f) => {
-    ctx.font = "bold 13px Vazirmatn, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillStyle = f.color;
-    ctx.globalAlpha = Math.max(0, f.life);
-    ctx.fillText(f.text, f.x, f.y);
-    ctx.globalAlpha = 1;
+    ctx.font = "bold 12px Vazirmatn, sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = f.color; ctx.globalAlpha = Math.max(0, f.life);
+    ctx.fillText(f.text, f.x, f.y); ctx.globalAlpha = 1;
   });
 }
 
 function draw(t) {
   drawBackground(t);
-  drawTiles(t);
-  drawPowerup();
-  drawOrb(ai, t);
-  drawOrb(player, t);
+  drawDock(dockP1, "#4F7CFF", p1.fuel >= 100);
+  drawDock(dockP2, "#9B5CFF", p2.fuel >= 100);
+  drawResources(t);
+  drawShip(p1);
+  drawShip(p2);
   drawEffects();
-
-  const boosted = player.boostUntil > t;
-  powerupSlot.classList.toggle("active", boosted);
 }
 
 function updateHud() {
-  scoreHud.textContent = score;
-  roundHud.textContent = `راند ${round}/${TOTAL_ROUNDS}`;
-  timerHud.textContent = Math.ceil(timeLeft);
-  const mult = COMBO_LEVELS[comboIndex];
-  comboHud.textContent = mult > 1 ? `x${mult} کمبو` : "بدون کمبو";
+  fuelP1El.style.width = `${p1.fuel}%`;
+  fuelP2El.style.width = `${p2.fuel}%`;
+  cargoP1El.textContent = p1.cargo;
+  cargoP2El.textContent = p2.cargo;
 }
 
 let lastTime = null;
@@ -419,184 +340,105 @@ function loop(ts) {
   const now = ts / 1000;
 
   if (!paused) {
-    updatePlayer(dt, now);
-    updateAI(dt, now);
-    checkCaptures(now);
-    maybeSpawnPowerup(dt);
+    updateShip(p1, joyVecP1, dt);
+    updateShip(p2, joyVecP2, dt);
+    checkResourceCollisions();
+    checkLaunch(now);
+    maybeSpawnResource(dt);
     updateEffects(dt);
-    comboTimer = Math.max(0, comboTimer - dt);
-    if (comboTimer === 0) comboIndex = 0;
-    timeLeft -= dt;
-    if (timeLeft <= 0) endRound();
-    updateHud();
   }
   draw(now);
   requestAnimationFrame(loop);
 }
 
-function showOverlay(big, sub, duration) {
-  return new Promise((resolve) => {
-    overlayMsg.innerHTML = `<div class="big">${big}</div><div class="sub">${sub || ""}</div>`;
-    overlayMsg.style.display = "flex";
-    setTimeout(() => { overlayMsg.style.display = "none"; resolve(); }, duration);
-  });
-}
-
-async function countdown() {
+async function startMatch() {
+  resizeCanvasResolution();
+  resetGame();
+  running = true;
+  requestAnimationFrame(loop);
   paused = true;
-  for (const step of ["۳", "۲", "۱", "ASTRA!"]) {
+  overlayMsg.innerHTML = `<div class="big">۳</div>`;
+  for (const step of ["۳", "۲", "۱", "برو!"]) {
     overlayMsg.innerHTML = `<div class="big">${step}</div>`;
     overlayMsg.style.display = "flex";
-    playTone(step === "ASTRA!" ? 1200 : 500, 0.08);
-    await new Promise((r) => setTimeout(r, 650));
+    playTone(step === "برو!" ? 900 : 500, 0.08);
+    await new Promise((r) => setTimeout(r, 600));
   }
   overlayMsg.style.display = "none";
   paused = orientationLocked;
 }
 
-async function endRound() {
-  paused = true;
-  if (round < TOTAL_ROUNDS) {
-    round++;
-    resetEntities();
-    timeLeft = ROUND_TIME;
-    await showOverlay(`راند ${round}`, "آماده شو...", 1400);
-    paused = orientationLocked;
-  } else {
-    finishMatch();
+// ---------- جوی‌استیک‌ها با Pointer Events (چندلمسی) ----------
+function setupJoystick(baseEl, knobEl, side) {
+  let active = false, origin = { x: 0, y: 0 }, pointerId = null;
+  const setVec = (v) => { if (side === "p1") joyVecP1 = v; else joyVecP2 = v; };
+
+  function start(clientX, clientY) {
+    active = true;
+    baseEl.classList.add("pressed");
+    const rect = baseEl.getBoundingClientRect();
+    origin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
   }
+  function move(clientX, clientY) {
+    if (!active) return;
+    let dx = clientX - origin.x, dy = clientY - origin.y;
+    const max = baseEl.getBoundingClientRect().width * 0.38;
+    const deadZone = max * 0.14;
+    const d = Math.hypot(dx, dy);
+    if (d < deadZone) { setVec({ x: 0, y: 0 }); knobEl.style.transform = "translate(0,0)"; return; }
+    if (d > max) { dx = (dx / d) * max; dy = (dy / d) * max; }
+    knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
+    setVec({ x: dx / max, y: dy / max });
+  }
+  function end() {
+    active = false; pointerId = null;
+    baseEl.classList.remove("pressed");
+    knobEl.style.transform = "translate(0,0)";
+    setVec({ x: 0, y: 0 });
+  }
+
+  baseEl.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (pointerId !== null) return;
+    pointerId = e.pointerId;
+    baseEl.setPointerCapture(e.pointerId);
+    start(e.clientX, e.clientY);
+    move(e.clientX, e.clientY);
+  });
+  baseEl.addEventListener("pointermove", (e) => { if (e.pointerId === pointerId) { e.preventDefault(); move(e.clientX, e.clientY); } });
+  baseEl.addEventListener("pointerup", (e) => { if (e.pointerId === pointerId) end(); });
+  baseEl.addEventListener("pointercancel", (e) => { if (e.pointerId === pointerId) end(); });
+  baseEl.style.touchAction = "none";
 }
 
-async function finishMatch() {
-  running = false;
-  const won = score > aiScore;
-  playTone(won ? 1300 : 300, 0.3);
-  try { await recordRoundResult(myName, "astra", { won }); } catch (e) { console.error(e); }
-
-  resultScreen.style.display = "flex";
-  resultScreen.innerHTML = `
-    <div class="headline ${won ? "win" : "lose"}">${won ? "🏆 پیروزی" : "😅 شکست"}</div>
-    <div class="astra-result-grid">
-      <div class="astra-result-box"><div class="num">${score}</div><div class="lbl">امتیاز تو</div></div>
-      <div class="astra-result-box"><div class="num">${aiScore}</div><div class="lbl">امتیاز ربات</div></div>
-      <div class="astra-result-box"><div class="num">x${COMBO_LEVELS[comboIndex]}</div><div class="lbl">آخرین کمبو</div></div>
-      <div class="astra-result-box"><div class="num">${tilesCapturedTotal}</div><div class="lbl">تایل گرفته‌شده</div></div>
-    </div>
-    <button id="rematchBtn">🔄 دوباره بازی کن</button>
-    <button id="homeBtn" class="ghost">🏠 بازگشت به خانه</button>
-  `;
-  document.getElementById("rematchBtn").addEventListener("click", () => window.location.reload());
-  document.getElementById("homeBtn").addEventListener("click", () => { window.location.href = "../index.html"; });
-}
-
-async function startMatch() {
-  round = 1; score = 0; aiScore = 0; tilesCapturedTotal = 0; timeLeft = ROUND_TIME;
-  resizeCanvasResolution();
-  resetEntities();
-  running = true;
-  requestAnimationFrame(loop);
-  await countdown();
-}
-
-// ---------- جوی‌استیک با Pointer Events ----------
-const joyBase = document.getElementById("astraJoyBase");
-const joyKnob = document.getElementById("astraJoyKnob");
-let joyActive = false, joyOrigin = { x: 0, y: 0 }, joyPointerId = null;
-
-function joyStart(clientX, clientY) {
-  joyActive = true;
-  joyBase.classList.add("pressed");
-  const rect = joyBase.getBoundingClientRect();
-  joyOrigin = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-}
-function joyMove(clientX, clientY) {
-  if (!joyActive) return;
-  let dx = clientX - joyOrigin.x, dy = clientY - joyOrigin.y;
-  const max = joyBase.getBoundingClientRect().width * 0.38;
-  const deadZone = max * 0.14;
-  const d = Math.hypot(dx, dy);
-  if (d < deadZone) { joyVec = { x: 0, y: 0 }; joyKnob.style.transform = "translate(0,0)"; return; }
-  if (d > max) { dx = (dx / d) * max; dy = (dy / d) * max; }
-  joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-  joyVec = { x: dx / max, y: dy / max };
-}
-function joyEnd() {
-  joyActive = false;
-  joyPointerId = null;
-  joyBase.classList.remove("pressed");
-  joyKnob.style.transform = "translate(0,0)";
-  joyVec = { x: 0, y: 0 };
-}
-
-joyBase.addEventListener("pointerdown", (e) => {
-  e.preventDefault();
-  if (joyPointerId !== null) return;
-  joyPointerId = e.pointerId;
-  joyBase.setPointerCapture(e.pointerId);
-  joyStart(e.clientX, e.clientY);
-  joyMove(e.clientX, e.clientY);
-});
-joyBase.addEventListener("pointermove", (e) => {
-  if (e.pointerId !== joyPointerId) return;
-  e.preventDefault();
-  joyMove(e.clientX, e.clientY);
-});
-joyBase.addEventListener("pointerup", (e) => { if (e.pointerId === joyPointerId) joyEnd(); });
-joyBase.addEventListener("pointercancel", (e) => { if (e.pointerId === joyPointerId) joyEnd(); });
-joyBase.style.touchAction = "none";
-
-// ---------- کیبورد (دسکتاپ) ----------
-const keys = {};
-window.addEventListener("keydown", (e) => { keys[e.key] = true; if (!joyActive) updateKeyVec(); });
-window.addEventListener("keyup", (e) => { keys[e.key] = false; if (!joyActive) updateKeyVec(); });
-function updateKeyVec() {
-  let x = 0, y = 0;
-  if (keys["ArrowLeft"] || keys["a"]) x -= 1;
-  if (keys["ArrowRight"] || keys["d"]) x += 1;
-  if (keys["ArrowUp"] || keys["w"]) y -= 1;
-  if (keys["ArrowDown"] || keys["s"]) y += 1;
-  joyVec = { x, y };
-}
+setupJoystick(document.getElementById("astraJoyBaseP1"), document.getElementById("astraJoyKnobP1"), "p1");
+setupJoystick(document.getElementById("astraJoyBaseP2"), document.getElementById("astraJoyKnobP2"), "p2");
 
 // ---------- Fullscreen ----------
 fullscreenBtn.addEventListener("click", async () => {
   try {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-      fullscreenBtn.textContent = "⛶ خروج از تمام‌صفحه";
-    } else {
-      await document.exitFullscreen();
-      fullscreenBtn.textContent = "⛶ تمام‌صفحه";
-    }
-  } catch (e) {
-    // بعضی مرورگرها Fullscreen رو رد می‌کنن — بازی بدون مشکل ادامه پیدا می‌کنه
-  }
+    if (!document.fullscreenElement) { await document.documentElement.requestFullscreen(); fullscreenBtn.textContent = "⛶ خروج"; }
+    else { await document.exitFullscreen(); fullscreenBtn.textContent = "⛶ تمام‌صفحه"; }
+  } catch (e) {}
 });
 
-// ---------- قفل landscape + پاسخ به تغییرات viewport ----------
+// ---------- قفل landscape ----------
 let orientationLocked = false;
-
 function checkOrientation() {
   const w = window.innerWidth, h = window.innerHeight;
   const isMobileLike = Math.min(w, h) < 700;
   const isPortrait = h > w;
   orientationLocked = isMobileLike && isPortrait;
   rotateScreen.classList.toggle("show", orientationLocked);
-  if (running) paused = orientationLocked;
+  if (running && !raceOver) paused = orientationLocked;
 }
-
 function handleViewportChange() {
   checkOrientation();
-  if (!orientationLocked) {
-    requestAnimationFrame(() => requestAnimationFrame(resizeCanvasResolution));
-  }
+  if (!orientationLocked) requestAnimationFrame(() => requestAnimationFrame(resizeCanvasResolution));
 }
-
 window.addEventListener("resize", handleViewportChange);
 window.addEventListener("orientationchange", handleViewportChange);
-if (window.visualViewport) {
-  window.visualViewport.addEventListener("resize", handleViewportChange);
-}
+if (window.visualViewport) window.visualViewport.addEventListener("resize", handleViewportChange);
 
 async function init() {
   const user = await waitForUser();
