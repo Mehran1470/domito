@@ -5,185 +5,151 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"
   >
 
-  <title>Domito Astra</title>
+  <title>دومیتو استرا</title>
 
   <link rel="stylesheet" href="astra.css">
 </head>
 
-<body class="astra-body">
+<body>
 
-  <!-- Portrait warning -->
-  <div id="astraRotateScreen" class="astra-rotate-screen">
+  <!-- حالت عمودی -->
+  <div id="rotateScreen" class="rotate-screen">
     <div class="rotate-icon">📱</div>
-    <h2>گوشیتو بچرخون</h2>
-    <p>
-      دومیتو استرا فقط در حالت افقی بازی می‌شه
-    </p>
+    <h2>گوشی را بچرخان</h2>
+    <p>دومیتو استرا در حالت افقی اجرا می‌شود</p>
   </div>
 
-
-  <main class="astra-root">
+  <main class="astra">
 
     <!-- HUD -->
-    <header class="astra-hud">
+    <header class="hud">
 
-      <div class="hud-brand">
+      <div class="logo">
         🚀 ASTRA
       </div>
 
-      <div class="hud-item">
-        <span id="hudMode">تک‌نفره</span>
+      <div class="hud-box">
+        <span>⛽</span>
+        <b id="fuel">0%</b>
       </div>
 
-      <div class="hud-item">
-        ⛽
-        <span id="hudFuel">0%</span>
+      <div class="hud-box">
+        <span>📦</span>
+        <b id="cargo">0</b>
       </div>
 
-      <div class="hud-item">
-        📦
-        <span id="hudCargo">0</span>
+      <div class="hud-box">
+        <span>⚡</span>
+        <b id="powerup">0</b>
       </div>
 
-      <div class="hud-item">
-        👥
-        <span id="hudPlayers">1</span>
+      <div class="hud-box">
+        <span>👥</span>
+        <b id="playerCount">1</b>
       </div>
 
-      <div class="hud-item objective">
-        <span id="hudObjective">
-          منابع رو جمع کن
-        </span>
+      <div id="objective" class="objective">
+        💎 منابع را جمع کن
       </div>
 
     </header>
 
 
-    <!-- Arena -->
-    <section
-      id="astraArena"
-      class="astra-arena"
-    >
+    <!-- بازی -->
+    <section id="arena" class="arena">
 
-      <canvas id="astraCanvas"></canvas>
+      <canvas id="canvas"></canvas>
 
 
-      <!-- Center message -->
-      <div
-        id="astraMessage"
-        class="astra-message"
-      >
-        <div class="message-title">
+      <!-- پیام شروع -->
+      <div id="startMessage" class="start-message">
+        <strong id="messageTitle">
           🚀 آماده‌ای؟
-        </div>
+        </strong>
 
-        <div
-          id="messageSub"
-          class="message-sub"
-        >
-          منابع فضایی رو جمع کن
-        </div>
+        <span id="messageText">
+          منابع انرژی را جمع کن
+        </span>
       </div>
 
 
-      <!-- Joystick -->
-      <div
-        id="joyBase"
-        class="joystick"
-      >
-        <div
-          id="joyKnob"
-          class="joystick-knob"
-        ></div>
+      <!-- بازیکنان -->
+      <div id="players" class="players"></div>
+
+
+      <!-- جوی‌استیک -->
+      <div id="joystick" class="joystick">
+        <div id="knob" class="knob"></div>
       </div>
 
 
-      <!-- Turbo -->
+      <!-- توربو -->
       <button
-        id="boostButton"
-        class="boost-button"
+        id="boost"
+        class="boost"
         type="button"
       >
         ⚡
-        <span>توربو</span>
+        <small>توربو</small>
       </button>
 
 
-      <!-- Launch -->
+      <!-- پرتاب -->
       <button
-        id="launchButton"
-        class="launch-button"
+        id="launch"
+        class="launch"
         type="button"
       >
         🚀 پرتاب
       </button>
 
 
-      <!-- Fullscreen -->
+      <!-- فول‌اسکرین -->
       <button
-        id="fullscreenButton"
-        class="small-button fullscreen-button"
+        id="fullscreen"
+        class="small-btn fullscreen"
         type="button"
       >
         ⛶
       </button>
 
 
-      <!-- Mute -->
+      <!-- صدا -->
       <button
-        id="muteButton"
-        class="small-button mute-button"
+        id="mute"
+        class="small-btn mute"
         type="button"
       >
         🔊
       </button>
 
 
-      <!-- Players panel -->
+      <!-- نتیجه -->
       <div
-        id="playersPanel"
-        class="players-panel"
-      ></div>
-
-
-      <!-- Result -->
-      <div
-        id="resultScreen"
-        class="result-screen hidden"
+        id="result"
+        class="result hidden"
       >
 
-        <div
-          id="resultIcon"
-          class="result-icon"
-        >
+        <div id="resultIcon" class="result-icon">
           🏆
         </div>
 
-        <div
-          id="resultTitle"
-          class="result-title"
-        >
-          World 2
-        </div>
+        <h1 id="resultTitle">
+          WORLD 2
+        </h1>
 
-        <div
-          id="resultText"
-          class="result-text"
-        >
+        <p id="resultText">
           برنده شدی!
-        </div>
+        </p>
 
-        <div
-          id="resultStats"
-          class="result-stats"
-        ></div>
+        <div id="resultStats" class="result-stats"></div>
 
         <button
-          id="backButton"
-          class="result-button"
+          id="back"
+          class="back"
           type="button"
         >
           برگشت
@@ -194,7 +160,6 @@
     </section>
 
   </main>
-
 
   <script
     type="module"
