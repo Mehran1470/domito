@@ -1,59 +1,39 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-  <title>Astra | دومیتو</title>
-  <link rel="stylesheet" href="astra.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Domito Astra</title>
+<link rel="stylesheet" href="astra.css">
 </head>
-
 <body class="astra-body">
 
-  <div id="astraRotateScreen">
-    <div>📱 لطفاً گوشی را افقی کنید</div>
+  <div class="astra-rotate-screen" id="astraRotateScreen">
+    <div class="icon">📱</div>
+    <h2>گوشیتو بچرخون</h2>
+    <p>Domito Astra فقط در حالت افقی (landscape) بازی می‌شه</p>
   </div>
 
-  <main class="astra-game-root">
+  <div class="astra-game-root">
+    <div class="astra-hud-top">
+      <span class="astra-title">🚀 ASTRA</span>
+      <span class="astra-hud-item" id="hudRound">راند ۱/۳</span>
+      <span class="astra-hud-item" id="hudTimer">۳۰</span>
+      <span class="astra-hud-item combo" id="hudCombo">بدون کمبو</span>
+      <span class="astra-hud-item">🪙 <span id="hudScore">0</span></span>
+    </div>
 
-    <header class="astra-hud">
-      <div id="hudMode">🤖 بازی با ربات</div>
-      <div id="hudTimer">03:00</div>
-
-      <div class="hud-buttons">
-        <button id="muteBtn">🔊</button>
-        <button id="fullscreenBtn">⛶</button>
-      </div>
-    </header>
-
-    <div id="playersHud" class="players-hud"></div>
-
-    <section id="astraArenaBox" class="astra-arena">
+    <div class="astra-arena-box" id="astraArenaBox">
       <canvas id="astraCanvas"></canvas>
-
-      <div id="astraOverlayMsg" class="astra-overlay-msg">
-        <div class="loader"></div>
-        <div>در حال آماده‌سازی بازی...</div>
+      <div class="astra-overlay-msg" id="astraOverlayMsg" style="display:none;"></div>
+      <div class="astra-joystick-base" id="astraJoyBase">
+        <div class="astra-joystick-knob" id="astraJoyKnob"></div>
       </div>
+      <div class="astra-powerup-slot" id="astraPowerupSlot"></div>
+      <div class="astra-result" id="astraResult" style="display:none;"></div>
+    </div>
+  </div>
 
-      <div id="astraResult" class="astra-result hidden"></div>
-
-      <div id="powerupIndicator" class="powerup-indicator hidden"></div>
-
-      <div id="p1JoyBase" class="joystick">
-        <div id="p1JoyKnob" class="joystick-knob"></div>
-      </div>
-
-      <button id="p1Boost" class="boost-btn">🚀</button>
-
-      <div id="p2JoyBase" class="joystick p2">
-        <div id="p2JoyKnob" class="joystick-knob"></div>
-      </div>
-
-      <button id="p2Boost" class="boost-btn p2-boost">🚀</button>
-    </section>
-
-  </main>
-
-  <script type="module" src="astra.js"></script>
+<script type="module" src="astra.js"></script>
 </body>
 </html>
