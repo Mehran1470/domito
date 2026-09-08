@@ -2,9 +2,8 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Domito Astra</title>
-<link rel="stylesheet" href="../css/style.css">
 <link rel="stylesheet" href="astra.css">
 </head>
 <body class="astra-body">
@@ -15,21 +14,22 @@
     <p>Domito Astra فقط در حالت افقی (landscape) بازی می‌شه</p>
   </div>
 
-  <div class="astra-wrap">
+  <div class="astra-game-root">
     <div class="astra-hud-top">
-      <span class="astra-title">🚀 DOMITO ASTRA</span>
+      <span class="astra-title">🚀 ASTRA</span>
       <span class="astra-hud-item" id="hudRound">راند ۱/۳</span>
       <span class="astra-hud-item" id="hudTimer">۳۰</span>
       <span class="astra-hud-item combo" id="hudCombo">بدون کمبو</span>
       <span class="astra-hud-item">🪙 <span id="hudScore">0</span></span>
     </div>
 
-    <div class="astra-arena-box">
+    <div class="astra-arena-box" id="astraArenaBox">
       <canvas id="astraCanvas"></canvas>
       <div class="astra-overlay-msg" id="astraOverlayMsg" style="display:none;"></div>
       <div class="astra-joystick-base" id="astraJoyBase">
         <div class="astra-joystick-knob" id="astraJoyKnob"></div>
       </div>
+      <div class="astra-powerup-slot" id="astraPowerupSlot"></div>
       <div class="astra-result" id="astraResult" style="display:none;"></div>
     </div>
   </div>
