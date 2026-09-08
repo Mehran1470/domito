@@ -1,139 +1,936 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>اتاق بازی | دومیتو</title>
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>اتاق بازی | دومیتو</title>
+
+  <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
+
   <div class="wrap">
+
+    <!-- عنوان اتاق -->
     <div class="brand">
+
       <div class="brand-mark">🁢</div>
+
       <h1>اتاق بازی</h1>
-      <div class="room-code-badge" id="roomCodeText" style="margin-top:8px;"></div>
+
+      <div
+        class="room-code-badge"
+        id="roomCodeText"
+        style="margin-top:8px;"
+      ></div>
+
     </div>
 
+
+    <!-- بازیکنان -->
     <div class="card">
-      <h2>👥 بازیکنان (<span id="playerCount">0</span>)</h2>
-      <div class="room-players" id="playerGrid"></div>
+
+      <h2>
+        👥 بازیکنان
+        (<span id="playerCount">0</span>)
+      </h2>
+
+      <div
+        class="room-players"
+        id="playerGrid"
+      ></div>
+
+
+      <!-- دعوت به اتاق -->
+      <button
+        id="inviteRoomBtn"
+        class="btn-full"
+        style="margin-top:14px;"
+      >
+        👥 دعوت به اتاق
+      </button>
+
     </div>
 
+
+    <!-- انتخاب دوست برای دعوت -->
+    <div
+      class="card"
+      id="inviteCard"
+      style="display:none;"
+    >
+
+      <h2>
+        👥 دعوت از دوستان
+      </h2>
+
+      <p
+        class="muted"
+        style="margin-bottom:14px;"
+      >
+        یک دوست آنلاین را برای ورود به این اتاق انتخاب کن.
+      </p>
+
+      <div id="inviteFriendsList"></div>
+
+      <button
+        id="closeInviteBtn"
+        class="btn-full btn-ghost"
+        style="margin-top:12px;"
+      >
+        بستن
+      </button>
+
+    </div>
+
+
+    <!-- رای دادن -->
     <div class="card">
-      <h2>رای بده به بازی بعدی</h2>
+
+      <h2>
+        رای بده به بازی بعدی
+      </h2>
+
       <div id="gameOptions"></div>
-      <p class="status-line" id="voteStatus">در انتظار رای‌ها...</p>
+
+      <p
+        class="status-line"
+        id="voteStatus"
+      >
+        در انتظار رای‌ها...
+      </p>
+
     </div>
 
-    <button id="leaveBtn" class="btn-full btn-ghost">خروج از اتاق</button>
+
+    <!-- خروج -->
+    <button
+      id="leaveBtn"
+      class="btn-full btn-ghost"
+    >
+      خروج از اتاق
+    </button>
+
   </div>
 
-<script type="module">
-  import {
-    GAMES, roomRef, getSavedRoom, onValue, set, waitForUser,
-    getSavedName, leaveLobby, joinLobby, runTransaction, clearRoom, currentUid
-  } from "./js/app.js";
-  import { mountChat } from "./js/chat.js";
 
-  const myName = getSavedName();
-  const code = getSavedRoom();
-  if (!myName || !code) window.location.href = "index.html";
-  document.getElementById("roomCodeText").textContent = `کد: ${code}`;
+  <script type="module">
 
-  const R = (p) => roomRef(code, p);
+    import {
 
-  let myUid = null;
-  let players = {};
-  let votes = {};
-  let started = false;
+      GAMES,
 
-  const playerGrid = document.getElementById("playerGrid");
-  const playerCount = document.getElementById("playerCount");
-  const gameOptions = document.getElementById("gameOptions");
-  const voteStatus = document.getElementById("voteStatus");
+      roomRef,
+      getSavedRoom,
 
-  function renderPlayers() {
-    playerCount.textContent = Object.keys(players).length;
-    playerGrid.innerHTML = "";
-    Object.entries(players).forEach(([uid, p]) => {
-      const voted = !!votes[uid];
-      const el = document.createElement("div");
-      el.className = "room-player";
-      el.innerHTML = `
-        ${voted ? '<span class="ready-badge">رای داد</span>' : ""}
-        <div class="room-avatar">${(p.name.trim()[0] || "?").toUpperCase()}</div>
-        <div class="pname">${p.name}${uid === myUid ? " (تو)" : ""}</div>
-      `;
-      playerGrid.appendChild(el);
-    });
-  }
+      onValue,
+      set,
 
-  function tally() {
-    const counts = {};
-    GAMES.forEach((g) => (counts[g.id] = 0));
-    Object.entries(votes).forEach(([uid, v]) => {
-      if (players[uid] && counts[v.gameId] !== undefined) counts[v.gameId]++;
-    });
-    return counts;
-  }
+      waitForUser,
+      getSavedName,
 
-  function renderGames() {
-    const counts = tally();
-    gameOptions.innerHTML = "";
-    GAMES.forEach((g) => {
-      const el = document.createElement("div");
-      const myVote = votes[myUid]?.gameId === g.id;
-      el.className = "game-option" + (myVote ? " voted" : "");
-      el.innerHTML = `
-        <div><div class="name">${g.name}</div><div class="desc">${g.desc}</div></div>
-        <div class="votes">${counts[g.id]}</div>
-      `;
-      el.addEventListener("click", async () => {
-        await set(R(`votes/${myUid}`), { gameId: g.id, name: myName });
-      });
-      gameOptions.appendChild(el);
-    });
-    const validVotes = Object.keys(votes).filter((uid) => players[uid]).length;
-    const totalPlayers = Object.keys(players).length;
-    voteStatus.textContent = `${validVotes} از ${totalPlayers} نفر رای دادند`;
-  }
+      leaveLobby,
+      joinLobby,
 
-  async function maybeStartGame() {
-    const validVotes = Object.keys(votes).filter((uid) => players[uid]).length;
-    const totalPlayers = Object.keys(players).length;
-    if (started || totalPlayers === 0 || validVotes < totalPlayers) return;
+      runTransaction,
 
-    const counts = tally();
-    let winner = GAMES[0].id;
-    let best = -1;
-    GAMES.forEach((g) => { if (counts[g.id] > best) { best = counts[g.id]; winner = g.id; } });
+      clearRoom,
+      currentUid,
 
-    await runTransaction(R("currentGame"), (curr) => (curr && curr.gameId ? curr : { gameId: winner, roundId: Date.now() }));
-  }
+      inviteFriendToRoom,
+      listenFriends
 
-  async function init() {
-    const user = await waitForUser();
-    if (!user) { window.location.href = "index.html"; return; }
-    myUid = currentUid();
-    await joinLobby(myName);
-    mountChat(myName, code);
-    renderPlayers();
-    renderGames();
+    } from "./js/app.js";
 
-    onValue(R("players"), (snap) => { players = snap.val() || {}; renderPlayers(); renderGames(); maybeStartGame(); });
-    onValue(R("votes"), (snap) => { votes = snap.val() || {}; renderPlayers(); renderGames(); maybeStartGame(); });
-    onValue(R("currentGame"), (snap) => {
-      const cg = snap.val();
-      if (cg && cg.gameId) { started = true; window.location.href = `games/${cg.gameId}.html?round=${cg.roundId}`; }
-    });
-  }
-  init();
 
-  document.getElementById("leaveBtn").addEventListener("click", async () => {
-    await leaveLobby();
-    clearRoom();
-    window.location.href = "index.html";
-  });
-</script>
+    import {
+      mountChat
+    } from "./js/chat.js";
+
+
+    // ============================================================
+    // اطلاعات کاربر و اتاق
+    // ============================================================
+
+    const myName =
+      getSavedName();
+
+    const code =
+      getSavedRoom();
+
+
+    if (!myName || !code) {
+
+      window.location.href =
+        "index.html";
+
+    }
+
+
+    document
+      .getElementById("roomCodeText")
+      .textContent =
+        `کد: ${code}`;
+
+
+    const R =
+      (path) =>
+        roomRef(code, path);
+
+
+    // ============================================================
+    // متغیرها
+    // ============================================================
+
+    let myUid = null;
+
+    let players = {};
+
+    let votes = {};
+
+    let started = false;
+
+    let friends = [];
+
+
+    // ============================================================
+    // عناصر صفحه
+    // ============================================================
+
+    const playerGrid =
+      document.getElementById(
+        "playerGrid"
+      );
+
+
+    const playerCount =
+      document.getElementById(
+        "playerCount"
+      );
+
+
+    const gameOptions =
+      document.getElementById(
+        "gameOptions"
+      );
+
+
+    const voteStatus =
+      document.getElementById(
+        "voteStatus"
+      );
+
+
+    const inviteRoomBtn =
+      document.getElementById(
+        "inviteRoomBtn"
+      );
+
+
+    const inviteCard =
+      document.getElementById(
+        "inviteCard"
+      );
+
+
+    const inviteFriendsList =
+      document.getElementById(
+        "inviteFriendsList"
+      );
+
+
+    const closeInviteBtn =
+      document.getElementById(
+        "closeInviteBtn"
+      );
+
+
+    // ============================================================
+    // نمایش بازیکنان
+    // ============================================================
+
+    function renderPlayers() {
+
+      playerCount.textContent =
+        Object.keys(players).length;
+
+
+      playerGrid.innerHTML =
+        "";
+
+
+      Object.entries(players)
+        .forEach(
+          ([uid, p]) => {
+
+            const voted =
+              !!votes[uid];
+
+
+            const el =
+              document.createElement(
+                "div"
+              );
+
+
+            el.className =
+              "room-player";
+
+
+            el.innerHTML = `
+
+              ${
+                voted
+                  ? '<span class="ready-badge">رای داد</span>'
+                  : ""
+              }
+
+              <div class="room-avatar">
+                ${
+                  (p.name.trim()[0] || "?")
+                    .toUpperCase()
+                }
+              </div>
+
+              <div class="pname">
+                ${p.name}
+
+                ${
+                  uid === myUid
+                    ? " (تو)"
+                    : ""
+                }
+
+              </div>
+
+            `;
+
+
+            playerGrid.appendChild(
+              el
+            );
+
+          }
+        );
+
+    }
+
+
+    // ============================================================
+    // محاسبه رای‌ها
+    // ============================================================
+
+    function tally() {
+
+      const counts = {};
+
+
+      GAMES.forEach(
+        (game) => {
+
+          counts[game.id] =
+            0;
+
+        }
+      );
+
+
+      Object.entries(votes)
+        .forEach(
+          ([uid, vote]) => {
+
+            if (
+              players[uid] &&
+              counts[vote.gameId] !== undefined
+            ) {
+
+              counts[vote.gameId]++;
+
+            }
+
+          }
+        );
+
+
+      return counts;
+
+    }
+
+
+    // ============================================================
+    // نمایش بازی‌ها
+    // ============================================================
+
+    function renderGames() {
+
+      const counts =
+        tally();
+
+
+      gameOptions.innerHTML =
+        "";
+
+
+      GAMES.forEach(
+        (game) => {
+
+          const el =
+            document.createElement(
+              "div"
+            );
+
+
+          const myVote =
+            votes[myUid]?.gameId ===
+            game.id;
+
+
+          el.className =
+            "game-option" +
+            (
+              myVote
+                ? " voted"
+                : ""
+            );
+
+
+          el.innerHTML = `
+
+            <div>
+
+              <div class="name">
+                ${game.name}
+              </div>
+
+              <div class="desc">
+                ${game.desc}
+              </div>
+
+            </div>
+
+            <div class="votes">
+              ${counts[game.id]}
+            </div>
+
+          `;
+
+
+          el.addEventListener(
+            "click",
+            async () => {
+
+              await set(
+                R(`votes/${myUid}`),
+                {
+                  gameId:
+                    game.id,
+
+                  name:
+                    myName
+
+                }
+              );
+
+            }
+          );
+
+
+          gameOptions.appendChild(
+            el
+          );
+
+        }
+      );
+
+
+      const validVotes =
+        Object.keys(votes)
+          .filter(
+            (uid) =>
+              players[uid]
+          )
+          .length;
+
+
+      const totalPlayers =
+        Object.keys(players)
+          .length;
+
+
+      voteStatus.textContent =
+        `${validVotes} از ${totalPlayers} نفر رای دادند`;
+
+    }
+
+
+    // ============================================================
+    // شروع بازی
+    // ============================================================
+
+    async function maybeStartGame() {
+
+      const validVotes =
+        Object.keys(votes)
+          .filter(
+            (uid) =>
+              players[uid]
+          )
+          .length;
+
+
+      const totalPlayers =
+        Object.keys(players)
+          .length;
+
+
+      if (
+        started ||
+        totalPlayers === 0 ||
+        validVotes < totalPlayers
+      ) {
+
+        return;
+
+      }
+
+
+      const counts =
+        tally();
+
+
+      let winner =
+        GAMES[0].id;
+
+
+      let best =
+        -1;
+
+
+      GAMES.forEach(
+        (game) => {
+
+          if (
+            counts[game.id] >
+            best
+          ) {
+
+            best =
+              counts[game.id];
+
+            winner =
+              game.id;
+
+          }
+
+        }
+      );
+
+
+      await runTransaction(
+        R("currentGame"),
+        (current) => {
+
+          if (
+            current &&
+            current.gameId
+          ) {
+
+            return current;
+
+          }
+
+
+          return {
+
+            gameId:
+              winner,
+
+            roundId:
+              Date.now()
+
+          };
+
+        }
+      );
+
+    }
+
+
+    // ============================================================
+    // نمایش دوستان برای دعوت
+    // ============================================================
+
+    function renderInviteFriends() {
+
+      inviteFriendsList.innerHTML =
+        "";
+
+
+      if (
+        friends.length === 0
+      ) {
+
+        inviteFriendsList.innerHTML = `
+
+          <p class="muted">
+            هنوز دوستی نداری.
+          </p>
+
+        `;
+
+        return;
+
+      }
+
+
+      friends.forEach(
+        (friend) => {
+
+          const row =
+            document.createElement(
+              "div"
+            );
+
+
+          row.className =
+            "request-row";
+
+
+          const statusClass =
+            friend.online
+              ? ""
+              : "off";
+
+
+          row.innerHTML = `
+
+            <div
+              style="
+                display:flex;
+                align-items:center;
+                gap:9px;
+              "
+            >
+
+              <span
+                class="fdot ${statusClass}"
+              ></span>
+
+              <span class="txt">
+                ${friend.name}
+              </span>
+
+            </div>
+
+          `;
+
+
+          const actions =
+            document.createElement(
+              "div"
+            );
+
+
+          actions.className =
+            "actions";
+
+
+          const button =
+            document.createElement(
+              "button"
+            );
+
+
+          if (friend.online) {
+
+            button.textContent =
+              "دعوت";
+
+
+            button.addEventListener(
+              "click",
+              async () => {
+
+                button.disabled =
+                  true;
+
+                button.textContent =
+                  "در حال ارسال...";
+
+
+                try {
+
+                  await inviteFriendToRoom(
+                    myName,
+                    friend.name,
+                    code
+                  );
+
+
+                  button.textContent =
+                    "✓ ارسال شد";
+
+
+                } catch (error) {
+
+                  console.error(
+                    error
+                  );
+
+
+                  button.disabled =
+                    false;
+
+                  button.textContent =
+                    "دعوت";
+
+                  alert(
+                    "ارسال دعوت انجام نشد."
+                  );
+
+                }
+
+              }
+            );
+
+          } else {
+
+            button.textContent =
+              "آفلاین";
+
+            button.disabled =
+              true;
+
+            button.classList.add(
+              "btn-ghost"
+            );
+
+          }
+
+
+          actions.appendChild(
+            button
+          );
+
+
+          row.appendChild(
+            actions
+          );
+
+
+          inviteFriendsList
+            .appendChild(
+              row
+            );
+
+        }
+      );
+
+    }
+
+
+    // ============================================================
+    // باز کردن پنل دعوت
+    // ============================================================
+
+    inviteRoomBtn.addEventListener(
+      "click",
+      () => {
+
+        inviteCard.style.display =
+          "block";
+
+
+        renderInviteFriends();
+
+
+        inviteCard.scrollIntoView({
+          behavior:
+            "smooth",
+
+          block:
+            "center"
+
+        });
+
+      }
+    );
+
+
+    // ============================================================
+    // بستن پنل دعوت
+    // ============================================================
+
+    closeInviteBtn.addEventListener(
+      "click",
+      () => {
+
+        inviteCard.style.display =
+          "none";
+
+      }
+    );
+
+
+    // ============================================================
+    // شروع
+    // ============================================================
+
+    async function init() {
+
+      const user =
+        await waitForUser();
+
+
+      if (!user) {
+
+        window.location.href =
+          "index.html";
+
+        return;
+
+      }
+
+
+      myUid =
+        currentUid();
+
+
+      // ورود بازیکن به لابی
+      await joinLobby(
+        myName
+      );
+
+
+      // چت
+      mountChat(
+        myName,
+        code
+      );
+
+
+      // نمایش اولیه
+      renderPlayers();
+
+      renderGames();
+
+
+      // دوستان
+      listenFriends(
+        myName,
+        (list) => {
+
+          friends =
+            list || [];
+
+
+          if (
+            inviteCard.style.display !==
+            "none"
+          ) {
+
+            renderInviteFriends();
+
+          }
+
+        }
+      );
+
+
+      // بازیکنان
+      onValue(
+        R("players"),
+        (snap) => {
+
+          players =
+            snap.val() || {};
+
+
+          renderPlayers();
+
+          renderGames();
+
+          maybeStartGame();
+
+        }
+      );
+
+
+      // رای‌ها
+      onValue(
+        R("votes"),
+        (snap) => {
+
+          votes =
+            snap.val() || {};
+
+
+          renderPlayers();
+
+          renderGames();
+
+          maybeStartGame();
+
+        }
+      );
+
+
+      // بازی انتخاب‌شده
+      onValue(
+        R("currentGame"),
+        (snap) => {
+
+          const currentGame =
+            snap.val();
+
+
+          if (
+            currentGame &&
+            currentGame.gameId
+          ) {
+
+            started =
+              true;
+
+
+            window.location.href =
+              `games/${currentGame.gameId}.html?round=${currentGame.roundId}`;
+
+          }
+
+        }
+      );
+
+    }
+
+
+    init();
+
+
+    // ============================================================
+    // خروج از اتاق
+    // ============================================================
+
+    document
+      .getElementById("leaveBtn")
+      .addEventListener(
+        "click",
+        async () => {
+
+          await leaveLobby();
+
+          clearRoom();
+
+          window.location.href =
+            "index.html";
+
+        }
+      );
+
+  </script>
+
 </body>
 </html>
