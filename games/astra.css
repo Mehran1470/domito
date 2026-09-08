@@ -5,76 +5,223 @@
 
 html,
 body {
-  margin: 0;
-  padding: 0;
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  background: #030712;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
 }
 
 body {
+  background: #02040b;
+  color: white;
+  font-family:
+    Tahoma,
+    Arial,
+    sans-serif;
+
   touch-action: none;
-  user-select: none;
+  overscroll-behavior: none;
 }
 
-.astra-body {
+button {
+  font-family: inherit;
+}
+
+
+/* =========================
+   MAIN
+========================= */
+
+.astra {
   width: 100%;
   height: 100dvh;
+
+  display: flex;
+  flex-direction: column;
+
   overflow: hidden;
-  color: white;
+
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(90,70,255,.14),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(0,190,255,.12),
+      transparent 35%
+    ),
+    #02040b;
 }
 
 
-/* =========================================================
-   ROTATE
-========================================================= */
+/* =========================
+   HUD
+========================= */
 
-.astra-rotate-screen {
+.hud {
+  height: 50px;
+  min-height: 50px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding:
+    max(5px, env(safe-area-inset-top))
+    10px
+    5px;
+
+  overflow-x: auto;
+
+  background:
+    rgba(4,7,18,.88);
+
+  border-bottom:
+    1px solid rgba(130,150,255,.18);
+
+  backdrop-filter: blur(12px);
+
+  z-index: 20;
+
+  scrollbar-width: none;
+}
+
+.hud::-webkit-scrollbar {
+  display: none;
+}
+
+.logo {
+  flex: 0 0 auto;
+
+  font-weight: 1000;
+  font-size: 14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #55dfff,
+      #9664ff,
+      #ff6fcf
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+.hud-box {
+  flex: 0 0 auto;
+
+  height: 31px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+
+  padding: 0 9px;
+
+  border-radius: 9px;
+
+  background:
+    rgba(255,255,255,.06);
+
+  border:
+    1px solid rgba(255,255,255,.1);
+
+  font-size: 11px;
+}
+
+.objective {
+  flex: 0 0 auto;
+
+  padding: 7px 10px;
+
+  border-radius: 9px;
+
+  background:
+    rgba(77,220,255,.07);
+
+  border:
+    1px solid rgba(77,220,255,.12);
+
+  color: #80eaff;
+
+  font-size: 10px;
+
+  white-space: nowrap;
+}
+
+
+/* =========================
+   ARENA
+========================= */
+
+.arena {
+  position: relative;
+
+  flex: 1;
+
+  min-height: 0;
+
+  overflow: hidden;
+
+  background: #02040b;
+}
+
+#canvas {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  touch-action: none;
+}
+
+
+/* =========================
+   ROTATE
+========================= */
+
+.rotate-screen {
   position: fixed;
+
   inset: 0;
-  z-index: 99999;
+
+  z-index: 9999;
 
   display: none;
-  flex-direction: column;
+
   align-items: center;
   justify-content: center;
+
+  flex-direction: column;
 
   text-align: center;
 
   background:
     radial-gradient(
-      circle at center,
-      #172554,
-      #020617 70%
+      circle,
+      #111a3c,
+      #02040b 70%
     );
-}
-
-.astra-rotate-screen h2 {
-  margin: 12px 0 5px;
-  font-size: 25px;
-}
-
-.astra-rotate-screen p {
-  margin: 0;
-  opacity: .7;
 }
 
 .rotate-icon {
   font-size: 55px;
-  animation: rotatePhone 1.6s infinite ease-in-out;
+
+  animation:
+    phoneRotate 1.4s infinite;
 }
 
-@keyframes rotatePhone {
-  0%,
-  100% {
-    transform: rotate(0deg);
+@keyframes phoneRotate {
+  0%,100% {
+    transform: rotate(0);
   }
 
   50% {
@@ -82,217 +229,181 @@ body {
   }
 }
 
+.rotate-screen h2 {
+  margin: 10px 0 5px;
+}
 
-/* =========================================================
-   ROOT
-========================================================= */
+.rotate-screen p {
+  color: #8994b5;
+  font-size: 12px;
+}
 
-.astra-game-root {
-  width: 100%;
-  height: 100dvh;
+
+/* =========================
+   START MESSAGE
+========================= */
+
+.start-message {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+
+  transform:
+    translate(-50%,-50%);
+
+  z-index: 10;
+
+  min-width: 230px;
+
+  padding: 15px 22px;
 
   display: flex;
   flex-direction: column;
 
-  background:
-    radial-gradient(
-      circle at 50% 20%,
-      rgba(30, 64, 175, .18),
-      transparent 45%
-    ),
-    #020617;
-}
+  gap: 5px;
 
-
-/* =========================================================
-   HUD
-========================================================= */
-
-.astra-hud {
-  height: 58px;
-  min-height: 58px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding:
-    7px
-    max(10px, env(safe-area-inset-right))
-    7px
-    max(10px, env(safe-area-inset-left));
-
-  position: relative;
-  z-index: 10;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(15,23,42,.96),
-      rgba(15,23,42,.7)
-    );
-
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-
-.hud-brand {
-  font-weight: 900;
-  font-size: 19px;
-  letter-spacing: 1px;
-  color: #7dd3fc;
-  white-space: nowrap;
-}
-
-.hud-center {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   text-align: center;
-  pointer-events: none;
+
+  border-radius: 16px;
+
+  background:
+    rgba(4,7,18,.84);
+
+  border:
+    1px solid rgba(130,150,255,.2);
+
+  backdrop-filter: blur(12px);
+
+  transition:
+    opacity .3s,
+    transform .3s;
 }
 
-.race-title {
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 1px;
+.start-message.hidden {
+  opacity: 0;
+
+  transform:
+    translate(-50%,-50%)
+    scale(.9);
 }
 
-.hud-status {
-  margin-top: 2px;
-  font-size: 10px;
-  opacity: .65;
+.start-message strong {
+  font-size: 20px;
 }
 
-.hud-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.hud-actions button {
-  border: 1px solid rgba(255,255,255,.1);
-  background: rgba(255,255,255,.07);
-  color: white;
-
-  width: 36px;
-  height: 36px;
-
-  border-radius: 10px;
-  font-size: 17px;
+.start-message span {
+  color: #8f9ab9;
+  font-size: 11px;
 }
 
 
-/* =========================================================
+/* =========================
    PLAYERS
-========================================================= */
+========================= */
 
-.players-panel {
+.players {
   position: absolute;
-  top: 65px;
-  left: 50%;
-  transform: translateX(-50%);
 
-  z-index: 20;
+  top: 8px;
+  left: 8px;
+
+  z-index: 15;
 
   display: flex;
+
   gap: 6px;
 
-  max-width: 92%;
+  max-width: 45vw;
+
   overflow-x: auto;
 
-  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.players::-webkit-scrollbar {
+  display: none;
 }
 
 .player-card {
-  min-width: 115px;
+  min-width: 90px;
 
-  padding: 5px 8px;
+  padding: 6px 8px;
 
-  border-radius: 11px;
+  border-radius: 9px;
 
-  background: rgba(2,6,23,.78);
-  border: 1px solid rgba(255,255,255,.09);
+  background:
+    rgba(3,6,16,.78);
+
+  border:
+    1px solid rgba(255,255,255,.1);
 
   backdrop-filter: blur(8px);
+
+  font-size: 9px;
 }
 
 .player-name {
-  font-size: 10px;
-  font-weight: 800;
+  font-weight: 900;
+
+  overflow: hidden;
 
   white-space: nowrap;
-  overflow: hidden;
+
   text-overflow: ellipsis;
 }
 
-.player-fuel {
-  margin-top: 4px;
+.fuel-bar {
+  width: 100%;
+  height: 4px;
 
-  height: 5px;
-  border-radius: 99px;
+  margin-top: 5px;
 
-  background: rgba(255,255,255,.1);
-  overflow: hidden;
-}
-
-.player-fuel-fill {
-  height: 100%;
-  width: 0;
-
-  border-radius: inherit;
-
-  transition: width .15s linear;
-}
-
-.player-cargo {
-  font-size: 9px;
-  opacity: .7;
-  margin-top: 2px;
-}
-
-
-/* =========================================================
-   ARENA
-========================================================= */
-
-.astra-arena-box {
-  position: relative;
-
-  flex: 1;
-  min-height: 0;
+  border-radius: 10px;
 
   overflow: hidden;
 
   background:
-    radial-gradient(
-      circle at center,
-      rgba(15,23,42,.5),
-      #020617
+    rgba(255,255,255,.1);
+}
+
+.fuel-bar i {
+  display: block;
+
+  height: 100%;
+
+  width: 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      #43e6ff,
+      #866cff
     );
 }
 
-#astraCanvas {
-  position: absolute;
-  inset: 0;
 
-  width: 100%;
-  height: 100%;
-
-  display: block;
-}
-
-
-/* =========================================================
+/* =========================
    JOYSTICK
-========================================================= */
+========================= */
 
-.astra-joystick-base {
+.joystick {
   position: absolute;
 
-  left: max(22px, env(safe-area-inset-left));
-  bottom: max(22px, env(safe-area-inset-bottom));
+  left:
+    calc(
+      14px +
+      env(safe-area-inset-left)
+    );
 
-  width: 118px;
-  height: 118px;
+  bottom:
+    calc(
+      14px +
+      env(safe-area-inset-bottom)
+    );
+
+  width: 100px;
+  height: 100px;
 
   border-radius: 50%;
 
@@ -300,123 +411,184 @@ body {
     radial-gradient(
       circle,
       rgba(255,255,255,.13),
-      rgba(255,255,255,.04)
+      rgba(255,255,255,.035)
     );
 
-  border: 2px solid rgba(255,255,255,.12);
+  border:
+    1px solid rgba(255,255,255,.18);
 
-  box-shadow:
-    0 0 35px rgba(56,189,248,.08);
-
-  z-index: 50;
-
-  touch-action: none;
+  z-index: 30;
 }
 
-.astra-joystick-knob {
+.knob {
   position: absolute;
 
-  left: 50%;
-  top: 50%;
+  left: 29%;
+  top: 29%;
 
-  width: 55px;
-  height: 55px;
+  width: 42%;
+  height: 42%;
 
-  transform: translate(-50%, -50%);
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      135deg,
+      #4d8dff,
+      #a05dff
+    );
+
+  box-shadow:
+    0 0 22px rgba(90,120,255,.65);
+}
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+.boost,
+.launch {
+  position: absolute;
+
+  z-index: 30;
+
+  border: none;
+
+  color: white;
+
+  font-weight: 900;
+
+  cursor: pointer;
+}
+
+.boost {
+  right:
+    calc(
+      18px +
+      env(safe-area-inset-right)
+    );
+
+  bottom:
+    calc(
+      17px +
+      env(safe-area-inset-bottom)
+    );
+
+  width: 70px;
+  height: 70px;
 
   border-radius: 50%;
 
   background:
     radial-gradient(
-      circle at 35% 30%,
-      #e0f2fe,
-      #38bdf8 45%,
-      #0369a1
+      circle,
+      #4ee8ff,
+      #416bff
     );
 
   box-shadow:
-    0 0 20px rgba(56,189,248,.5);
-
-  pointer-events: none;
+    0 0 25px rgba(65,150,255,.45);
 }
 
+.boost small {
+  display: block;
+  font-size: 8px;
+}
 
-/* =========================================================
-   POWERUP
-========================================================= */
+.launch {
+  right:
+    calc(
+      103px +
+      env(safe-area-inset-right)
+    );
 
-.astra-powerup-slot {
-  position: absolute;
+  bottom:
+    calc(
+      29px +
+      env(safe-area-inset-bottom)
+    );
 
-  right: max(22px, env(safe-area-inset-right));
-  bottom: max(22px, env(safe-area-inset-bottom));
+  padding: 12px 16px;
 
-  width: 64px;
-  height: 64px;
-
-  border-radius: 18px;
-
-  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 12px;
 
   background:
     linear-gradient(
-      145deg,
-      rgba(59,130,246,.35),
-      rgba(124,58,237,.3)
+      135deg,
+      #ffae3b,
+      #ff456a
     );
+
+  box-shadow:
+    0 7px 25px rgba(255,70,90,.25);
+}
+
+.launch.disabled {
+  opacity: .3;
+  filter: grayscale(1);
+}
+
+
+/* =========================
+   SMALL BUTTONS
+========================= */
+
+.small-btn {
+  position: absolute;
+
+  z-index: 40;
+
+  width: 35px;
+  height: 35px;
+
+  border-radius: 50%;
+
+  border:
+    1px solid rgba(255,255,255,.13);
+
+  background:
+    rgba(255,255,255,.07);
 
   color: white;
 
-  font-size: 28px;
+  font-size: 16px;
+}
 
-  box-shadow:
-    0 0 25px rgba(124,58,237,.18);
+.fullscreen {
+  top: 8px;
 
-  z-index: 50;
+  left:
+    calc(
+      8px +
+      env(safe-area-inset-left)
+    );
+}
+
+.mute {
+  top: 8px;
+
+  right:
+    calc(
+      8px +
+      env(safe-area-inset-right)
+    );
 }
 
 
-/* =========================================================
-   MESSAGE
-========================================================= */
-
-.astra-overlay-msg {
-  position: absolute;
-
-  left: 50%;
-  top: 50%;
-
-  transform: translate(-50%, -50%);
-
-  padding: 18px 28px;
-
-  border-radius: 18px;
-
-  background: rgba(2,6,23,.86);
-  border: 1px solid rgba(255,255,255,.12);
-
-  backdrop-filter: blur(12px);
-
-  text-align: center;
-
-  font-size: 17px;
-  font-weight: 800;
-
-  z-index: 100;
-}
-
-
-/* =========================================================
+/* =========================
    RESULT
-========================================================= */
+========================= */
 
-.astra-result {
+.result {
   position: absolute;
+
   inset: 0;
 
-  z-index: 200;
+  z-index: 100;
 
   display: flex;
+
   flex-direction: column;
 
   align-items: center;
@@ -424,74 +596,169 @@ body {
 
   text-align: center;
 
+  padding: 20px;
+
   background:
     radial-gradient(
-      circle at center,
-      rgba(30,64,175,.35),
-      rgba(2,6,23,.96) 65%
+      circle,
+      rgba(60,80,170,.4),
+      rgba(2,4,11,.96) 70%
     );
 
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
 }
 
-.result-title {
+.result.hidden {
+  display: none;
+}
+
+.result-icon {
+  font-size: 70px;
+
+  animation:
+    resultPop .6s ease;
+}
+
+@keyframes resultPop {
+  from {
+    transform: scale(.2);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.result h1 {
+  margin: 5px 0;
+
   font-size: 38px;
-  font-weight: 1000;
 
-  margin-bottom: 8px;
+  background:
+    linear-gradient(
+      135deg,
+      #55eaff,
+      #9c69ff,
+      #ffc857
+    );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
 }
 
-.result-sub {
-  font-size: 15px;
-  opacity: .75;
+.result p {
+  color: #aab5d0;
+  font-size: 13px;
+}
+
+.result-stats {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 10px;
+}
+
+.stat {
+  min-width: 80px;
+
+  padding: 8px;
+
+  border-radius: 10px;
+
+  background:
+    rgba(255,255,255,.06);
+
+  border:
+    1px solid rgba(255,255,255,.1);
+}
+
+.stat b {
+  display: block;
+
+  font-size: 17px;
+}
+
+.stat span {
+  color: #8490ae;
+
+  font-size: 8px;
+}
+
+.back {
+  margin-top: 16px;
+
+  min-width: 170px;
+
+  padding: 11px;
+
+  border: none;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #4c83ff,
+      #965bff
+    );
+
+  color: white;
+
+  font-weight: 900;
 }
 
 
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media (max-height: 420px) {
-
-  .astra-hud {
-    height: 48px;
-    min-height: 48px;
-  }
-
-  .players-panel {
-    top: 52px;
-  }
-
-  .astra-joystick-base {
-    width: 100px;
-    height: 100px;
-  }
-
-  .astra-joystick-knob {
-    width: 47px;
-    height: 47px;
-  }
-
-  .astra-powerup-slot {
-    width: 55px;
-    height: 55px;
-  }
-
-}
-
-
-/* =========================================================
+/* =========================
    PORTRAIT
-========================================================= */
+========================= */
 
 @media (orientation: portrait) {
 
-  .astra-rotate-screen {
+  .rotate-screen {
     display: flex;
   }
 
-  .astra-game-root {
-    display: none;
+  .astra {
+    filter: blur(5px);
+  }
+
+}
+
+
+/* =========================
+   SMALL LANDSCAPE
+========================= */
+
+@media (max-height: 430px) {
+
+  .hud {
+    height: 42px;
+    min-height: 42px;
+  }
+
+  .hud-box {
+    height: 27px;
+    font-size: 9px;
+  }
+
+  .joystick {
+    width: 82px;
+    height: 82px;
+  }
+
+  .boost {
+    width: 58px;
+    height: 58px;
+  }
+
+  .launch {
+    right: 88px;
+    padding: 9px 11px;
   }
 
 }
