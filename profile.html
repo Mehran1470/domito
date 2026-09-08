@@ -1,170 +1,1342 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
 <title>پروفایل | دومیتو</title>
-<link rel="stylesheet" href="css/style.css">
+
+<link
+  rel="stylesheet"
+  href="css/style.css"
+>
+
+<style>
+
+.profile-presence {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.presence-online {
+  color: #4cd97b;
+}
+
+.presence-offline {
+  color: #aaa;
+}
+
+.friend-state {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.friend-state.is-friend {
+  background: rgba(76,217,123,.12);
+  border: 1px solid rgba(76,217,123,.25);
+}
+
+.friend-state.pending {
+  background: rgba(255,200,69,.12);
+  border: 1px solid rgba(255,200,69,.25);
+}
+
+</style>
+
 </head>
+
+
 <body>
-  <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">🁢</div>
-      <h1 id="pageTitle">پروفایل</h1>
+
+<div class="wrap">
+
+
+  <!-- ================================================= -->
+  <!-- BRAND -->
+  <!-- ================================================= -->
+
+  <div class="brand">
+
+    <div class="brand-mark">
+      🁢
     </div>
 
-    <div class="card" id="noNameCard" style="display:none">
-      <p class="status-line">هنوز وارد نشدی.</p>
-      <a href="index.html" class="btn btn-full">ورود</a>
-    </div>
+    <h1 id="pageTitle">
+      پروفایل
+    </h1>
 
-    <div class="card" id="notFoundCard" style="display:none">
-      <p class="status-line">همچین کاربری پیدا نشد.</p>
-    </div>
-
-    <div id="profileContent" style="display:none">
-      <div class="card">
-        <div class="profile-header">
-          <div class="avatar" id="avatarBox"></div>
-          <div>
-            <div style="font-weight:900; font-size:18px;" id="nameText"></div>
-            <div class="muted" id="joinedGamesText"></div>
-          </div>
-        </div>
-        <div id="coinBadgeWrap" style="margin-top:10px;"></div>
-        <div class="stat-grid">
-          <div class="stat-box"><div class="num" id="winsNum">0</div><div class="lbl">برد</div></div>
-          <div class="stat-box"><div class="num" id="lossesNum">0</div><div class="lbl">باخت</div></div>
-          <div class="stat-box"><div class="num" id="playedNum">0</div><div class="lbl">کل بازی‌ها</div></div>
-        </div>
-        <div id="addFriendWrap" style="display:none;">
-          <button id="addFriendFromProfileBtn" class="btn-full">➕ ارسال درخواست دوستی</button>
-          <p class="status-line" id="friendReqStatus"></p>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>امتیاز به تفکیک بازی</h2>
-        <div class="score-board" id="perGameBoard"></div>
-      </div>
-
-      <div class="card" id="shopCard" style="display:none;">
-        <h2>فروشگاه تم آواتار</h2>
-        <div class="shop-grid" id="shopGrid"></div>
-        <p class="status-line" id="shopStatus"></p>
-      </div>
-
-      <button id="logoutBtn" class="btn-full btn-ghost" style="display:none;">خروج از حساب</button>
-    </div>
-
-    <a href="index.html" class="link-back">← بازگشت</a>
   </div>
 
+
+  <!-- ================================================= -->
+  <!-- NOT LOGGED IN -->
+  <!-- ================================================= -->
+
+  <div
+    class="card"
+    id="noNameCard"
+    style="display:none"
+  >
+
+    <p class="status-line">
+      هنوز وارد نشدی.
+    </p>
+
+    <a
+      href="index.html"
+      class="btn btn-full"
+    >
+      ورود
+    </a>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- NOT FOUND -->
+  <!-- ================================================= -->
+
+  <div
+    class="card"
+    id="notFoundCard"
+    style="display:none"
+  >
+
+    <p class="status-line">
+      همچین کاربری پیدا نشد.
+    </p>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- PROFILE -->
+  <!-- ================================================= -->
+
+  <div
+    id="profileContent"
+    style="display:none"
+  >
+
+
+    <!-- ================================================= -->
+    <!-- MAIN PROFILE -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+      <div class="profile-header">
+
+        <div
+          class="avatar"
+          id="avatarBox"
+        ></div>
+
+        <div>
+
+          <div
+            style="
+              font-weight:900;
+              font-size:18px;
+            "
+            id="nameText"
+          ></div>
+
+          <div
+            class="muted"
+            id="joinedGamesText"
+          ></div>
+
+          <div
+            id="presenceText"
+            class="profile-presence"
+          ></div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ================================================= -->
+      <!-- COINS -->
+      <!-- ================================================= -->
+
+      <div
+        id="coinBadgeWrap"
+        style="margin-top:10px;"
+      ></div>
+
+
+      <!-- ================================================= -->
+      <!-- STATS -->
+      <!-- ================================================= -->
+
+      <div class="stat-grid">
+
+        <div class="stat-box">
+
+          <div
+            class="num"
+            id="winsNum"
+          >
+            0
+          </div>
+
+          <div class="lbl">
+            برد
+          </div>
+
+        </div>
+
+
+        <div class="stat-box">
+
+          <div
+            class="num"
+            id="lossesNum"
+          >
+            0
+          </div>
+
+          <div class="lbl">
+            باخت
+          </div>
+
+        </div>
+
+
+        <div class="stat-box">
+
+          <div
+            class="num"
+            id="playedNum"
+          >
+            0
+          </div>
+
+          <div class="lbl">
+            کل بازی‌ها
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- ================================================= -->
+      <!-- FRIEND ACTION -->
+      <!-- ================================================= -->
+
+      <div
+        id="addFriendWrap"
+        style="display:none;"
+      >
+
+        <button
+          id="addFriendFromProfileBtn"
+          class="btn-full"
+        >
+          ➕ ارسال درخواست دوستی
+        </button>
+
+        <div
+          id="friendState"
+          class="friend-state"
+          style="display:none;"
+        ></div>
+
+        <p
+          class="status-line"
+          id="friendReqStatus"
+        ></p>
+
+      </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- GAME STATS -->
+    <!-- ================================================= -->
+
+    <div class="card">
+
+      <h2>
+        امتیاز به تفکیک بازی
+      </h2>
+
+      <div
+        class="score-board"
+        id="perGameBoard"
+      ></div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- SHOP -->
+    <!-- ================================================= -->
+
+    <div
+      class="card"
+      id="shopCard"
+      style="display:none;"
+    >
+
+      <h2>
+        فروشگاه تم آواتار
+      </h2>
+
+      <div
+        class="shop-grid"
+        id="shopGrid"
+      ></div>
+
+      <p
+        class="status-line"
+        id="shopStatus"
+      ></p>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- LOGOUT -->
+    <!-- ================================================= -->
+
+    <button
+      id="logoutBtn"
+      class="btn-full btn-ghost"
+      style="display:none;"
+    >
+      خروج از حساب
+    </button>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- BACK -->
+  <!-- ================================================= -->
+
+  <a
+    href="index.html"
+    class="link-back"
+  >
+    ← بازگشت
+  </a>
+
+</div>
+
+
 <script type="module">
-  import {
-    getSavedName, profileRef, onValue, GAMES, SHOP_ITEMS, buyItem, equipTheme,
-    waitForUser, logoutUser, getPublicProfile, sendFriendRequest
-  } from "./js/app.js";
 
-  const params = new URLSearchParams(location.search);
-  const viewedUser = params.get("user");
+import {
 
-  waitForUser().then(async (user) => {
-    const myName = getSavedName();
-    if (!user || !myName) { document.getElementById("noNameCard").style.display = "block"; return; }
+  getSavedName,
+  profileRef,
+  onValue,
 
-    const isOwnProfile = !viewedUser || viewedUser === myName;
-    const targetName = isOwnProfile ? myName : viewedUser;
+  GAMES,
+  SHOP_ITEMS,
+
+  buyItem,
+  equipTheme,
+
+  waitForUser,
+  logoutUser,
+
+  getPublicProfile,
+
+  sendFriendRequest,
+  getFriendStatus
+
+} from "./js/app.js";
+
+
+const params =
+  new URLSearchParams(
+    location.search
+  );
+
+
+const viewedUser =
+  params.get("user");
+
+
+waitForUser().then(
+  async (user) => {
+
+    const myName =
+      getSavedName();
+
+
+    // =================================================
+    // LOGIN
+    // =================================================
+
+    if (
+      !user ||
+      !myName
+    ) {
+
+      document
+        .getElementById(
+          "noNameCard"
+        )
+        .style.display =
+          "block";
+
+      return;
+
+    }
+
+
+    // =================================================
+    // TARGET
+    // =================================================
+
+    const isOwnProfile =
+      !viewedUser ||
+      viewedUser === myName;
+
+
+    const targetName =
+      isOwnProfile
+        ? myName
+        : viewedUser;
+
+
+    // =================================================
+    // USER EXISTS
+    // =================================================
 
     if (!isOwnProfile) {
-      const exists = await getPublicProfile(targetName);
-      if (!exists) { document.getElementById("notFoundCard").style.display = "block"; return; }
-      document.getElementById("pageTitle").textContent = `پروفایل ${targetName}`;
-    }
 
-    document.getElementById("profileContent").style.display = "block";
-    document.getElementById("nameText").textContent = targetName;
+      const exists =
+        await getPublicProfile(
+          targetName
+        );
 
-    if (isOwnProfile) {
-      document.getElementById("shopCard").style.display = "block";
-      document.getElementById("logoutBtn").style.display = "block";
-      document.getElementById("logoutBtn").addEventListener("click", async () => { await logoutUser(); window.location.href = "index.html"; });
-    } else {
-      document.getElementById("addFriendWrap").style.display = "block";
-      document.getElementById("addFriendFromProfileBtn").addEventListener("click", async () => {
-        const res = await sendFriendRequest(myName, targetName);
-        const st = document.getElementById("friendReqStatus");
-        if (res.ok) st.textContent = "درخواست ارسال شد!";
-        else if (res.reason === "already-friends") st.textContent = "قبلاً دوست هستید";
-        else st.textContent = "خطا در ارسال درخواست";
-      });
-    }
 
-    function themeGradient(equippedTheme) {
-      const item = SHOP_ITEMS.find((i) => i.id === equippedTheme);
-      return item ? `linear-gradient(145deg, ${item.colors[0]}, ${item.colors[1]})` : null;
-    }
+      if (!exists) {
 
-    onValue(profileRef(targetName), (snap) => {
-      const p = snap.val() || { wins: 0, losses: 0, gamesPlayed: 0, byGame: {}, coins: 0, purchased: [], equippedTheme: "default" };
-      document.getElementById("winsNum").textContent = p.wins || 0;
-      document.getElementById("lossesNum").textContent = p.losses || 0;
-      document.getElementById("playedNum").textContent = p.gamesPlayed || 0;
-      document.getElementById("joinedGamesText").textContent = `${p.gamesPlayed || 0} دور بازی کرده`;
+        document
+          .getElementById(
+            "notFoundCard"
+          )
+          .style.display =
+            "block";
 
-      if (isOwnProfile) {
-        document.getElementById("coinBadgeWrap").innerHTML = `<a href="wallet.html" class="coin-badge" style="text-decoration:none;">🪙 ${p.coins || 0} سکه ←</a>`;
+        return;
+
       }
 
-      const avatarBox = document.getElementById("avatarBox");
-      avatarBox.textContent = targetName.trim()[0]?.toUpperCase() || "?";
-      const grad = themeGradient(p.equippedTheme);
-      if (grad) avatarBox.style.background = grad;
 
-      const board = document.getElementById("perGameBoard");
-      board.innerHTML = "";
-      GAMES.forEach((g) => {
-        const stats = (p.byGame && p.byGame[g.id]) || { wins: 0, plays: 0 };
-        const row = document.createElement("div");
-        row.className = "score-row";
-        row.innerHTML = `<span>${g.name}</span><span class="muted" style="font-size:12px;">${stats.plays} بازی</span><span class="points">${stats.wins} برد</span>`;
-        board.appendChild(row);
-      });
+      document
+        .getElementById(
+          "pageTitle"
+        )
+        .textContent =
+          `پروفایل ${targetName}`;
 
-      if (isOwnProfile) renderShop(p);
-    });
-
-    function renderShop(p) {
-      const purchased = p.purchased || [];
-      const grid = document.getElementById("shopGrid");
-      grid.innerHTML = "";
-      SHOP_ITEMS.forEach((item) => {
-        const owned = purchased.includes(item.id);
-        const equipped = p.equippedTheme === item.id;
-        const el = document.createElement("div");
-        el.className = "shop-item" + (owned ? " owned" : "") + (equipped ? " equipped" : "");
-        el.innerHTML = `
-          <div class="swatch" style="background:linear-gradient(135deg, ${item.colors[0]}, ${item.colors[1]})"></div>
-          <div class="name">${item.name}</div>
-          <div class="price">${owned ? (equipped ? "فعاله" : "خریداری‌شده") : `🪙 ${item.price}`}</div>
-        `;
-        const btn = document.createElement("button");
-        if (equipped) { btn.textContent = "فعاله"; btn.disabled = true; }
-        else if (owned) {
-          btn.textContent = "فعال کردن"; btn.className = "btn-ghost";
-          btn.addEventListener("click", async () => { await equipTheme(targetName, item.id); });
-        } else {
-          btn.textContent = "خرید"; btn.className = "btn-gold";
-          btn.addEventListener("click", async () => {
-            const res = await buyItem(targetName, item.id);
-            document.getElementById("shopStatus").textContent = res.ok ? "خریداری شد!" : (res.reason === "insufficient" ? "سکه‌ت کافی نیست" : "خطا در خرید");
-          });
-        }
-        el.appendChild(btn);
-        grid.appendChild(el);
-      });
     }
-  });
+
+
+    // =================================================
+    // SHOW
+    // =================================================
+
+    document
+      .getElementById(
+        "profileContent"
+      )
+      .style.display =
+        "block";
+
+
+    document
+      .getElementById(
+        "nameText"
+      )
+      .textContent =
+        targetName;
+
+
+    // =================================================
+    // OWN PROFILE
+    // =================================================
+
+    if (isOwnProfile) {
+
+      document
+        .getElementById(
+          "shopCard"
+        )
+        .style.display =
+          "block";
+
+
+      document
+        .getElementById(
+          "logoutBtn"
+        )
+        .style.display =
+          "block";
+
+
+      document
+        .getElementById(
+          "logoutBtn"
+        )
+        .addEventListener(
+          "click",
+          async () => {
+
+            await logoutUser();
+
+            window.location.href =
+              "index.html";
+
+          }
+        );
+
+    }
+
+
+    // =================================================
+    // OTHER PROFILE
+    // =================================================
+
+    else {
+
+      const wrap =
+        document.getElementById(
+          "addFriendWrap"
+        );
+
+
+      wrap.style.display =
+        "block";
+
+
+      const button =
+        document.getElementById(
+          "addFriendFromProfileBtn"
+        );
+
+
+      const state =
+        document.getElementById(
+          "friendState"
+        );
+
+
+      // -----------------------------------------------
+      // بررسی دوست بودن
+      // -----------------------------------------------
+
+      async function refreshFriendState() {
+
+        try {
+
+          const status =
+            await getFriendStatus(
+              myName,
+              targetName
+            );
+
+
+          if (status.isFriend) {
+
+            button.style.display =
+              "none";
+
+            state.style.display =
+              "block";
+
+            state.className =
+              "friend-state is-friend";
+
+            state.textContent =
+              "✅ این کاربر دوست شماست";
+
+            return;
+
+          }
+
+
+          if (
+            status.requestPending
+          ) {
+
+            button.style.display =
+              "none";
+
+            state.style.display =
+              "block";
+
+            state.className =
+              "friend-state pending";
+
+            state.textContent =
+              "⏳ درخواست دوستی ارسال شده";
+
+            return;
+
+          }
+
+
+          button.style.display =
+            "block";
+
+          state.style.display =
+            "none";
+
+
+        } catch (error) {
+
+          console.error(
+            "Friend state error:",
+            error
+          );
+
+        }
+
+      }
+
+
+      await refreshFriendState();
+
+
+      // -----------------------------------------------
+      // SEND REQUEST
+      // -----------------------------------------------
+
+      button.addEventListener(
+        "click",
+        async () => {
+
+          button.disabled =
+            true;
+
+          button.textContent =
+            "در حال ارسال...";
+
+
+          try {
+
+            const res =
+              await sendFriendRequest(
+                myName,
+                targetName
+              );
+
+
+            const st =
+              document.getElementById(
+                "friendReqStatus"
+              );
+
+
+            if (res.ok) {
+
+              st.textContent =
+                "✅ درخواست دوستی ارسال شد!";
+
+            }
+
+            else if (
+              res.reason ===
+              "already-friends"
+            ) {
+
+              st.textContent =
+                "✅ این کاربر از قبل دوست شماست";
+
+            }
+
+            else if (
+              res.reason ===
+              "request-pending"
+            ) {
+
+              st.textContent =
+                "⏳ درخواست قبلاً ارسال شده";
+
+            }
+
+            else {
+
+              st.textContent =
+                "❌ خطا در ارسال درخواست";
+
+            }
+
+
+            await refreshFriendState();
+
+
+          } catch (error) {
+
+            console.error(
+              error
+            );
+
+            document
+              .getElementById(
+                "friendReqStatus"
+              )
+              .textContent =
+                "❌ ارسال درخواست انجام نشد";
+
+
+            button.disabled =
+              false;
+
+            button.textContent =
+              "➕ ارسال درخواست دوستی";
+
+          }
+
+        }
+      );
+
+    }
+
+
+    // =================================================
+    // THEME
+    // =================================================
+
+    function themeGradient(
+      equippedTheme
+    ) {
+
+      const item =
+        SHOP_ITEMS.find(
+          (i) =>
+            i.id === equippedTheme
+        );
+
+
+      return item
+        ? `linear-gradient(145deg, ${item.colors[0]}, ${item.colors[1]})`
+        : null;
+
+    }
+
+
+    // =================================================
+    // PROFILE REALTIME
+    // =================================================
+
+    onValue(
+      profileRef(targetName),
+      (snap) => {
+
+        const p =
+          snap.val() || {
+
+            wins: 0,
+            losses: 0,
+            gamesPlayed: 0,
+
+            byGame: {},
+
+            coins: 0,
+
+            purchased: [],
+
+            equippedTheme:
+              "default"
+
+          };
+
+
+        // ---------------------------------------------
+        // STATS
+        // ---------------------------------------------
+
+        document
+          .getElementById(
+            "winsNum"
+          )
+          .textContent =
+            p.wins || 0;
+
+
+        document
+          .getElementById(
+            "lossesNum"
+          )
+          .textContent =
+            p.losses || 0;
+
+
+        document
+          .getElementById(
+            "playedNum"
+          )
+          .textContent =
+            p.gamesPlayed || 0;
+
+
+        document
+          .getElementById(
+            "joinedGamesText"
+          )
+          .textContent =
+            `${p.gamesPlayed || 0} دور بازی کرده`;
+
+
+        // ---------------------------------------------
+        // COINS
+        // ---------------------------------------------
+
+        if (isOwnProfile) {
+
+          document
+            .getElementById(
+              "coinBadgeWrap"
+            )
+            .innerHTML = `
+
+              <a
+                href="wallet.html"
+                class="coin-badge"
+                style="text-decoration:none;"
+              >
+                🪙 ${p.coins || 0} سکه ←
+              </a>
+
+            `;
+
+        }
+
+
+        // ---------------------------------------------
+        // AVATAR
+        // ---------------------------------------------
+
+        const avatarBox =
+          document.getElementById(
+            "avatarBox"
+          );
+
+
+        avatarBox.textContent =
+          targetName
+            .trim()[0]
+            ?.toUpperCase() ||
+          "?";
+
+
+        const grad =
+          themeGradient(
+            p.equippedTheme
+          );
+
+
+        if (grad) {
+
+          avatarBox.style.background =
+            grad;
+
+        }
+
+
+        // ---------------------------------------------
+        // GAME BOARD
+        // ---------------------------------------------
+
+        const board =
+          document.getElementById(
+            "perGameBoard"
+          );
+
+
+        board.innerHTML =
+          "";
+
+
+        GAMES.forEach(
+          (g) => {
+
+            const stats =
+              (
+                p.byGame &&
+                p.byGame[g.id]
+              ) || {
+
+                wins: 0,
+                plays: 0
+
+              };
+
+
+            const row =
+              document.createElement(
+                "div"
+              );
+
+
+            row.className =
+              "score-row";
+
+
+            row.innerHTML = `
+
+              <span>
+                ${g.name}
+              </span>
+
+              <span
+                class="muted"
+                style="font-size:12px;"
+              >
+                ${stats.plays} بازی
+              </span>
+
+              <span class="points">
+                ${stats.wins} برد
+              </span>
+
+            `;
+
+
+            board.appendChild(
+              row
+            );
+
+          }
+        );
+
+
+        // ---------------------------------------------
+        // SHOP
+        // ---------------------------------------------
+
+        if (isOwnProfile) {
+
+          renderShop(p);
+
+        }
+
+      }
+    );
+
+
+    // =================================================
+    // PRESENCE
+    // =================================================
+
+    onValue(
+      profileRef(
+        targetName,
+        "presence"
+      ),
+      (snap) => {
+
+        const presence =
+          snap.val() || {
+
+            online: false,
+            lastSeen: 0
+
+          };
+
+
+        const presenceText =
+          document.getElementById(
+            "presenceText"
+          );
+
+
+        if (
+          presence.online
+        ) {
+
+          presenceText.className =
+            "profile-presence presence-online";
+
+
+          presenceText.textContent =
+            "🟢 اکنون آنلاین است";
+
+
+          return;
+
+        }
+
+
+        presenceText.className =
+          "profile-presence presence-offline";
+
+
+        const lastSeen =
+          Number(
+            presence.lastSeen || 0
+          );
+
+
+        if (!lastSeen) {
+
+          presenceText.textContent =
+            "⚪ هنوز سابقه حضور ثبت نشده";
+
+          return;
+
+        }
+
+
+        presenceText.textContent =
+          `⚪ آخرین حضور: ${formatLastSeen(lastSeen)}`;
+
+      }
+    );
+
+
+    // =================================================
+    // LAST SEEN FORMAT
+    // =================================================
+
+    function formatLastSeen(
+      timestamp
+    ) {
+
+      const date =
+        new Date(timestamp);
+
+
+      const now =
+        new Date();
+
+
+      const diff =
+        Math.max(
+          0,
+          now.getTime() -
+          date.getTime()
+        );
+
+
+      const minute =
+        60 * 1000;
+
+      const hour =
+        60 * minute;
+
+      const day =
+        24 * hour;
+
+
+      if (
+        diff < minute
+      ) {
+
+        return "همین الان";
+
+      }
+
+
+      if (
+        diff < hour
+      ) {
+
+        const n =
+          Math.floor(
+            diff / minute
+          );
+
+        return `${n} دقیقه پیش`;
+
+      }
+
+
+      if (
+        diff < day
+      ) {
+
+        const n =
+          Math.floor(
+            diff / hour
+          );
+
+        return `${n} ساعت پیش`;
+
+      }
+
+
+      if (
+        diff < 2 * day
+      ) {
+
+        return `دیروز، ساعت ${formatTime(date)}`;
+
+      }
+
+
+      if (
+        diff < 7 * day
+      ) {
+
+        const n =
+          Math.floor(
+            diff / day
+          );
+
+        return `${n} روز پیش`;
+
+      }
+
+
+      return `${formatDate(date)}، ساعت ${formatTime(date)}`;
+
+    }
+
+
+    // =================================================
+    // TIME
+    // =================================================
+
+    function formatTime(
+      date
+    ) {
+
+      return date.toLocaleTimeString(
+        "fa-IR",
+        {
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      );
+
+    }
+
+
+    // =================================================
+    // DATE
+    // =================================================
+
+    function formatDate(
+      date
+    ) {
+
+      return date.toLocaleDateString(
+        "fa-IR",
+        {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        }
+      );
+
+    }
+
+
+    // =================================================
+    // SHOP
+    // =================================================
+
+    function renderShop(
+      p
+    ) {
+
+      const purchased =
+        p.purchased || [];
+
+
+      const grid =
+        document.getElementById(
+          "shopGrid"
+        );
+
+
+      grid.innerHTML =
+        "";
+
+
+      SHOP_ITEMS.forEach(
+        (item) => {
+
+          const owned =
+            purchased.includes(
+              item.id
+            );
+
+
+          const equipped =
+            p.equippedTheme ===
+            item.id;
+
+
+          const el =
+            document.createElement(
+              "div"
+            );
+
+
+          el.className =
+            "shop-item" +
+            (
+              owned
+                ? " owned"
+                : ""
+            ) +
+            (
+              equipped
+                ? " equipped"
+                : ""
+            );
+
+
+          el.innerHTML = `
+
+            <div
+              class="swatch"
+              style="
+                background:
+                linear-gradient(
+                  135deg,
+                  ${item.colors[0]},
+                  ${item.colors[1]}
+                )
+              "
+            ></div>
+
+            <div class="name">
+              ${item.name}
+            </div>
+
+            <div class="price">
+
+              ${
+                owned
+                  ? (
+                      equipped
+                        ? "فعاله"
+                        : "خریداری‌شده"
+                    )
+                  : `🪙 ${item.price}`
+              }
+
+            </div>
+
+          `;
+
+
+          const btn =
+            document.createElement(
+              "button"
+            );
+
+
+          if (equipped) {
+
+            btn.textContent =
+              "فعاله";
+
+            btn.disabled =
+              true;
+
+          }
+
+          else if (owned) {
+
+            btn.textContent =
+              "فعال کردن";
+
+            btn.className =
+              "btn-ghost";
+
+
+            btn.addEventListener(
+              "click",
+              async () => {
+
+                await equipTheme(
+                  targetName,
+                  item.id
+                );
+
+              }
+            );
+
+          }
+
+          else {
+
+            btn.textContent =
+              "خرید";
+
+            btn.className =
+              "btn-gold";
+
+
+            btn.addEventListener(
+              "click",
+              async () => {
+
+                const res =
+                  await buyItem(
+                    targetName,
+                    item.id
+                  );
+
+
+                document
+                  .getElementById(
+                    "shopStatus"
+                  )
+                  .textContent =
+
+                  res.ok
+                    ? "خریداری شد!"
+                    : (
+                        res.reason ===
+                        "insufficient"
+
+                          ? "سکه‌ت کافی نیست"
+
+                          : "خطا در خرید"
+                      );
+
+              }
+            );
+
+          }
+
+
+          el.appendChild(
+            btn
+          );
+
+
+          grid.appendChild(
+            el
+          );
+
+        }
+      );
+
+    }
+
+  }
+);
+
 </script>
+
 </body>
+
 </html>
