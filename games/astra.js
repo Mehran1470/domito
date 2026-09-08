@@ -1,4240 +1,1106 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  waitForUser,
-  getSavedName,
-  currentUid,
-  getSavedRoom,
-  recordRoundResult,
-  db,
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getDatabase,
   ref,
-  get,
   set,
-  update,
-  onValue,
-  runTransaction,
-  onDisconnect
-} from "../js/app.js";
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+import { firebaseConfig } from "./firebase-config.js";
 
-// ============================================================
-// تنظیمات
-// ============================================================
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-const GAME_ID = "astra";
-
-const MAX_PLAYERS = 4;
-
-const MATCH_TIME = 180;
-
-const PLAYER_SPEED = 220;
-
-const BOOST_SPEED = 390;
-
-const BOOST_TIME = 2.5;
-
-const RESOURCE_COUNT = 12;
-
-const RESOURCE_RESPAWN = 3500;
-
-const SYNC_INTERVAL = 80;
-
-
-// ============================================================
+// ======================================================
 // DOM
-// ============================================================
+// ======================================================
 
-const canvas =
-  document.getElementById("astraCanvas");
+const canvas = document.getElementById("astraCanvas");
+const ctx = canvas.getContext("2d");
 
-const ctx =
-  canvas.getContext("2d");
+const overlay = document.getElementById("astraOverlayMsg");
+const result = document.getElementById("astraResult");
 
-const arena =
-  document.getElementById("astraArenaBox");
+const hudMode = document.getElementById("hudMode");
+const hudTimer = document.getElementById("hudTimer");
+const playersHud = document.getElementById("playersHud");
 
-const overlay =
-  document.getElementById("astraOverlayMsg");
+const muteBtn = document.getElementById("astraMuteBtn");
+const fullscreenBtn = document.getElementById("astraFullscreenBtn");
 
-const result =
-  document.getElementById("astraResult");
+const p1JoyBase = document.getElementById("p1JoyBase");
+const p1JoyKnob = document.getElementById("p1JoyKnob");
 
-const playersHud =
-  document.getElementById("playersHud");
+const p2JoyBase = document.getElementById("p2JoyBase");
+const p2JoyKnob = document.getElementById("p2JoyKnob");
 
-const hudTimer =
-  document.getElementById("hudTimer");
+const p1Boost = document.getElementById("p1Boost");
+const p2Boost = document.getElementById("p2Boost");
 
-const hudMode =
-  document.getElementById("hudMode");
+const powerupIndicator = document.getElementById("powerupIndicator");
 
-const rotateScreen =
-  document.getElementById("astraRotateScreen");
+// ======================================================
+// GAME SETTINGS
+// ======================================================
 
-const powerupIndicator =
-  document.getElementById("powerupIndicator");
+const WORLD_WIDTH = 2400;
+const WORLD_HEIGHT = 1400;
 
-const fullscreenBtn =
-  document.getElementById("astraFullscreenBtn");
+const PLAYER_RADIUS = 28;
+const PLAYER_SPEED = 5;
 
-const muteBtn =
-  document.getElementById("astraMuteBtn");
+const ENERGY_NEEDED = 100;
 
-
-// ============================================================
-// بازی
-// ============================================================
-
-let myName = "";
-
-let myUid = "";
-
-let roomCode = "";
-
-let multiplayer = false;
-
-let W = 900;
-
-let H = 450;
-
-let running = false;
-
-let paused = true;
-
+let muted = false;
+let gameRunning = false;
 let gameFinished = false;
 
-let lastFrame = 0;
+let lastTime = performance.now();
 
-let lastSync = 0;
+let camera = {
+  x: 0,
+  y: 0
+};
 
-let countdownRunning = false;
+// ======================================================
+// PLAYERS
+// ======================================================
 
-
-// ============================================================
-// وضعیت محلی
-// ============================================================
-
-let players = {};
-
-let resources = [];
-
-let powerups = [];
-
-let particles = [];
-
-let stars = [];
-
-let worldTime = 0;
-
-
-// ============================================================
-// کنترل
-// ============================================================
-
-const controls = {
-
+const players = {
   p1: {
-    x: 0,
-    y: 0,
-    pointerId: null
+    id: "p1",
+    name: "بازیکن ۱",
+    x: 450,
+    y: WORLD_HEIGHT / 2,
+    vx: 0,
+    vy: 0,
+    energy: 0,
+    boost: 100,
+    color: "#4f7cff",
+    glow: "#6b9cff",
+    score: 0,
+    world2: false
   },
 
   p2: {
-    x: 0,
-    y: 0,
-    pointerId: null
+    id: "p2",
+    name: "بازیکن ۲",
+    x: WORLD_WIDTH - 450,
+    y: WORLD_HEIGHT / 2,
+    vx: 0,
+    vy: 0,
+    energy: 0,
+    boost: 100,
+    color: "#9b5cff",
+    glow: "#d34cff",
+    score: 0,
+    world2: false
   }
-
 };
 
+// ======================================================
+// INPUT
+// ======================================================
 
-// ============================================================
-// بازیکن محلی
-// ============================================================
+const keys = {};
 
-let myPlayer = null;
+window.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
 
-
-// ============================================================
-// کمبو
-// ============================================================
-
-let combo = 0;
-
-let comboTimer = 0;
-
-
-// ============================================================
-// صدا
-// ============================================================
-
-let audioCtx = null;
-
-let muted = false;
-
-
-function tone(
-  frequency,
-  duration = .1
-) {
-
-  if (muted) return;
-
-  try {
-
-    if (!audioCtx) {
-
-      audioCtx =
-        new (
-          window.AudioContext ||
-          window.webkitAudioContext
-        )();
-
-    }
-
-    const osc =
-      audioCtx.createOscillator();
-
-    const gain =
-      audioCtx.createGain();
-
-    osc.frequency.value =
-      frequency;
-
-    osc.type = "sine";
-
-    gain.gain.setValueAtTime(
-      .08,
-      audioCtx.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      .001,
-      audioCtx.currentTime + duration
-    );
-
-    osc.connect(gain);
-
-    gain.connect(
-      audioCtx.destination
-    );
-
-    osc.start();
-
-    osc.stop(
-      audioCtx.currentTime +
-      duration
-    );
-
-  } catch {}
-
-}
-
-
-muteBtn.addEventListener(
-  "click",
-  () => {
-
-    muted = !muted;
-
-    muteBtn.textContent =
-      muted
-        ? "🔇"
-        : "🔊";
-
+  if (e.key === " ") {
+    e.preventDefault();
+    boost(players.p1);
   }
-);
+});
 
+window.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
 
-// ============================================================
-// Resize
-// ============================================================
+const joystick = {
+  p1: { x: 0, y: 0 },
+  p2: { x: 0, y: 0 }
+};
+
+// ======================================================
+// RESIZE
+// ======================================================
 
 function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
 
-  const rect =
-    arena.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-  W =
-    Math.max(
-      1,
-      rect.width
-    );
+  canvas.width = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(rect.height * dpr);
 
-  H =
-    Math.max(
-      1,
-      rect.height
-    );
-
-  const dpr =
-    Math.min(
-      window.devicePixelRatio || 1,
-      2.5
-    );
-
-  canvas.width =
-    Math.round(W * dpr);
-
-  canvas.height =
-    Math.round(H * dpr);
-
-  canvas.style.width =
-    `${W}px`;
-
-  canvas.style.height =
-    `${H}px`;
-
-  ctx.setTransform(
-    dpr,
-    0,
-    0,
-    dpr,
-    0,
-    0
-  );
-
-  createStars();
-
-  if (myPlayer) {
-
-    myPlayer.x =
-      Math.max(
-        25,
-        Math.min(
-          W - 25,
-          myPlayer.x
-        )
-      );
-
-    myPlayer.y =
-      Math.max(
-        25,
-        Math.min(
-          H - 25,
-          myPlayer.y
-        )
-      );
-
-  }
-
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+window.addEventListener("resize", resizeCanvas);
 
-function createStars() {
+resizeCanvas();
 
-  stars = [];
+// ======================================================
+// JOYSTICKS
+// ======================================================
 
-  const count =
-    Math.max(
-      60,
-      Math.round(
-        W * H / 4000
-      )
-    );
+function setupJoystick(base, knob, player) {
+  let activePointer = null;
 
-  for (
-    let i = 0;
-    i < count;
-    i++
-  ) {
+  function move(e) {
+    if (activePointer !== e.pointerId) return;
 
-    stars.push({
+    const rect = base.getBoundingClientRect();
 
-      x: Math.random() * W,
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
 
-      y: Math.random() * H,
+    let dx = e.clientX - centerX;
+    let dy = e.clientY - centerY;
 
-      r:
-        Math.random() *
-        1.5 +
-        .3,
+    const max = rect.width * 0.28;
 
-      alpha:
-        Math.random() *
-        .7 +
-        .2
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
+    if (distance > max) {
+      dx = dx / distance * max;
+      dy = dy / distance * max;
+    }
+
+    joystick[player].x = dx / max;
+    joystick[player].y = dy / max;
+
+    knob.style.transform =
+      `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+    base.classList.add("pressed");
+  }
+
+  function stop(e) {
+    if (activePointer !== e.pointerId) return;
+
+    activePointer = null;
+
+    joystick[player].x = 0;
+    joystick[player].y = 0;
+
+    knob.style.transform = "translate(-50%,-50%)";
+
+    base.classList.remove("pressed");
+  }
+
+  base.addEventListener("pointerdown", e => {
+    activePointer = e.pointerId;
+
+    base.setPointerCapture(e.pointerId);
+
+    move(e);
+  });
+
+  base.addEventListener("pointermove", move);
+  base.addEventListener("pointerup", stop);
+  base.addEventListener("pointercancel", stop);
+}
+
+setupJoystick(p1JoyBase, p1JoyKnob, "p1");
+setupJoystick(p2JoyBase, p2JoyKnob, "p2");
+
+// ======================================================
+// BOOST
+// ======================================================
+
+function boost(player) {
+  if (!gameRunning) return;
+
+  if (player.boost < 20) return;
+
+  player.boost -= 20;
+
+  const angle = Math.atan2(player.vy, player.vx);
+
+  if (!Number.isFinite(angle)) return;
+
+  player.vx += Math.cos(angle) * 7;
+  player.vy += Math.sin(angle) * 7;
+
+  createParticles(player.x, player.y, player.color, 15);
+}
+
+// ======================================================
+// POWER CELLS
+// ======================================================
+
+const cells = [];
+
+function createCells() {
+  cells.length = 0;
+
+  for (let i = 0; i < 55; i++) {
+    cells.push({
+      x: 100 + Math.random() * (WORLD_WIDTH - 200),
+      y: 140 + Math.random() * (WORLD_HEIGHT - 280),
+      r: 11,
+      energy: 5 + Math.floor(Math.random() * 6),
+      phase: Math.random() * Math.PI * 2,
+      taken: false
     });
-
   }
-
 }
 
+createCells();
 
-// ============================================================
-// Firebase paths
-// ============================================================
+// ======================================================
+// PARTICLES
+// ======================================================
 
-function roomGameRef(
-  path = ""
-) {
+const particles = [];
 
-  return ref(
-    db,
-    `rooms/${roomCode}/currentGame/astra${
-      path
-        ? "/" + path
-        : ""
-    }`
-  );
-
+function createParticles(x, y, color, amount = 8) {
+  for (let i = 0; i < amount; i++) {
+    particles.push({
+      x,
+      y,
+      vx: (Math.random() - .5) * 7,
+      vy: (Math.random() - .5) * 7,
+      life: 1,
+      size: 2 + Math.random() * 5,
+      color
+    });
+  }
 }
 
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
 
-// ============================================================
-// نام امن
-// ============================================================
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
 
-function cleanName(name) {
+    p.vx *= .97;
+    p.vy *= .97;
 
-  return String(name || "")
-    .slice(0, 24);
+    p.life -= dt * 2;
 
-}
-
-
-// ============================================================
-// بازیکن جدید
-// ============================================================
-
-function makePlayer(
-  uid,
-  name,
-  index
-) {
-
-  const colors = [
-    "#4F7CFF",
-    "#9B5CFF",
-    "#3ECF8E",
-    "#FF7A59"
-  ];
-
-  const positions = [
-
-    {
-      x: W * .18,
-      y: H * .50
-    },
-
-    {
-      x: W * .82,
-      y: H * .50
-    },
-
-    {
-      x: W * .50,
-      y: H * .25
-    },
-
-    {
-      x: W * .50,
-      y: H * .75
+    if (p.life <= 0) {
+      particles.splice(i, 1);
     }
-
-  ];
-
-  const pos =
-    positions[
-      index % positions.length
-    ];
-
-  return {
-
-    uid,
-
-    name:
-      cleanName(name),
-
-    x: pos.x,
-
-    y: pos.y,
-
-    fuel: 0,
-
-    cargo: 0,
-
-    score: 0,
-
-    combo: 0,
-
-    powerup: "",
-
-    boostUntil: 0,
-
-    launched: false,
-
-    finished: false,
-
-    lastUpdate:
-      Date.now(),
-
-    color:
-      colors[
-        index % colors.length
-      ]
-
-  };
-
+  }
 }
 
+// ======================================================
+// STARS
+// ======================================================
 
-// ============================================================
-// فاصله
-// ============================================================
+const stars = [];
 
-function distance(a, b) {
-
-  return Math.hypot(
-    a.x - b.x,
-    a.y - b.y
-  );
-
+for (let i = 0; i < 350; i++) {
+  stars.push({
+    x: Math.random() * WORLD_WIDTH,
+    y: Math.random() * WORLD_HEIGHT,
+    r: Math.random() * 2 + .5,
+    alpha: Math.random()
+  });
 }
 
+// ======================================================
+// WORLD 2 ROCKET
+// ======================================================
 
-// ============================================================
-// محدوده
-// ============================================================
+const rocket = {
+  x: WORLD_WIDTH / 2,
+  y: WORLD_HEIGHT / 2,
+  active: false,
+  owner: null,
+  progress: 0
+};
 
-function clampPlayer(p) {
+// ======================================================
+// UPDATE PLAYER
+// ======================================================
 
-  p.x =
-    Math.max(
-      24,
-      Math.min(
-        W - 24,
-        p.x
-      )
-    );
+function updatePlayer(player, inputX, inputY, dt) {
+  let x = inputX;
+  let y = inputY;
 
-  p.y =
-    Math.max(
-      24,
-      Math.min(
-        H - 24,
-        p.y
-      )
-    );
-
-}
-
-
-// ============================================================
-// منابع
-// ============================================================
-
-function makeResource(
-  id
-) {
-
-  const margin = 45;
-
-  const values = [
-    10,
-    10,
-    10,
-    15,
-    15,
-    20,
-    20,
-    25
-  ];
-
-  return {
-
-    id,
-
-    x:
-      margin +
-      Math.random() *
-      Math.max(
-        1,
-        W - margin * 2
-      ),
-
-    y:
-      margin +
-      Math.random() *
-      Math.max(
-        1,
-        H - margin * 2
-      ),
-
-    value:
-      values[
-        Math.floor(
-          Math.random() *
-          values.length
-        )
-      ],
-
-    createdAt:
-      Date.now()
-
-  };
-
-}
-
-
-function createResources() {
-
-  resources = [];
-
-  for (
-    let i = 0;
-    i < RESOURCE_COUNT;
-    i++
-  ) {
-
-    resources.push(
-      makeResource(
-        `r-${Date.now()}-${i}-${Math.random()}`
-      )
-    );
-
+  // P1 keyboard
+  if (player.id === "p1") {
+    if (keys["w"] || keys["arrowup"]) y -= 1;
+    if (keys["s"] || keys["arrowdown"]) y += 1;
+    if (keys["a"] || keys["arrowleft"]) x -= 1;
+    if (keys["d"] || keys["arrowright"]) x += 1;
   }
 
-}
-
-
-// ============================================================
-// بازی تک نفره
-// ============================================================
-
-function createSoloGame() {
-
-  multiplayer = false;
-
-  hudMode.textContent =
-    "🤖 بازی با ربات";
-
-  myPlayer =
-    makePlayer(
-      myUid,
-      myName,
-      0
-    );
-
-  myPlayer.color =
-    "#4F7CFF";
-
-  players = {
-
-    [myUid]:
-      myPlayer,
-
-    ai:
-      makePlayer(
-        "ai",
-        "ربات",
-        1
-      )
-
-  };
-
-  players.ai.color =
-    "#9B5CFF";
-
-  createResources();
-
-  powerups = [];
-
-  startCountdown();
-
-}
-
-
-// ============================================================
-// تشخیص اتاق
-// ============================================================
-
-async function detectMode() {
-
-  roomCode =
-    getSavedRoom();
-
-  if (!roomCode) {
-
-    createSoloGame();
-
-    return;
-
+  // P2 keyboard
+  if (player.id === "p2") {
+    if (keys["i"]) y -= 1;
+    if (keys["k"]) y += 1;
+    if (keys["j"]) x -= 1;
+    if (keys["l"]) x += 1;
   }
 
-  multiplayer = true;
+  const length = Math.sqrt(x * x + y * y);
 
-  hudMode.textContent =
-    "🌐 بازی آنلاین";
-
-  await joinMultiplayer();
-
-}
-
-
-// ============================================================
-// ورود به Multiplayer
-// ============================================================
-
-async function joinMultiplayer() {
-
-  const playersRef =
-    ref(
-      db,
-      `rooms/${roomCode}/players`
-    );
-
-  const snap =
-    await get(playersRef);
-
-  const roomPlayers =
-    snap.val() || {};
-
-  const ids =
-    Object.keys(
-      roomPlayers
-    );
-
-  if (!ids.includes(myUid)) {
-
-    overlay.innerHTML = `
-      <div class="big">🚪</div>
-      <div class="sub">
-        اول وارد لابی اتاق شو
-      </div>
-    `;
-
-    return;
-
+  if (length > 1) {
+    x /= length;
+    y /= length;
   }
 
-  if (ids.length < 2) {
+  const speed = PLAYER_SPEED;
 
-    running = true;
+  player.vx += (x * speed - player.vx) * .18;
+  player.vy += (y * speed - player.vy) * .18;
 
-    paused = true;
+  player.x += player.vx * dt * 60;
+  player.y += player.vy * dt * 60;
 
-    resizeCanvas();
+  player.x = Math.max(50, Math.min(WORLD_WIDTH - 50, player.x));
+  player.y = Math.max(100, Math.min(WORLD_HEIGHT - 50, player.y));
 
-    createStars();
+  player.boost += dt * 7;
 
-    renderWaiting();
-
-    listenRoomPlayers();
-
-    return;
-
-  }
-
-  listenRoomPlayers();
-
-  listenGameState();
-
-  await prepareMultiplayer();
-
+  player.boost = Math.min(100, player.boost);
 }
 
+// ======================================================
+// COLLECT ENERGY
+// ======================================================
 
-// ============================================================
-// آماده‌سازی Multiplayer
-// ============================================================
+function collectEnergy(player) {
+  for (const cell of cells) {
+    if (cell.taken) continue;
 
-async function prepareMultiplayer() {
+    const dx = player.x - cell.x;
+    const dy = player.y - cell.y;
 
-  const playersSnap =
-    await get(
-      ref(
-        db,
-        `rooms/${roomCode}/players`
-      )
-    );
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-  const roomPlayers =
-    playersSnap.val() || {};
+    if (distance < PLAYER_RADIUS + cell.r + 10) {
+      cell.taken = true;
 
-  let ids =
-    Object.keys(
-      roomPlayers
-    );
+      player.energy += cell.energy;
 
-  ids =
-    ids.slice(
-      0,
-      MAX_PLAYERS
-    );
+      player.energy = Math.min(ENERGY_NEEDED, player.energy);
 
-  const existing =
-    await get(
-      roomGameRef()
-    );
+      player.score += cell.energy;
 
-  if (!existing.exists()) {
+      createParticles(
+        cell.x,
+        cell.y,
+        player.color,
+        12
+      );
 
-    const initialPlayers = {};
-
-    ids.forEach(
-      (uid, index) => {
-
-        initialPlayers[uid] =
-          makePlayer(
-            uid,
-            roomPlayers[uid].name ||
-              `بازیکن ${index + 1}`,
-            index
-          );
-
+      if (player.energy >= ENERGY_NEEDED) {
+        activateRocket(player);
       }
-    );
-
-    await set(
-      roomGameRef(),
-      {
-
-        status:
-          "waiting",
-
-        startedAt:
-          0,
-
-        endAt:
-          0,
-
-        winnerUid:
-          "",
-
-        resources:
-          {},
-
-        powerups:
-          {},
-
-        players:
-          initialPlayers
-
-      }
-    );
-
-  }
-
-  await ensureMyPlayer();
-
-  renderWaiting();
-
-}
-
-
-// ============================================================
-// بازیکن من
-// ============================================================
-
-async function ensureMyPlayer() {
-
-  const pRef =
-    roomGameRef(
-      `players/${myUid}`
-    );
-
-  const snap =
-    await get(pRef);
-
-  if (snap.exists()) {
-
-    myPlayer =
-      snap.val();
-
-    return;
-
-  }
-
-  const playersSnap =
-    await get(
-      ref(
-        db,
-        `rooms/${roomCode}/players`
-      )
-    );
-
-  const roomPlayers =
-    playersSnap.val() || {};
-
-  const ids =
-    Object.keys(
-      roomPlayers
-    );
-
-  const index =
-    Math.max(
-      0,
-      ids.indexOf(myUid)
-    );
-
-  myPlayer =
-    makePlayer(
-      myUid,
-      roomPlayers[myUid]?.name ||
-        myName,
-      index
-    );
-
-  await set(
-    pRef,
-    myPlayer
-  );
-
-}
-
-
-// ============================================================
-// Listen players
-// ============================================================
-
-let playersUnsubscribe =
-  null;
-
-function listenRoomPlayers() {
-
-  if (playersUnsubscribe) return;
-
-  playersUnsubscribe =
-    onValue(
-      ref(
-        db,
-        `rooms/${roomCode}/players`
-      ),
-      snapshot => {
-
-        const roomPlayers =
-          snapshot.val() || {};
-
-        updateRoomPlayerNames(
-          roomPlayers
-        );
-
-      }
-    );
-
-}
-
-
-function updateRoomPlayerNames(
-  roomPlayers
-) {
-
-  const ids =
-    Object.keys(
-      roomPlayers
-    ).slice(
-      0,
-      MAX_PLAYERS
-    );
-
-  ids.forEach(
-    uid => {
-
-      if (
-        players[uid]
-      ) {
-
-        players[uid].name =
-          roomPlayers[uid].name ||
-          players[uid].name;
-
-      }
-
     }
-  );
-
-}
-
-
-// ============================================================
-// Listen Game State
-// ============================================================
-
-let gameUnsubscribe =
-  null;
-
-function listenGameState() {
-
-  if (gameUnsubscribe) return;
-
-  gameUnsubscribe =
-    onValue(
-      roomGameRef(),
-      snapshot => {
-
-        const state =
-          snapshot.val();
-
-        if (!state) return;
-
-        if (
-          state.players
-        ) {
-
-          players =
-            state.players;
-
-          myPlayer =
-            players[myUid] ||
-            myPlayer;
-
-        }
-
-        resources =
-          state.resources
-            ? Object.entries(
-                state.resources
-              ).map(
-                ([id, r]) => ({
-                  id,
-                  ...r
-                })
-              )
-            : [];
-
-        powerups =
-          state.powerups
-            ? Object.entries(
-                state.powerups
-              ).map(
-                ([id, p]) => ({
-                  id,
-                  ...p
-                })
-              )
-            : [];
-
-        if (
-          state.status ===
-          "playing"
-        ) {
-
-          if (
-            !running
-          ) {
-
-            running = true;
-
-            paused = false;
-
-            hideOverlay();
-
-            requestAnimationFrame(
-              gameLoop
-            );
-
-          }
-
-        }
-
-        if (
-          state.status ===
-          "finished"
-        ) {
-
-          finishFromNetwork(
-            state.winnerUid
-          );
-
-        }
-
-        updateHUD();
-
-      }
-    );
-
-}
-
-
-// ============================================================
-// ساخت بازی آنلاین توسط Host
-// ============================================================
-
-async function tryStartRoomGame() {
-
-  if (!multiplayer) return;
-
-  if (countdownRunning) return;
-
-  const playersSnap =
-    await get(
-      ref(
-        db,
-        `rooms/${roomCode}/players`
-      )
-    );
-
-  const roomPlayers =
-    playersSnap.val() || {};
-
-  const ids =
-    Object.keys(
-      roomPlayers
-    )
-      .slice(
-        0,
-        MAX_PLAYERS
-      );
-
-  if (
-    ids.length < 2
-  ) {
-
-    renderWaiting();
-
-    return;
-
   }
+}
 
-  const sorted =
-    [...ids].sort();
+// ======================================================
+// ROCKET
+// ======================================================
 
-  const hostUid =
-    sorted[0];
+function activateRocket(player) {
+  if (rocket.active || gameFinished) return;
 
-  if (
-    hostUid !== myUid
-  ) {
+  rocket.active = true;
+  rocket.owner = player.id;
+  rocket.progress = 0;
 
-    renderWaiting();
+  hudMode.textContent = `${player.name} موشک را فعال کرد!`;
 
-    return;
+  createParticles(
+    rocket.x,
+    rocket.y,
+    "#ffd34f",
+    40
+  );
+}
 
+// ======================================================
+// UPDATE ROCKET
+// ======================================================
+
+function updateRocket(dt) {
+  if (!rocket.active) return;
+
+  rocket.progress += dt * .55;
+
+  createParticles(
+    rocket.x + (Math.random() - .5) * 30,
+    rocket.y + 35,
+    "#ff8c42",
+    2
+  );
+
+  if (rocket.progress >= 1) {
+    finishGame(rocket.owner);
   }
-
-  const stateSnap =
-    await get(
-      roomGameRef()
-    );
-
-  const state =
-    stateSnap.val();
-
-  if (
-    state &&
-    state.status ===
-    "playing"
-  ) {
-
-    return;
-
-  }
-
-  const initialPlayers = {};
-
-  ids.forEach(
-    (uid, index) => {
-
-      initialPlayers[uid] =
-        players[uid] ||
-        makePlayer(
-          uid,
-          roomPlayers[uid].name ||
-            `بازیکن ${index + 1}`,
-          index
-        );
-
-    }
-  );
-
-  const resourceMap = {};
-
-  for (
-    let i = 0;
-    i < RESOURCE_COUNT;
-    i++
-  ) {
-
-    const r =
-      makeResource(
-        `r-${Date.now()}-${i}-${Math.random()}`
-      );
-
-    resourceMap[r.id] =
-      r;
-
-  }
-
-  const now =
-    Date.now();
-
-  await set(
-    roomGameRef(),
-    {
-
-      status:
-        "playing",
-
-      startedAt:
-        now,
-
-      endAt:
-        now +
-        MATCH_TIME * 1000,
-
-      winnerUid:
-        "",
-
-      resources:
-        resourceMap,
-
-      powerups:
-        {},
-
-      players:
-        initialPlayers
-
-    }
-  );
-
 }
 
-
-// ============================================================
-// انتظار
-// ============================================================
-
-function renderWaiting() {
-
-  if (
-    !multiplayer
-  ) return;
-
-  running = true;
-
-  paused = true;
-
-  const count =
-    Object.keys(
-      players
-    ).length;
-
-  overlay.innerHTML = `
-
-    <div class="big">
-      🚀 ASTRA
-    </div>
-
-    <div class="sub">
-      ${count < 2
-        ? "منتظر بازیکن دوم هستیم..."
-        : `${count} بازیکن آماده‌اند`
-      }
-    </div>
-
-  `;
-
-  overlay.classList.remove(
-    "hidden"
-  );
-
-  if (
-    count >= 2
-  ) {
-
-    tryStartRoomGame();
-
-  }
-
-}
-
-
-// ============================================================
-// Solo Countdown
-// ============================================================
-
-async function startCountdown() {
-
-  if (
-    countdownRunning
-  ) return;
-
-  countdownRunning = true;
-
-  running = true;
-
-  paused = true;
-
-  const steps = [
-    "۳",
-    "۲",
-    "۱",
-    "🚀 ASTRA!"
-  ];
-
-  for (
-    const step of steps
-  ) {
-
-    overlay.innerHTML = `
-      <div class="big">
-        ${step}
-      </div>
-    `;
-
-    overlay.classList.remove(
-      "hidden"
-    );
-
-    tone(
-      step.includes("ASTRA")
-        ? 1100
-        : 500,
-      .12
-    );
-
-    await delay(650);
-
-  }
-
-  hideOverlay();
-
-  paused = false;
-
-  countdownRunning = false;
-
-  lastFrame =
-    performance.now();
-
-  requestAnimationFrame(
-    gameLoop
-  );
-
-}
-
-
-// ============================================================
-// Delay
-// ============================================================
-
-function delay(ms) {
-
-  return new Promise(
-    resolve =>
-      setTimeout(
-        resolve,
-        ms
-      )
-  );
-
-}
-
-
-// ============================================================
-// Game loop
-// ============================================================
-
-function gameLoop(timestamp) {
-
-  if (!running) return;
-
-  const dt =
-    Math.min(
-      .05,
-      (timestamp - lastFrame) /
-        1000
-    );
-
-  lastFrame =
-    timestamp;
-
-  worldTime =
-    timestamp / 1000;
-
-  if (!paused) {
-
-    updateGame(
-      dt,
-      timestamp
-    );
-
-  }
-
-  drawGame(
-    timestamp
-  );
-
-  requestAnimationFrame(
-    gameLoop
-  );
-
-}
-
-
-// ============================================================
-// Update
-// ============================================================
-
-function updateGame(
-  dt,
-  timestamp
-) {
-
-  if (!myPlayer) return;
-
-  if (
-    multiplayer
-  ) {
-
-    updateMyOnlinePlayer(
-      dt,
-      timestamp
-    );
-
-  } else {
-
-    updateSoloPlayer(
-      dt,
-      timestamp
-    );
-
-    updateAI(
-      dt,
-      timestamp
-    );
-
-  }
-
-  updateEffects(
-    dt
-  );
-
-  checkResources();
-
-  checkLaunch();
-
-  updateCombo(
-    dt
-  );
-
-  updateTimer();
-
-  syncPlayer(
-    timestamp
-  );
-
-}
-
-
-// ============================================================
-// حرکت بازیکن
-// ============================================================
-
-function updateMyOnlinePlayer(
-  dt,
-  timestamp
-) {
-
-  const control =
-    getMyControl();
-
-  const magnitude =
-    Math.min(
-      1,
-      Math.hypot(
-        control.x,
-        control.y
-      )
-    );
-
-  if (
-    magnitude > .01
-  ) {
-
-    const length =
-      Math.hypot(
-        control.x,
-        control.y
-      ) || 1;
-
-    const nx =
-      control.x / length;
-
-    const ny =
-      control.y / length;
-
-    const speed =
-      myPlayer.boostUntil >
-      Date.now()
-        ? BOOST_SPEED
-        : PLAYER_SPEED;
-
-    myPlayer.x +=
-      nx *
-      magnitude *
-      speed *
-      dt;
-
-    myPlayer.y +=
-      ny *
-      magnitude *
-      speed *
-      dt;
-
-    clampPlayer(
-      myPlayer
-    );
-
-  }
-
-}
-
-
-// ============================================================
-// Solo player
-// ============================================================
-
-function updateSoloPlayer(
-  dt,
-  timestamp
-) {
-
-  const control =
-    controls.p1;
-
-  const magnitude =
-    Math.min(
-      1,
-      Math.hypot(
-        control.x,
-        control.y
-      )
-    );
-
-  if (
-    magnitude < .01
-  ) return;
-
-  const length =
-    Math.hypot(
-      control.x,
-      control.y
-    ) || 1;
-
-  const nx =
-    control.x / length;
-
-  const ny =
-    control.y / length;
-
-  const speed =
-    myPlayer.boostUntil >
-    Date.now()
-      ? BOOST_SPEED
-      : PLAYER_SPEED;
-
-  myPlayer.x +=
-    nx *
-    magnitude *
-    speed *
-    dt;
-
-  myPlayer.y +=
-    ny *
-    magnitude *
-    speed *
-    dt;
-
-  clampPlayer(
-    myPlayer
-  );
-
-}
-
-
-// ============================================================
-// ربات
-// ============================================================
-
-let aiTarget = null;
-
-function updateAI(
-  dt
-) {
-
-  const ai =
-    players.ai;
-
-  if (!ai) return;
-
-  if (
-    !aiTarget ||
-    !resources.find(
-      r =>
-        r.id ===
-        aiTarget.id
-    )
-  ) {
-
-    let best =
-      null;
-
-    let bestScore =
-      -Infinity;
-
-    resources.forEach(
-      resource => {
-
-        const d =
-          distance(
-            ai,
-            resource
-          );
-
-        const value =
-          resource.value /
-          (d + 30);
-
-        if (
-          value >
-          bestScore
-        ) {
-
-          bestScore =
-            value;
-
-          best =
-            resource;
-
-        }
-
-      }
-    );
-
-    aiTarget =
-      best;
-
-  }
-
-  if (!aiTarget) return;
-
-  const d =
-    distance(
-      ai,
-      aiTarget
-    );
-
-  if (
-    d < 2
-  ) return;
-
-  ai.x +=
-    (
-      aiTarget.x -
-      ai.x
-    ) /
-    d *
-    PLAYER_SPEED *
-    .72 *
-    dt;
-
-  ai.y +=
-    (
-      aiTarget.y -
-      ai.y
-    ) /
-    d *
-    PLAYER_SPEED *
-    .72 *
-    dt;
-
-  clampPlayer(
-    ai
-  );
-
-}
-
-
-// ============================================================
-// کنترل فعال
-// ============================================================
-
-function getMyControl() {
-
-  if (
-    !multiplayer
-  ) {
-
-    return controls.p1;
-
-  }
-
-  const ids =
-    Object.keys(
-      players
-    );
-
-  const index =
-    Math.max(
-      0,
-      ids.indexOf(
-        myUid
-      )
-    );
-
-  return index === 0
-    ? controls.p1
-    : controls.p2;
-
-}
-
-
-// ============================================================
-// منابع
-// ============================================================
-
-let resourceLock =
-  false;
-
-function checkResources() {
-
-  if (!myPlayer) return;
-
-  if (
-    myPlayer.finished
-  ) return;
-
-  for (
-    const resource of resources
-  ) {
-
-    if (
-      distance(
-        myPlayer,
-        resource
-      ) >
-      30
-    ) continue;
-
-    if (
-      multiplayer
-    ) {
-
-      claimOnlineResource(
-        resource
-      );
-
-    } else {
-
-      collectLocalResource(
-        resource
-      );
-
-    }
-
-    break;
-
-  }
-
-}
-
-
-// ============================================================
-// Solo collect
-// ============================================================
-
-function collectLocalResource(
-  resource
-) {
-
-  const index =
-    resources.findIndex(
-      r =>
-        r.id ===
-        resource.id
-    );
-
-  if (
-    index === -1
-  ) return;
-
-  resources.splice(
-    index,
-    1
-  );
-
-  myPlayer.cargo++;
-
-  myPlayer.score +=
-    resource.value;
-
-  combo++;
-
-  comboTimer = 3;
-
-  burst(
-    resource.x,
-    resource.y,
-    myPlayer.color,
-    16
-  );
-
-  tone(
-    650 +
-    combo * 30,
-    .07
-  );
-
-  setTimeout(
-    () => {
-
-      resources.push(
-        makeResource(
-          `r-${Date.now()}-${Math.random()}`
-        )
-      );
-
-    },
-    RESOURCE_RESPAWN
-  );
-
-}
-
-
-// ============================================================
-// Multiplayer collect
-// ============================================================
-
-async function claimOnlineResource(
-  resource
-) {
-
-  if (
-    resourceLock
-  ) return;
-
-  resourceLock = true;
-
-  try {
-
-    const resourceRef =
-      roomGameRef(
-        `resources/${resource.id}`
-      );
-
-    const transaction =
-      await runTransaction(
-        resourceRef,
-        current => {
-
-          if (
-            !current
-          ) {
-
-            return;
-
-          }
-
-          return null;
-
-        }
-      );
-
-    if (
-      transaction.committed
-    ) {
-
-      myPlayer.cargo++;
-
-      myPlayer.score +=
-        Number(
-          resource.value || 10
-        );
-
-      combo++;
-
-      comboTimer = 3;
-
-      burst(
-        resource.x,
-        resource.y,
-        myPlayer.color,
-        16
-      );
-
-      tone(
-        650 +
-        combo * 30,
-        .07
-      );
-
-      await syncMyPlayer();
-
-      spawnResourceLater();
-
-    }
-
-  } catch (error) {
-
-    console.warn(
-      "Resource claim:",
-      error
-    );
-
-  }
-
-  resourceLock = false;
-
-}
-
-
-// ============================================================
-// ساخت منبع جدید
-// ============================================================
-
-function spawnResourceLater() {
-
-  if (!multiplayer) return;
-
-  setTimeout(
-    async () => {
-
-      try {
-
-        const state =
-          await get(
-            roomGameRef(
-              "resources"
-            )
-          );
-
-        const map =
-          state.val() || {};
-
-        if (
-          Object.keys(map)
-            .length >=
-          RESOURCE_COUNT
-        ) return;
-
-        const r =
-          makeResource(
-            `r-${Date.now()}-${Math.random()}`
-          );
-
-        await update(
-          roomGameRef(
-            "resources"
-          ),
-          {
-            [r.id]: r
-          }
-        );
-
-      } catch {}
-
-    },
-    RESOURCE_RESPAWN
-  );
-
-}
-
-
-// ============================================================
-// تبدیل Cargo به Fuel
-// ============================================================
-
-function processCargo() {
-
-  if (
-    myPlayer.cargo <= 0
-  ) return;
-
-  const pad =
-    getBasePosition(
-      myPlayer.uid
-    );
-
-  if (
-    Math.hypot(
-      myPlayer.x - pad.x,
-      myPlayer.y - pad.y
-    ) > 65
-  ) {
-
-    return;
-
-  }
-
-  const amount =
-    Math.min(
-      myPlayer.cargo,
-      Math.ceil(
-        (100 -
-          myPlayer.fuel) /
-        10
-      )
-    );
-
-  if (
-    amount <= 0
-  ) return;
-
-  myPlayer.cargo -=
-    amount;
-
-  myPlayer.fuel =
-    Math.min(
-      100,
-      myPlayer.fuel +
-        amount * 10
-    );
-
-  tone(
-    850,
-    .08
-  );
-
-}
-
-
-// ============================================================
-// Launch
-// ============================================================
-
-function checkLaunch() {
-
-  processCargo();
-
-  if (
-    myPlayer.fuel < 100
-  ) return;
-
-  if (
-    myPlayer.launched ||
-    myPlayer.finished
-  ) return;
-
-  const pad =
-    getLaunchPad(
-      myPlayer.uid
-    );
-
-  const d =
-    Math.hypot(
-      myPlayer.x - pad.x,
-      myPlayer.y - pad.y
-    );
-
-  if (
-    d > 70
-  ) return;
-
-  launchPlayer();
-
-}
-
-
-// ============================================================
-// Launch player
-// ============================================================
-
-let launching =
-  false;
-
-async function launchPlayer() {
-
-  if (launching) return;
-
-  launching = true;
-
-  myPlayer.launched = true;
-
-  myPlayer.finished = true;
-
-  burst(
-    myPlayer.x,
-    myPlayer.y,
-    myPlayer.color,
-    45
-  );
-
-  tone(
-    1200,
-    .35
-  );
-
-  if (
-    multiplayer
-  ) {
-
-    await syncMyPlayer();
-
-    try {
-
-      await runTransaction(
-        roomGameRef(
-          "winnerUid"
-        ),
-        current => {
-
-          if (
-            current
-          ) return;
-
-          return myUid;
-
-        }
-      );
-
-    } catch {}
-
-  } else {
-
-    showSoloWin();
-
-  }
-
-  launching = false;
-
-}
-
-
-// ============================================================
-// جایگاه Base
-// ============================================================
-
-function getBasePosition(
-  uid
-) {
-
-  const index =
-    Object.keys(
-      players
-    )
-      .indexOf(uid);
-
-  const positions = [
-
-    {
-      x: W * .18,
-      y: H * .50
-    },
-
-    {
-      x: W * .82,
-      y: H * .50
-    },
-
-    {
-      x: W * .50,
-      y: H * .25
-    },
-
-    {
-      x: W * .50,
-      y: H * .75
-    }
-
-  ];
-
-  return positions[
-    Math.max(
-      0,
-      index
-    ) % positions.length
-  ];
-
-}
-
-
-function getLaunchPad(
-  uid
-) {
-
-  const base =
-    getBasePosition(
-      uid
-    );
-
-  return {
-
-    x:
-      base.x,
-
-    y:
-      base.y
-
-  };
-
-}
-
-
-// ============================================================
-// Multiplayer sync
-// ============================================================
-
-async function syncPlayer(
-  timestamp
-) {
-
-  if (
-    !multiplayer
-  ) return;
-
-  if (
-    timestamp -
-    lastSync <
-    SYNC_INTERVAL
-  ) return;
-
-  lastSync =
-    timestamp;
-
-  await syncMyPlayer();
-
-}
-
-
-async function syncMyPlayer() {
-
-  if (
-    !myPlayer ||
-    !myUid ||
-    !roomCode
-  ) return;
-
-  try {
-
-    await update(
-      roomGameRef(
-        `players/${myUid}`
-      ),
-      {
-
-        x:
-          myPlayer.x,
-
-        y:
-          myPlayer.y,
-
-        fuel:
-          myPlayer.fuel,
-
-        cargo:
-          myPlayer.cargo,
-
-        score:
-          myPlayer.score,
-
-        combo:
-          myPlayer.combo,
-
-        powerup:
-          myPlayer.powerup,
-
-        boostUntil:
-          myPlayer.boostUntil,
-
-        launched:
-          myPlayer.launched,
-
-        finished:
-          myPlayer.finished,
-
-        lastUpdate:
-          Date.now()
-
-      }
-    );
-
-  } catch (error) {
-
-    console.warn(
-      "Astra sync error:",
-      error
-    );
-
-  }
-
-}
-
-
-// ============================================================
-// Timer
-// ============================================================
-
-function updateTimer() {
-
-  if (
-    !multiplayer
-  ) {
-
-    if (
-      !window.soloStartedAt
-    ) {
-
-      window.soloStartedAt =
-        Date.now();
-
-    }
-
-    const elapsed =
-      (
-        Date.now() -
-        window.soloStartedAt
-      ) / 1000;
-
-    const left =
-      Math.max(
-        0,
-        MATCH_TIME -
-        elapsed
-      );
-
-    hudTimer.textContent =
-      formatTime(
-        left
-      );
-
-    if (
-      left <= 0
-    ) {
-
-      showSoloTimeUp();
-
-    }
-
-    return;
-
-  }
-
-  get(
-    roomGameRef()
-  )
-    .then(
-      snap => {
-
-        const state =
-          snap.val();
-
-        if (!state) return;
-
-        const left =
-          Math.max(
-            0,
-            (
-              Number(
-                state.endAt
-              ) -
-              Date.now()
-            ) / 1000
-          );
-
-        hudTimer.textContent =
-          formatTime(
-            left
-          );
-
-        if (
-          left <= 0 &&
-          state.status ===
-          "playing"
-        ) {
-
-          if (
-            Object.keys(
-              players
-            ).length
-          ) {
-
-            finishByTimeout();
-
-          }
-
-        }
-
-      }
-    )
-    .catch(() => {});
-
-}
-
-
-function formatTime(
-  seconds
-) {
-
-  seconds =
-    Math.max(
-      0,
-      Math.ceil(
-        seconds
-      )
-    );
-
-  const min =
-    Math.floor(
-      seconds / 60
-    );
-
-  const sec =
-    seconds % 60;
-
-  return `${String(min).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
-
-}
-
-
-// ============================================================
-// Timeout
-// ============================================================
-
-async function finishByTimeout() {
-
-  if (
-    !multiplayer
-  ) return;
-
-  try {
-
-    await runTransaction(
-      roomGameRef(
-        "status"
-      ),
-      current => {
-
-        if (
-          current !==
-          "playing"
-        ) return;
-
-        return "finished";
-
-      }
-    );
-
-  } catch {}
-
-}
-
-
-// ============================================================
-// نتیجه از شبکه
-// ============================================================
-
-function finishFromNetwork(
-  winnerUid
-) {
-
-  if (
-    gameFinished
-  ) return;
+// ======================================================
+// GAME FINISH
+// ======================================================
+
+function finishGame(winnerId) {
+  if (gameFinished) return;
 
   gameFinished = true;
+  gameRunning = false;
 
-  running = false;
+  const winner = players[winnerId];
 
-  paused = true;
-
-  const winner =
-    players[winnerUid];
-
-  const winnerName =
-    winner?.name ||
-    "برنده";
-
-  const won =
-    winnerUid ===
-    myUid;
-
-  tone(
-    won
-      ? 1300
-      : 300,
-    .3
-  );
-
-  showResult(
-    won,
-    winnerName
-  );
-
-  saveResult(
-    won
-  );
-
-}
-
-
-// ============================================================
-// نتیجه Solo
-// ============================================================
-
-function showSoloWin() {
-
-  if (
-    gameFinished
-  ) return;
-
-  gameFinished = true;
-
-  running = false;
-
-  paused = true;
-
-  tone(
-    1400,
-    .35
-  );
-
-  showResult(
-    true,
-    myName
-  );
-
-  saveResult(
-    true
-  );
-
-}
-
-
-function showSoloTimeUp() {
-
-  if (
-    gameFinished
-  ) return;
-
-  gameFinished = true;
-
-  running = false;
-
-  paused = true;
-
-  const won =
-    myPlayer.score >
-    players.ai.score;
-
-  showResult(
-    won,
-    won
-      ? myName
-      : "ربات"
-  );
-
-  saveResult(
-    won
-  );
-
-}
-
-
-// ============================================================
-// ذخیره نتیجه
-// ============================================================
-
-let resultSaved =
-  false;
-
-async function saveResult(
-  won
-) {
-
-  if (
-    resultSaved
-  ) return;
-
-  resultSaved = true;
-
-  try {
-
-    await recordRoundResult(
-      myName,
-      GAME_ID,
-      {
-        won
-      }
-    );
-
-  } catch (
-    error
-  ) {
-
-    console.warn(
-      "Astra result error:",
-      error
-    );
-
-  }
-
-}
-
-
-// ============================================================
-// Result UI
-// ============================================================
-
-function showResult(
-  won,
-  winnerName
-) {
-
-  const allPlayers =
-    Object.values(
-      players
-    )
-      .filter(
-        p =>
-          p &&
-          p.uid !== "ai"
-      )
-      .sort(
-        (a,b) =>
-          b.score -
-          a.score
-      );
-
-  const cards =
-    allPlayers
-      .map(
-        p => `
-
-          <div class="result-player">
-
-            <div class="name">
-              ${p.uid === myUid ? "🔵 " : ""}
-              ${escapeHtml(p.name)}
-            </div>
-
-            <div class="score">
-              ⭐ ${Math.round(
-                p.score || 0
-              )}
-            </div>
-
-            <div>
-              ⛽ ${Math.round(
-                p.fuel || 0
-              )}%
-            </div>
-
-          </div>
-
-        `
-      )
-      .join("");
+  winner.world2 = true;
 
   result.innerHTML = `
-
     <div class="result-title">
-      ${won
-        ? "🏆 تو برنده شدی!"
-        : "😅 بازی تمام شد"
-      }
+      🚀 ${winner.name} وارد World 2 شد!
     </div>
 
     <div class="result-sub">
-      🚀 ${escapeHtml(
-        winnerName
-      )} وارد World 2 شد
+      🏆 برنده مسابقه Domito Astra
     </div>
 
     <div class="result-players">
-      ${cards}
+
+      <div class="result-player">
+        <div class="name">🔵 ${players.p1.name}</div>
+        <div class="score">
+          انرژی: ${Math.floor(players.p1.energy)}
+        </div>
+      </div>
+
+      <div class="result-player">
+        <div class="name">🟣 ${players.p2.name}</div>
+        <div class="score">
+          انرژی: ${Math.floor(players.p2.energy)}
+        </div>
+      </div>
+
     </div>
 
-    <button
-      class="result-button"
-      id="astraAgain"
-    >
-      🔄 دوباره بازی کن
+    <button class="result-button" id="restartAstra">
+      🔄 بازی دوباره
     </button>
-
-    <button
-      class="result-button secondary"
-      id="astraHome"
-    >
-      🏠 بازگشت به خانه
-    </button>
-
   `;
 
-  result.classList.add(
-    "show"
-  );
+  result.classList.add("show");
 
   document
-    .getElementById(
-      "astraAgain"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
+    .getElementById("restartAstra")
+    .addEventListener("click", restartGame);
 
-        window.location.reload();
-
-      }
-    );
-
-  document
-    .getElementById(
-      "astraHome"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-
-        window.location.href =
-          "../index.html";
-
-      }
-    );
-
+  hudMode.textContent = "🏆 مسابقه تمام شد";
 }
 
+// ======================================================
+// RESTART
+// ======================================================
 
-// ============================================================
-// Escape
-// ============================================================
+function restartGame() {
+  players.p1.x = 450;
+  players.p1.y = WORLD_HEIGHT / 2;
+  players.p1.vx = 0;
+  players.p1.vy = 0;
+  players.p1.energy = 0;
+  players.p1.boost = 100;
+  players.p1.score = 0;
+  players.p1.world2 = false;
 
-function escapeHtml(
-  text
-) {
+  players.p2.x = WORLD_WIDTH - 450;
+  players.p2.y = WORLD_HEIGHT / 2;
+  players.p2.vx = 0;
+  players.p2.vy = 0;
+  players.p2.energy = 0;
+  players.p2.boost = 100;
+  players.p2.score = 0;
+  players.p2.world2 = false;
 
-  return String(
-    text || ""
-  )
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
+  rocket.active = false;
+  rocket.owner = null;
+  rocket.progress = 0;
 
+  createCells();
+
+  result.classList.remove("show");
+
+  gameFinished = false;
+  gameRunning = true;
+
+  overlay.classList.add("hidden");
+
+  hudMode.textContent = "جمع‌آوری انرژی";
+
+  startTimer();
 }
 
-
-// ============================================================
-// HUD
-// ============================================================
-
-function updateHUD() {
-
-  const list =
-    Object.values(
-      players
-    )
-      .filter(
-        p =>
-          p &&
-          p.uid !== "ai"
-      );
-
-  playersHud.innerHTML =
-    list
-      .map(
-        p => `
-
-          <div
-            class="player-card ${
-              p.uid === myUid
-                ? "me"
-                : ""
-            }"
-          >
-
-            <div class="player-name">
-              ${p.uid === myUid
-                ? "🔵 "
-                : ""
-              }
-              ${escapeHtml(
-                p.name
-              )}
-            </div>
-
-            <div class="player-stats">
-              ⛽ ${Math.round(
-                p.fuel || 0
-              )}%
-              &nbsp;
-              📦 ${p.cargo || 0}
-              &nbsp;
-              ⭐ ${Math.round(
-                p.score || 0
-              )}
-            </div>
-
-          </div>
-
-        `
-      )
-      .join("");
-
-}
-
-
-// ============================================================
-// Combo
-// ============================================================
-
-function updateCombo(
-  dt
-) {
-
-  if (
-    comboTimer > 0
-  ) {
-
-    comboTimer -= dt;
-
-  } else {
-
-    combo = 0;
-
-  }
-
-  myPlayer.combo =
-    combo;
-
-}
-
-
-// ============================================================
-// Effects
-// ============================================================
-
-function burst(
-  x,
-  y,
-  color,
-  count = 12
-) {
-
-  for (
-    let i = 0;
-    i < count;
-    i++
-  ) {
-
-    const angle =
-      Math.random() *
-      Math.PI *
-      2;
-
-    const speed =
-      50 +
-      Math.random() *
-      160;
-
-    particles.push({
-
-      x,
-
-      y,
-
-      vx:
-        Math.cos(
-          angle
-        ) *
-        speed,
-
-      vy:
-        Math.sin(
-          angle
-        ) *
-        speed,
-
-      life:
-        1,
-
-      color
-
-    });
-
-  }
-
-}
-
-
-function updateEffects(
-  dt
-) {
-
-  particles.forEach(
-    p => {
-
-      p.x +=
-        p.vx *
-        dt;
-
-      p.y +=
-        p.vy *
-        dt;
-
-      p.vx *=
-        .92;
-
-      p.vy *=
-        .92;
-
-      p.life -=
-        dt *
-        1.5;
-
-    }
-  );
-
-  particles =
-    particles.filter(
-      p =>
-        p.life > 0
-    );
-
-}
-
-
-// ============================================================
-// Drawing
-// ============================================================
-
-function drawGame(
-  timestamp
-) {
-
-  drawBackground(
-    timestamp / 1000
-  );
-
-  drawLaunchPads();
-
-  drawResources();
-
-  drawPowerups();
-
-  drawPlayers();
-
-  drawEffects();
-
-}
-
-
-// ============================================================
-// Background
-// ============================================================
-
-function drawBackground(
-  t
-) {
-
-  ctx.clearRect(
-    0,
-    0,
-    W,
-    H
-  );
-
-  ctx.fillStyle =
-    "#03040b";
-
-  ctx.fillRect(
-    0,
-    0,
-    W,
-    H
-  );
-
-  const glow1 =
-    ctx.createRadialGradient(
-      W * .2,
-      H * .25,
-      0,
-      W * .2,
-      H * .25,
-      Math.max(W,H) * .5
-    );
-
-  glow1.addColorStop(
-    0,
-    "rgba(79,124,255,.18)"
-  );
-
-  glow1.addColorStop(
-    1,
-    "rgba(79,124,255,0)"
-  );
-
-  ctx.fillStyle =
-    glow1;
-
-  ctx.fillRect(
-    0,
-    0,
-    W,
-    H
-  );
-
-
-  const glow2 =
-    ctx.createRadialGradient(
-      W * .8,
-      H * .75,
-      0,
-      W * .8,
-      H * .75,
-      Math.max(W,H) * .45
-    );
-
-  glow2.addColorStop(
-    0,
-    "rgba(155,92,255,.16)"
-  );
-
-  glow2.addColorStop(
-    1,
-    "rgba(155,92,255,0)"
-  );
-
-  ctx.fillStyle =
-    glow2;
-
-  ctx.fillRect(
-    0,
-    0,
-    W,
-    H
-  );
-
-
-  stars.forEach(
-    s => {
-
-      const a =
-        s.alpha +
-        Math.sin(
-          t * 2 +
-          s.x
-        ) *
-        .15;
-
-      ctx.globalAlpha =
-        Math.max(
-          .1,
-          a
-        );
-
-      ctx.beginPath();
-
-      ctx.arc(
-        s.x,
-        s.y,
-        s.r,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fillStyle =
-        "#fff";
-
-      ctx.fill();
-
-    }
-  );
-
-  ctx.globalAlpha =
-    1;
-
-
-  ctx.strokeStyle =
-    "rgba(255,255,255,.035)";
-
-  ctx.lineWidth =
-    1;
-
-  const gap =
-    Math.max(
-      35,
-      Math.min(
-        W,
-        H
-      ) / 10
-    );
-
-  for (
-    let x = 0;
-    x < W;
-    x += gap
-  ) {
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      x,
-      0
-    );
-
-    ctx.lineTo(
-      x,
-      H
-    );
-
-    ctx.stroke();
-
-  }
-
-  for (
-    let y = 0;
-    y < H;
-    y += gap
-  ) {
-
-    ctx.beginPath();
-
-    ctx.moveTo(
-      0,
-      y
-    );
-
-    ctx.lineTo(
-      W,
-      y
-    );
-
-    ctx.stroke();
-
-  }
-
-}
-
-
-// ============================================================
-// Launch Pads
-// ============================================================
-
-function drawLaunchPads() {
-
-  Object.values(
-    players
-  )
-    .filter(
-      p =>
-        p &&
-        p.uid !== "ai"
-    )
-    .forEach(
-      p => {
-
-        const pad =
-          getLaunchPad(
-            p.uid
-          );
-
-        ctx.beginPath();
-
-        ctx.arc(
-          pad.x,
-          pad.y,
-          30,
-          0,
-          Math.PI * 2
-        );
-
-        ctx.fillStyle =
-          "rgba(255,255,255,.035)";
-
-        ctx.fill();
-
-        ctx.beginPath();
-
-        ctx.arc(
-          pad.x,
-          pad.y,
-          25,
-          0,
-          Math.PI * 2
-        );
-
-        ctx.strokeStyle =
-          p.fuel >= 100
-            ? "#ffd34f"
-            : p.color;
-
-        ctx.globalAlpha =
-          p.fuel >= 100
-            ? .95
-            : .4;
-
-        ctx.lineWidth =
-          3;
-
-        ctx.stroke();
-
-        ctx.globalAlpha =
-          1;
-
-        ctx.fillStyle =
-          "#fff";
-
-        ctx.font =
-          "bold 10px Arial";
-
-        ctx.textAlign =
-          "center";
-
-        ctx.fillText(
-          p.fuel >= 100
-            ? "LAUNCH"
-            : "BASE",
-          pad.x,
-          pad.y + 4
-        );
-
-      }
-    );
-
-}
-
-
-// ============================================================
-// Resources
-// ============================================================
-
-function drawResources() {
-
-  resources.forEach(
-    r => {
-
-      const rare =
-        r.value >= 25;
-
-      const radius =
-        rare
-          ? 14
-          : 10;
-
-      const pulse =
-        1 +
-        Math.sin(
-          worldTime * 3 +
-          r.x
-        ) *
-        .12;
-
-      ctx.beginPath();
-
-      ctx.arc(
-        r.x,
-        r.y,
-        radius * pulse,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fillStyle =
-        rare
-          ? "#ffd34f"
-          : "#4fd1ff";
-
-      ctx.shadowColor =
-        ctx.fillStyle;
-
-      ctx.shadowBlur =
-        rare
-          ? 22
-          : 12;
-
-      ctx.fill();
-
-      ctx.shadowBlur =
-        0;
-
-      ctx.fillStyle =
-        "#05060f";
-
-      ctx.font =
-        "bold 8px Arial";
-
-      ctx.textAlign =
-        "center";
-
-      ctx.fillText(
-        r.value,
-        r.x,
-        r.y + 3
-      );
-
-    }
-  );
-
-}
-
-
-// ============================================================
-// Powerups
-// ============================================================
-
-function drawPowerups() {
-
-  powerups.forEach(
-    p => {
-
-      ctx.beginPath();
-
-      ctx.arc(
-        p.x,
-        p.y,
-        13,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fillStyle =
-        "#3ecf8e";
-
-      ctx.shadowColor =
-        "#3ecf8e";
-
-      ctx.shadowBlur =
-        18;
-
-      ctx.fill();
-
-      ctx.shadowBlur =
-        0;
-
-      ctx.fillStyle =
-        "#05060f";
-
-      ctx.font =
-        "bold 14px Arial";
-
-      ctx.textAlign =
-        "center";
-
-      ctx.fillText(
-        "⚡",
-        p.x,
-        p.y + 5
-      );
-
-    }
-  );
-
-}
-
-
-// ============================================================
-// Players
-// ============================================================
-
-function drawPlayers() {
-
-  Object.values(
-    players
-  )
-    .filter(Boolean)
-    .forEach(
-      p => {
-
-        drawShip(
-          p
-        );
-
-      }
-    );
-
-}
-
-
-function drawShip(
-  p
-) {
-
-  const now =
-    Date.now();
-
-  const boosted =
-    Number(
-      p.boostUntil || 0
-    ) > now;
-
-  const size =
-    18;
+// ======================================================
+// DRAW BACKGROUND
+// ======================================================
+
+function drawBackground(time) {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+
+  ctx.fillStyle = "#03040b";
+  ctx.fillRect(0, 0, w, h);
 
   ctx.save();
 
-  ctx.translate(
-    p.x,
-    p.y
-  );
+  ctx.translate(-camera.x, -camera.y);
 
-  ctx.rotate(
-    Math.sin(
-      worldTime
-    ) *
-    .05
-  );
+  for (const star of stars) {
+    const twinkle =
+      .5 + Math.sin(time * .002 + star.alpha * 10) * .5;
 
-
-  // Trail
-  ctx.globalAlpha =
-    .22;
-
-  ctx.fillStyle =
-    p.color;
-
-  for (
-    let i = 1;
-    i <= 5;
-    i++
-  ) {
+    ctx.globalAlpha = .3 + twinkle * .7;
 
     ctx.beginPath();
-
     ctx.arc(
-      -i * 5,
-      0,
-      Math.max(
-        2,
-        8 - i
-      ),
+      star.x,
+      star.y,
+      star.r,
       0,
       Math.PI * 2
     );
 
+    ctx.fillStyle = "#fff";
     ctx.fill();
-
   }
 
-  ctx.globalAlpha =
-    1;
+  ctx.globalAlpha = 1;
 
+  // Grid
+  ctx.strokeStyle = "rgba(90,120,255,.07)";
+  ctx.lineWidth = 1;
 
-  // Engine
+  const grid = 100;
+
+  for (let x = 0; x < WORLD_WIDTH; x += grid) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, WORLD_HEIGHT);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < WORLD_HEIGHT; y += grid) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(WORLD_WIDTH, y);
+    ctx.stroke();
+  }
+
+  // Arena boundary
+  ctx.strokeStyle = "rgba(79,124,255,.3)";
+  ctx.lineWidth = 4;
+
+  ctx.strokeRect(
+    20,
+    20,
+    WORLD_WIDTH - 40,
+    WORLD_HEIGHT - 40
+  );
+
+  ctx.restore();
+}
+
+// ======================================================
+// DRAW CELLS
+// ======================================================
+
+function drawCells(time) {
+  ctx.save();
+
+  ctx.translate(-camera.x, -camera.y);
+
+  for (const cell of cells) {
+    if (cell.taken) continue;
+
+    const pulse =
+      Math.sin(time * .004 + cell.phase) * 3;
+
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = "#ffd34f";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      cell.x,
+      cell.y,
+      cell.r + pulse,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle = "#ffd34f";
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      cell.x,
+      cell.y,
+      cell.r * .35,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ======================================================
+// DRAW ROCKET
+// ======================================================
+
+function drawRocket(time) {
+  ctx.save();
+
+  ctx.translate(
+    rocket.x - camera.x,
+    rocket.y - camera.y
+  );
+
+  const scale =
+    rocket.active
+      ? 1 + rocket.progress * 1.2
+      : 1;
+
+  ctx.scale(scale, scale);
+
+  // glow
+  ctx.shadowBlur = 35;
+  ctx.shadowColor = "#ffd34f";
+
+  ctx.fillStyle = "#fff";
+
   ctx.beginPath();
-
-  ctx.moveTo(
-    -size,
-    0
+  ctx.roundRect(
+    -18,
+    -50,
+    36,
+    85,
+    18
   );
-
-  ctx.lineTo(
-    -size - 15 -
-      (
-        boosted
-          ? Math.random() * 8
-          : 0
-      ),
-    -6
-  );
-
-  ctx.lineTo(
-    -size - 15 -
-      (
-        boosted
-          ? Math.random() * 8
-          : 0
-      ),
-    6
-  );
-
-  ctx.closePath();
-
-  ctx.fillStyle =
-    boosted
-      ? "#ffd34f"
-      : "#ff7a59";
-
-  ctx.shadowColor =
-    ctx.fillStyle;
-
-  ctx.shadowBlur =
-    boosted
-      ? 20
-      : 10;
-
   ctx.fill();
 
-  ctx.shadowBlur =
-    0;
+  ctx.shadowBlur = 0;
 
-
-  // Ship body
+  // window
   ctx.beginPath();
+  ctx.arc(0, -20, 9, 0, Math.PI * 2);
 
-  ctx.moveTo(
-    size + 8,
-    0
-  );
-
-  ctx.lineTo(
-    -size,
-    -size * .65
-  );
-
-  ctx.lineTo(
-    -size * .65,
-    0
-  );
-
-  ctx.lineTo(
-    -size,
-    size * .65
-  );
-
-  ctx.closePath();
-
-  ctx.fillStyle =
-    p.color;
-
-  ctx.shadowColor =
-    p.color;
-
-  ctx.shadowBlur =
-    boosted
-      ? 25
-      : 12;
-
+  ctx.fillStyle = "#4f7cff";
   ctx.fill();
 
-  ctx.shadowBlur =
-    0;
+  // nose
+  ctx.beginPath();
 
+  ctx.moveTo(-18, -48);
+  ctx.lineTo(0, -78);
+  ctx.lineTo(18, -48);
+  ctx.closePath();
 
-  // Cockpit
+  ctx.fillStyle = "#e7eaff";
+  ctx.fill();
+
+  // flame
+  if (rocket.active) {
+    ctx.beginPath();
+
+    ctx.moveTo(-12, 32);
+    ctx.lineTo(0, 65 + Math.random() * 20);
+    ctx.lineTo(12, 32);
+    ctx.closePath();
+
+    ctx.fillStyle = "#ff8c42";
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ======================================================
+// DRAW PLAYER
+// ======================================================
+
+function drawPlayer(player) {
+  ctx.save();
+
+  ctx.translate(
+    player.x - camera.x,
+    player.y - camera.y
+  );
+
+  const angle =
+    Math.atan2(player.vy, player.vx);
+
+  if (Math.abs(player.vx) + Math.abs(player.vy) > .1) {
+    ctx.rotate(angle);
+  }
+
+  // Glow
+  ctx.shadowBlur = 30;
+  ctx.shadowColor = player.glow;
+
   ctx.beginPath();
 
   ctx.arc(
-    4,
     0,
-    5,
+    0,
+    PLAYER_RADIUS,
     0,
     Math.PI * 2
   );
 
-  ctx.fillStyle =
-    "#eaf0ff";
-
+  ctx.fillStyle = player.color;
   ctx.fill();
 
+  ctx.shadowBlur = 0;
 
-  // Shield
-  if (
-    boosted
-  ) {
+  // Ship
+  ctx.beginPath();
+
+  ctx.moveTo(35, 0);
+  ctx.lineTo(-20, -20);
+  ctx.lineTo(-12, 0);
+  ctx.lineTo(-20, 20);
+  ctx.closePath();
+
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+
+  // cockpit
+  ctx.beginPath();
+
+  ctx.arc(
+    5,
+    0,
+    9,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fillStyle = player.color;
+  ctx.fill();
+
+  // energy ring
+  ctx.strokeStyle = player.color;
+  ctx.lineWidth = 5;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    0,
+    0,
+    PLAYER_RADIUS + 10,
+    -Math.PI / 2,
+    -Math.PI / 2 +
+      Math.PI * 2 *
+      (player.energy / ENERGY_NEEDED)
+  );
+
+  ctx.stroke();
+
+  ctx.restore();
+
+  // name
+  ctx.save();
+
+  ctx.translate(
+    player.x - camera.x,
+    player.y - camera.y - 50
+  );
+
+  ctx.textAlign = "center";
+
+  ctx.font = "bold 14px Arial";
+
+  ctx.fillStyle = "#fff";
+
+  ctx.fillText(
+    player.name,
+    0,
+    0
+  );
+
+  ctx.restore();
+}
+
+// ======================================================
+// DRAW PARTICLES
+// ======================================================
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save();
+
+    ctx.globalAlpha = p.life;
 
     ctx.beginPath();
 
     ctx.arc(
-      0,
-      0,
-      size + 8,
+      p.x - camera.x,
+      p.y - camera.y,
+      p.size,
       0,
       Math.PI * 2
     );
 
-    ctx.strokeStyle =
-      "#3ecf8e";
+    ctx.fillStyle = p.color;
 
-    ctx.globalAlpha =
-      .65;
+    ctx.fill();
 
-    ctx.lineWidth =
-      2;
-
-    ctx.stroke();
-
-    ctx.globalAlpha =
-      1;
-
+    ctx.restore();
   }
-
-  ctx.restore();
-
-
-  // Name
-  ctx.fillStyle =
-    "#fff";
-
-  ctx.font =
-    "bold 11px Arial";
-
-  ctx.textAlign =
-    "center";
-
-  ctx.fillText(
-    p.name,
-    p.x,
-    p.y - 27
-  );
-
-
-  // Cargo
-  ctx.font =
-    "9px Arial";
-
-  ctx.fillStyle =
-    "#aeb7df";
-
-  ctx.fillText(
-    `⛽ ${Math.round(
-      p.fuel || 0
-    )}%  📦 ${
-      p.cargo || 0
-    }`,
-    p.x,
-    p.y + 32
-  );
-
 }
 
+// ======================================================
+// CAMERA
+// ======================================================
 
-// ============================================================
-// Effects
-// ============================================================
+function updateCamera() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
 
-function drawEffects() {
+  const centerX =
+    (players.p1.x + players.p2.x) / 2;
 
-  particles.forEach(
-    p => {
+  const centerY =
+    (players.p1.y + players.p2.y) / 2;
 
-      ctx.globalAlpha =
-        Math.max(
-          0,
-          p.life
-        );
+  camera.x +=
+    (centerX - w / 2 - camera.x) * .08;
 
-      ctx.beginPath();
+  camera.y +=
+    (centerY - h / 2 - camera.y) * .08;
 
-      ctx.arc(
-        p.x,
-        p.y,
-        2.5,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fillStyle =
-        p.color;
-
-      ctx.fill();
-
-    }
-  );
-
-  ctx.globalAlpha =
-    1;
-
-}
-
-
-// ============================================================
-// Boost
-// ============================================================
-
-function activateBoost() {
-
-  if (
-    !myPlayer
-  ) return;
-
-  myPlayer.boostUntil =
-    Date.now() +
-    BOOST_TIME *
-    1000;
-
-  powerupIndicator.classList.add(
-    "active"
-  );
-
-  tone(
-    1000,
-    .12
-  );
-
-  setTimeout(
-    () => {
-
-      if (
-        Date.now() >=
-        myPlayer.boostUntil
-      ) {
-
-        powerupIndicator.classList.remove(
-          "active"
-        );
-
-      }
-
-    },
-    BOOST_TIME *
-      1000
-  );
-
-  if (
-    multiplayer
-  ) {
-
-    syncMyPlayer();
-
-  }
-
-}
-
-
-// ============================================================
-// Buttons
-// ============================================================
-
-document
-  .getElementById("p1Boost")
-  .addEventListener(
-    "pointerdown",
-    e => {
-
-      e.preventDefault();
-
-      activateBoost();
-
-    }
-  );
-
-document
-  .getElementById("p2Boost")
-  .addEventListener(
-    "pointerdown",
-    e => {
-
-      e.preventDefault();
-
-      activateBoost();
-
-    }
-  );
-
-
-// ============================================================
-// Joystick
-// ============================================================
-
-function setupJoystick(
-  baseId,
-  knobId,
-  control
-) {
-
-  const base =
-    document.getElementById(
-      baseId
-    );
-
-  const knob =
-    document.getElementById(
-      knobId
-    );
-
-  let active =
-    false;
-
-  let pointerId =
-    null;
-
-  let origin = {
-    x: 0,
-    y: 0
-  };
-
-
-  function start(e) {
-
-    if (
-      active
-    ) return;
-
-    active =
-      true;
-
-    pointerId =
-      e.pointerId;
-
-    base.setPointerCapture(
-      pointerId
-    );
-
-    const rect =
-      base.getBoundingClientRect();
-
-    origin.x =
-      rect.left +
-      rect.width / 2;
-
-    origin.y =
-      rect.top +
-      rect.height / 2;
-
-    base.classList.add(
-      "pressed"
-    );
-
-    move(e);
-
-  }
-
-
-  function move(e) {
-
-    if (
-      !active ||
-      e.pointerId !==
-      pointerId
-    ) return;
-
-    e.preventDefault();
-
-    const rect =
-      base.getBoundingClientRect();
-
-    const max =
-      rect.width *
-      .38;
-
-    let dx =
-      e.clientX -
-      origin.x;
-
-    let dy =
-      e.clientY -
-      origin.y;
-
-    const distanceValue =
-      Math.hypot(
-        dx,
-        dy
-      );
-
-    if (
-      distanceValue >
-      max
-    ) {
-
-      dx =
-        dx /
-        distanceValue *
-        max;
-
-      dy =
-        dy /
-        distanceValue *
-        max;
-
-    }
-
-    const dead =
-      max *
-      .12;
-
-    if (
-      distanceValue <
-      dead
-    ) {
-
-      control.x =
-        0;
-
-      control.y =
-        0;
-
-      knob.style.transform =
-        "translate(0,0)";
-
-      return;
-
-    }
-
-    control.x =
-      dx / max;
-
-    control.y =
-      dy / max;
-
-    knob.style.transform =
-      `translate(${dx}px, ${dy}px)`;
-
-  }
-
-
-  function end(e) {
-
-    if (
-      e.pointerId !==
-      pointerId
-    ) return;
-
-    active =
-      false;
-
-    pointerId =
-      null;
-
-    control.x =
-      0;
-
-    control.y =
-      0;
-
-    knob.style.transform =
-      "translate(0,0)";
-
-    base.classList.remove(
-      "pressed"
-    );
-
-  }
-
-
-  base.addEventListener(
-    "pointerdown",
-    start,
-    {
-      passive: false
-    }
-  );
-
-  base.addEventListener(
-    "pointermove",
-    move,
-    {
-      passive: false
-    }
-  );
-
-  base.addEventListener(
-    "pointerup",
-    end
-  );
-
-  base.addEventListener(
-    "pointercancel",
-    end
-  );
-
-  base.addEventListener(
-    "lostpointercapture",
-    () => {
-
-      active =
-        false;
-
-      pointerId =
-        null;
-
-      control.x =
-        0;
-
-      control.y =
-        0;
-
-      knob.style.transform =
-        "translate(0,0)";
-
-      base.classList.remove(
-        "pressed"
-      );
-
-    }
-  );
-
-  base.style.touchAction =
-    "none";
-
-}
-
-
-setupJoystick(
-  "p1JoyBase",
-  "p1JoyKnob",
-  controls.p1
-);
-
-setupJoystick(
-  "p2JoyBase",
-  "p2JoyKnob",
-  controls.p2
-);
-
-
-// ============================================================
-// Keyboard
-// ============================================================
-
-const keys = {};
-
-window.addEventListener(
-  "keydown",
-  e => {
-
-    keys[e.key.toLowerCase()] =
-      true;
-
-    updateKeyboard();
-
-  }
-);
-
-window.addEventListener(
-  "keyup",
-  e => {
-
-    keys[e.key.toLowerCase()] =
-      false;
-
-    updateKeyboard();
-
-  }
-);
-
-
-function updateKeyboard() {
-
-  let x = 0;
-
-  let y = 0;
-
-  if (
-    keys["a"] ||
-    keys["arrowleft"]
-  ) x--;
-
-  if (
-    keys["d"] ||
-    keys["arrowright"]
-  ) x++;
-
-  if (
-    keys["w"] ||
-    keys["arrowup"]
-  ) y--;
-
-  if (
-    keys["s"] ||
-    keys["arrowdown"]
-  ) y++;
-
-  controls.p1.x =
-    x;
-
-  controls.p1.y =
-    y;
-
-}
-
-
-// ============================================================
-// Fullscreen
-// ============================================================
-
-fullscreenBtn.addEventListener(
-  "click",
-  async () => {
-
-    try {
-
-      if (
-        !document.fullscreenElement
-      ) {
-
-        await document.documentElement
-          .requestFullscreen();
-
-      } else {
-
-        await document.exitFullscreen();
-
-      }
-
-    } catch {}
-
-  }
-);
-
-
-// ============================================================
-// Landscape
-// ============================================================
-
-function checkOrientation() {
-
-  const width =
-    window.innerWidth;
-
-  const height =
-    window.innerHeight;
-
-  const mobileLike =
+  camera.x = Math.max(
+    0,
     Math.min(
-      width,
-      height
-    ) < 800;
-
-  const portrait =
-    height >
-    width;
-
-  const isPortraitMobile =
-    mobileLike &&
-    portrait;
-
-  rotateScreen.classList.toggle(
-    "show",
-    isPortraitMobile
+      WORLD_WIDTH - w,
+      camera.x
+    )
   );
 
-  if (
-    isPortraitMobile
-  ) {
+  camera.y = Math.max(
+    0,
+    Math.min(
+      WORLD_HEIGHT - h,
+      camera.y
+    )
+  );
+}
 
-    paused = true;
+// ======================================================
+// HUD
+// ======================================================
 
-  } else if (
-    running &&
-    !countdownRunning
-  ) {
+function updateHUD() {
+  playersHud.innerHTML = `
+    <div class="player-card me">
+      <div class="player-name">
+        🔵 ${players.p1.name}
+      </div>
+      <div class="player-stats">
+        ⚡ ${Math.floor(players.p1.energy)}/${ENERGY_NEEDED}
+        &nbsp; 🚀 ${Math.floor(players.p1.boost)}
+      </div>
+    </div>
 
-    paused = false;
+    <div class="player-card">
+      <div class="player-name">
+        🟣 ${players.p2.name}
+      </div>
+      <div class="player-stats">
+        ⚡ ${Math.floor(players.p2.energy)}/${ENERGY_NEEDED}
+        &nbsp; 🚀 ${Math.floor(players.p2.boost)}
+      </div>
+    </div>
+  `;
 
+  const active =
+    players.p1.energy >= ENERGY_NEEDED ||
+    players.p2.energy >= ENERGY_NEEDED;
+
+  powerupIndicator.classList.toggle(
+    "active",
+    active
+  );
+}
+
+// ======================================================
+// TIMER
+// ======================================================
+
+let timerSeconds = 180;
+let timerInterval = null;
+
+function startTimer() {
+  clearInterval(timerInterval);
+
+  timerSeconds = 180;
+
+  hudTimer.textContent = "03:00";
+
+  timerInterval = setInterval(() => {
+    if (!gameRunning) return;
+
+    timerSeconds--;
+
+    const minutes =
+      Math.floor(timerSeconds / 60)
+        .toString()
+        .padStart(2, "0");
+
+    const seconds =
+      (timerSeconds % 60)
+        .toString()
+        .padStart(2, "0");
+
+    hudTimer.textContent =
+      `${minutes}:${seconds}`;
+
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+
+      const winner =
+        players.p1.energy >= players.p2.energy
+          ? "p1"
+          : "p2";
+
+      finishGame(winner);
+    }
+  }, 1000);
+}
+
+// ======================================================
+// GAME LOOP
+// ======================================================
+
+function gameLoop(time) {
+  const dt =
+    Math.min(
+      (time - lastTime) / 1000,
+      .05
+    );
+
+  lastTime = time;
+
+  if (gameRunning && !gameFinished) {
+    updatePlayer(
+      players.p1,
+      joystick.p1.x,
+      joystick.p1.y,
+      dt
+    );
+
+    updatePlayer(
+      players.p2,
+      joystick.p2.x,
+      joystick.p2.y,
+      dt
+    );
+
+    collectEnergy(players.p1);
+    collectEnergy(players.p2);
+
+    updateRocket(dt);
   }
 
-}
+  updateParticles(dt);
+  updateCamera();
 
+  drawBackground(time);
+  drawCells(time);
+  drawRocket(time);
 
-function handleResize() {
+  drawPlayer(players.p1);
+  drawPlayer(players.p2);
 
-  checkOrientation();
-
-  requestAnimationFrame(
-    resizeCanvas
-  );
-
-}
-
-
-window.addEventListener(
-  "resize",
-  handleResize
-);
-
-window.addEventListener(
-  "orientationchange",
-  handleResize
-);
-
-if (
-  window.visualViewport
-) {
-
-  window.visualViewport.addEventListener(
-    "resize",
-    handleResize
-  );
-
-}
-
-
-// ============================================================
-// Hide overlay
-// ============================================================
-
-function hideOverlay() {
-
-  overlay.classList.add(
-    "hidden"
-  );
-
-}
-
-
-// ============================================================
-// Waiting
-// ============================================================
-
-function startWaitingLoop() {
-
-  if (
-    !multiplayer
-  ) return;
-
-  setInterval(
-    async () => {
-
-      if (
-        !countdownRunning
-      ) {
-
-        try {
-
-          await tryStartRoomGame();
-
-        } catch {}
-
-      }
-
-    },
-    1200
-  );
-
-}
-
-
-// ============================================================
-// Init
-// ============================================================
-
-async function init() {
-
-  const user =
-    await waitForUser();
-
-  myName =
-    getSavedName();
-
-  myUid =
-    currentUid();
-
-  if (
-    !user ||
-    !myName ||
-    !myUid
-  ) {
-
-    window.location.href =
-      "../index.html";
-
-    return;
-
-  }
-
-  resizeCanvas();
-
-  checkOrientation();
-
-  await detectMode();
-
-  if (
-    multiplayer
-  ) {
-
-    startWaitingLoop();
-
-  }
+  drawParticles();
 
   updateHUD();
 
+  requestAnimationFrame(gameLoop);
 }
 
+// ======================================================
+// BUTTONS
+// ======================================================
 
-init();
+p1Boost.addEventListener("pointerdown", () => {
+  boost(players.p1);
+});
+
+p2Boost.addEventListener("pointerdown", () => {
+  boost(players.p2);
+});
+
+muteBtn.addEventListener("click", () => {
+  muted = !muted;
+
+  muteBtn.textContent =
+    muted ? "🔇" : "🔊";
+});
+
+fullscreenBtn.addEventListener("click", async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  } catch (error) {
+    console.log("Fullscreen:", error);
+  }
+});
+
+// ======================================================
+// START
+// ======================================================
+
+function startGame() {
+  overlay.classList.add("hidden");
+
+  hudMode.textContent =
+    "⚡ انرژی جمع کن و به World 2 برس!";
+
+  gameRunning = true;
+
+  startTimer();
+}
+
+setTimeout(() => {
+  startGame();
+}, 1000);
+
+// ======================================================
+// AUTH
+// ======================================================
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    console.log("Astra user:", user.uid);
+  } else {
+    console.log("Astra: guest mode");
+  }
+});
+
+// ======================================================
+// START LOOP
+// ======================================================
+
+requestAnimationFrame(gameLoop);
