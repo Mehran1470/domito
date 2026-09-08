@@ -1,5 +1,9 @@
+html, body{
+  width:100%; height:100%; margin:0; padding:0; overflow:hidden;
+}
+
 .astra-body{
-  margin:0; padding:0; min-height:100vh; overflow:hidden;
+  width:100%; height:100dvh; margin:0; padding:0; overflow:hidden;
   background:
     radial-gradient(1px 1px at 20% 30%, #fff 100%, transparent),
     radial-gradient(1px 1px at 70% 60%, #fff 100%, transparent),
@@ -10,59 +14,113 @@
     radial-gradient(circle at 80% 80%, rgba(79,124,255,.2), transparent 45%),
     #05060f;
   font-family:'Vazirmatn', sans-serif; color:#EAF0FF; direction:rtl;
-  display:flex; align-items:center; justify-content:center;
+  display:flex; flex-direction:column;
+  touch-action:none; overscroll-behavior:none;
 }
 
 .astra-rotate-screen{
   position:fixed; inset:0; z-index:500; display:none;
   align-items:center; justify-content:center; flex-direction:column; text-align:center;
-  background:#05060f; padding:20px;
+  background:#05060f;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  height:100dvh; width:100dvw;
 }
 .astra-rotate-screen.show{display:flex;}
-.astra-rotate-screen .icon{font-size:56px; margin-bottom:14px; animation:rotatehint 1.6s ease-in-out infinite;}
+.astra-rotate-screen .icon{font-size:clamp(36px, 8vh, 56px); margin-bottom:14px; animation:rotatehint 1.6s ease-in-out infinite;}
 @keyframes rotatehint{0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);}}
-.astra-rotate-screen h2{margin:0 0 8px; font-size:18px;}
-.astra-rotate-screen p{color:#8B93B8; font-size:13px; margin:0;}
+.astra-rotate-screen h2{margin:0 0 8px; font-size:clamp(15px, 3vh, 18px);}
+.astra-rotate-screen p{color:#8B93B8; font-size:clamp(11px, 2vh, 13px); margin:0; max-width:280px;}
 
-.astra-wrap{width:100%; max-width:920px; padding:10px;}
-.astra-hud-top{display:flex; justify-content:space-between; align-items:center; padding:0 8px 8px;}
-.astra-hud-item{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:6px 12px; font-size:12px; font-weight:900; backdrop-filter:blur(8px);}
+/* ---------- ساختار اصلی: ستون HUD + Arena ---------- */
+.astra-game-root{
+  display:flex; flex-direction:column;
+  width:100%; height:100dvh; min-height:0; overflow:hidden;
+  padding-top:env(safe-area-inset-top);
+}
+
+.astra-hud-top{
+  flex:0 0 auto;
+  display:flex; justify-content:space-between; align-items:center;
+  gap:clamp(4px, 1vw, 8px);
+  padding:clamp(4px,1vh,8px) clamp(8px,2vw,14px);
+  flex-wrap:nowrap;
+}
+.astra-hud-item{
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:10px;
+  padding:clamp(3px,0.8vh,6px) clamp(6px,1.4vw,12px);
+  font-size:clamp(9px, 1.6vh, 12px); font-weight:900; backdrop-filter:blur(8px);
+  white-space:nowrap;
+}
 .astra-hud-item.combo{color:#FFC845;}
-.astra-title{font-size:13px; font-weight:900; letter-spacing:1px; background:linear-gradient(135deg,#4F7CFF,#9B5CFF); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.astra-title{
+  font-size:clamp(9px, 1.6vh, 13px); font-weight:900; letter-spacing:.5px;
+  background:linear-gradient(135deg,#4F7CFF,#9B5CFF); -webkit-background-clip:text; background-clip:text; color:transparent;
+  white-space:nowrap;
+}
 
-.astra-arena-box{position:relative; border-radius:20px; overflow:hidden; border:1px solid rgba(124,77,255,.35); box-shadow:0 0 40px -10px rgba(124,77,255,.4);}
-#astraCanvas{display:block; width:100%; height:auto; background:transparent;}
+/* ---------- Arena: تمام فضای باقی‌مونده رو می‌گیره ---------- */
+.astra-arena-box{
+  position:relative;
+  flex:1 1 auto; min-height:0; min-width:0;
+  width:100%;
+  overflow:hidden;
+  border-top:1px solid rgba(124,77,255,.25);
+}
+#astraCanvas{
+  display:block;
+  width:100%; height:100%;
+}
 
 .astra-overlay-msg{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   flex-direction:column; background:rgba(5,6,15,.7); backdrop-filter:blur(4px); z-index:20;
 }
-.astra-overlay-msg .big{font-size:46px; font-weight:900; background:linear-gradient(135deg,#4F7CFF,#FFC845); -webkit-background-clip:text; background-clip:text; color:transparent;}
-.astra-overlay-msg .sub{font-size:14px; color:#8B93B8; margin-top:6px;}
+.astra-overlay-msg .big{font-size:clamp(26px, 6vh, 46px); font-weight:900; background:linear-gradient(135deg,#4F7CFF,#FFC845); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.astra-overlay-msg .sub{font-size:clamp(11px, 2vh, 14px); color:#8B93B8; margin-top:6px;}
 
+/* ---------- جوی‌استیک: پایین‌چپ، با Safe Area ---------- */
 .astra-joystick-base{
-  position:absolute; bottom:18px; left:18px; width:90px; height:90px; border-radius:50%;
-  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15); z-index:15; touch-action:none;
+  position:absolute;
+  bottom:calc(clamp(10px,2vh,18px) + env(safe-area-inset-bottom));
+  left:calc(clamp(10px,2vw,18px) + env(safe-area-inset-left));
+  width:clamp(64px, 16vh, 96px); height:clamp(64px, 16vh, 96px);
+  border-radius:50%;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.15);
+  z-index:15; touch-action:none;
 }
 .astra-joystick-knob{
-  position:absolute; width:38px; height:38px; border-radius:50%; top:26px; left:26px;
+  position:absolute; border-radius:50%;
+  width:42%; height:42%; top:29%; left:29%;
   background:linear-gradient(135deg,#4F7CFF,#9B5CFF); box-shadow:0 0 16px rgba(79,124,255,.6);
+}
+
+/* رزرو فضا برای پاورآپ‌های آینده (پایین‌راست) */
+.astra-powerup-slot{
+  position:absolute;
+  bottom:calc(clamp(10px,2vh,18px) + env(safe-area-inset-bottom));
+  right:calc(clamp(10px,2vw,18px) + env(safe-area-inset-right));
+  z-index:15;
 }
 
 .astra-result{
   position:absolute; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
-  background:rgba(5,6,15,.92); backdrop-filter:blur(10px); flex-direction:column; text-align:center; padding:20px;
+  background:rgba(5,6,15,.92); backdrop-filter:blur(10px); flex-direction:column; text-align:center;
+  padding:clamp(12px,3vh,20px); overflow-y:auto;
 }
-.astra-result .headline{font-size:26px; font-weight:900; margin-bottom:14px;}
+.astra-result .headline{font-size:clamp(18px, 4vh, 26px); font-weight:900; margin-bottom:clamp(8px,2vh,14px);}
 .astra-result .headline.win{color:#3ECF8E;}
 .astra-result .headline.lose{color:#FF6B6B;}
-.astra-result-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:18px; width:100%; max-width:340px;}
-.astra-result-box{background:rgba(255,255,255,.06); border-radius:12px; padding:10px; border:1px solid rgba(255,255,255,.08);}
-.astra-result-box .num{font-size:18px; font-weight:900; color:#FFC845;}
-.astra-result-box .lbl{font-size:10.5px; color:#8B93B8;}
+.astra-result-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:clamp(10px,2vh,18px); width:100%; max-width:340px;}
+.astra-result-box{background:rgba(255,255,255,.06); border-radius:10px; padding:clamp(6px,1.5vh,10px); border:1px solid rgba(255,255,255,.08);}
+.astra-result-box .num{font-size:clamp(14px,2.6vh,18px); font-weight:900; color:#FFC845;}
+.astra-result-box .lbl{font-size:clamp(9px,1.6vh,10.5px); color:#8B93B8;}
 .astra-result button{
-  width:100%; max-width:280px; margin-top:8px; padding:13px; border:none; border-radius:14px;
-  font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;
+  width:100%; max-width:280px; margin-top:6px; padding:clamp(9px,2vh,13px); border:none; border-radius:12px;
+  font-family:inherit; font-weight:700; font-size:clamp(12px,2.2vh,14px); cursor:pointer;
   background:linear-gradient(135deg,#4F7CFF,#9B5CFF); color:#fff;
 }
 .astra-result button.ghost{background:transparent; border:1px solid rgba(255,255,255,.15); color:#EAF0FF;}
