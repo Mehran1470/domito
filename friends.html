@@ -19,25 +19,45 @@
 
 <style>
 
-  .friend-status {
-    margin-right: 8px;
-    font-size: 12px;
-  }
+.friend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
 
-  .friend-row {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-  }
+.friend-name-link {
+  flex: 1;
+  text-decoration: none;
+}
 
-  .friend-name-link {
-    flex: 1;
-    text-decoration: none;
-  }
+.friend-status {
+  font-size: 12px;
+  white-space: nowrap;
+}
 
-  .friend-invite-btn {
-    white-space: nowrap;
-  }
+.friend-action {
+  min-width: 95px;
+}
+
+.search-result {
+  margin-top: 10px;
+}
+
+.friend-check {
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.friend-check.friend {
+  background: rgba(76, 217, 123, .12);
+  border: 1px solid rgba(76, 217, 123, .25);
+}
+
+.friend-check.pending {
+  background: rgba(255, 200, 69, .12);
+  border: 1px solid rgba(255, 200, 69, .25);
+}
 
 </style>
 
@@ -48,7 +68,10 @@
 
 <div class="wrap">
 
-  <!-- ================= BRAND ================= -->
+
+  <!-- ================================================= -->
+  <!-- BRAND -->
+  <!-- ================================================= -->
 
   <div class="brand">
 
@@ -63,7 +86,9 @@
   </div>
 
 
-  <!-- ================= NO LOGIN ================= -->
+  <!-- ================================================= -->
+  <!-- LOGIN -->
+  <!-- ================================================= -->
 
   <div
     class="card"
@@ -85,7 +110,9 @@
   </div>
 
 
-  <!-- ================= CONTENT ================= -->
+  <!-- ================================================= -->
+  <!-- CONTENT -->
+  <!-- ================================================= -->
 
   <div
     id="content"
@@ -93,12 +120,14 @@
   >
 
 
-    <!-- ================= ADD FRIEND ================= -->
+    <!-- ================================================= -->
+    <!-- ADD FRIEND -->
+    <!-- ================================================= -->
 
     <div class="card">
 
       <h2>
-        ➕ ارسال درخواست دوستی
+        ➕ اضافه کردن دوست
       </h2>
 
       <input
@@ -106,14 +135,21 @@
         id="friendInput"
         placeholder="نام‌کاربری"
         maxlength="20"
-      />
+        autocomplete="off"
+      >
 
       <button
         id="addFriendBtn"
         class="btn-full"
       >
-        ارسال درخواست
+        ارسال درخواست دوستی
       </button>
+
+      <div
+        id="friendCheck"
+        class="search-result"
+        style="display:none"
+      ></div>
 
       <p
         class="status-line"
@@ -123,24 +159,30 @@
     </div>
 
 
-    <!-- ================= REQUESTS ================= -->
+    <!-- ================================================= -->
+    <!-- REQUESTS -->
+    <!-- ================================================= -->
 
     <div
       class="card"
       id="requestsCard"
-      style="display:none;"
+      style="display:none"
     >
 
       <h2>
         📩 درخواست‌های دریافتی
       </h2>
 
-      <div id="requestList"></div>
+      <div
+        id="requestList"
+      ></div>
 
     </div>
 
 
-    <!-- ================= ALL FRIENDS ================= -->
+    <!-- ================================================= -->
+    <!-- FRIEND LIST -->
+    <!-- ================================================= -->
 
     <div class="card">
 
@@ -156,14 +198,14 @@
 
       </h2>
 
-
-      <div id="friendList"></div>
-
+      <div
+        id="friendList"
+      ></div>
 
       <p
         class="muted"
         id="noFriends"
-        style="display:none;"
+        style="display:none"
       >
         هنوز دوستی اضافه نکردی
       </p>
@@ -173,7 +215,9 @@
   </div>
 
 
-  <!-- ================= BACK ================= -->
+  <!-- ================================================= -->
+  <!-- BACK -->
+  <!-- ================================================= -->
 
   <a
     href="index.html"
@@ -193,6 +237,8 @@ import {
   waitForUser,
 
   sendFriendRequest,
+  getFriendStatus,
+
   listenFriends,
 
   getSavedRoom,
@@ -206,14 +252,157 @@ import {
 } from "./js/app.js";
 
 
-/* ================================================= */
-/* AUTH */
-/* ================================================= */
+const noNameCard =
+  document.getElementById(
+    "noNameCard"
+  );
+
+const content =
+  document.getElementById(
+    "content"
+  );
+
+const friendInput =
+  document.getElementById(
+    "friendInput"
+  );
+
+const addFriendBtn =
+  document.getElementById(
+    "addFriendBtn"
+  );
+
+const addStatus =
+  document.getElementById(
+    "addStatus"
+  );
+
+const friendCheck =
+  document.getElementById(
+    "friendCheck"
+  );
+
+
+let myName = "";
+
+
+// =====================================================
+// بررسی نام واردشده
+// =====================================================
+
+async function checkFriendInput() {
+
+  const targetName =
+    friendInput.value.trim();
+
+
+  friendCheck.style.display =
+    "none";
+
+  addStatus.textContent =
+    "";
+
+  addFriendBtn.disabled =
+    false;
+
+  addFriendBtn.textContent =
+    "ارسال درخواست دوستی";
+
+
+  if (!targetName) {
+    return;
+  }
+
+
+  if (
+    targetName === myName
+  ) {
+
+    addFriendBtn.disabled =
+      true;
+
+    friendCheck.style.display =
+      "block";
+
+    friendCheck.className =
+      "friend-check";
+
+    friendCheck.textContent =
+      "🙂 این خودت هستی!";
+
+    return;
+
+  }
+
+
+  try {
+
+    const status =
+      await getFriendStatus(
+        myName,
+        targetName
+      );
+
+
+    if (status.isFriend) {
+
+      addFriendBtn.disabled =
+        true;
+
+      friendCheck.style.display =
+        "block";
+
+      friendCheck.className =
+        "friend-check friend";
+
+      friendCheck.innerHTML =
+        "✅ این کاربر از قبل دوست شماست";
+
+      return;
+
+    }
+
+
+    if (
+      status.requestPending
+    ) {
+
+      addFriendBtn.disabled =
+        true;
+
+      friendCheck.style.display =
+        "block";
+
+      friendCheck.className =
+        "friend-check pending";
+
+      friendCheck.innerHTML =
+        "⏳ درخواست دوستی قبلاً ارسال شده";
+
+      return;
+
+    }
+
+  } catch (error) {
+
+    console.error(
+      "Friend status error:",
+      error
+    );
+
+  }
+
+}
+
+
+// =====================================================
+// AUTH
+// =====================================================
 
 waitForUser().then(
   (user) => {
 
-    const myName =
+    myName =
       getSavedName();
 
 
@@ -222,133 +411,162 @@ waitForUser().then(
       !myName
     ) {
 
-      document
-        .getElementById(
-          "noNameCard"
-        )
-        .style.display =
-          "block";
+      noNameCard.style.display =
+        "block";
 
       return;
 
     }
 
 
-    document
-      .getElementById(
-        "content"
-      )
-      .style.display =
-        "block";
+    content.style.display =
+      "block";
 
 
-    const addStatus =
-      document.getElementById(
-        "addStatus"
-      );
+    // =================================================
+    // بررسی هنگام تایپ
+    // =================================================
+
+    friendInput.addEventListener(
+      "input",
+      () => {
+
+        clearTimeout(
+          friendInput._checkTimer
+        );
+
+        friendInput._checkTimer =
+          setTimeout(
+            checkFriendInput,
+            300
+          );
+
+      }
+    );
 
 
-    /* ================================================= */
-    /* ADD FRIEND */
-    /* ================================================= */
+    // =================================================
+    // ارسال درخواست
+    // =================================================
 
-    document
-      .getElementById(
-        "addFriendBtn"
-      )
-      .addEventListener(
-        "click",
-        async () => {
+    addFriendBtn.addEventListener(
+      "click",
+      async () => {
 
-          const targetName =
-            document
-              .getElementById(
-                "friendInput"
-              )
-              .value
-              .trim();
+        const targetName =
+          friendInput.value.trim();
 
 
-          if (!targetName) {
-
-            addStatus.textContent =
-              "نام‌کاربری رو بنویس";
-
-            return;
-
-          }
-
+        if (!targetName) {
 
           addStatus.textContent =
-            "در حال ارسال...";
+            "نام‌کاربری رو بنویس";
+
+          return;
+
+        }
 
 
-          try {
+        if (
+          targetName === myName
+        ) {
 
-            const res =
-              await sendFriendRequest(
-                myName,
-                targetName
-              );
+          addStatus.textContent =
+            "نمی‌تونی خودتو اضافه کنی";
+
+          return;
+
+        }
 
 
-            if (res.ok) {
+        addFriendBtn.disabled =
+          true;
 
-              addStatus.textContent =
-                "درخواست ارسال شد!";
+        addStatus.textContent =
+          "در حال ارسال...";
 
-              document
-                .getElementById(
-                  "friendInput"
-                )
-                .value =
-                  "";
 
-            }
+        try {
 
-            else if (
-              res.reason ===
-              "not-found"
-            ) {
+          const res =
+            await sendFriendRequest(
+              myName,
+              targetName
+            );
 
-              addStatus.textContent =
-                "همچین کاربری پیدا نشد";
 
-            }
-
-            else if (
-              res.reason ===
-              "already-friends"
-            ) {
-
-              addStatus.textContent =
-                "قبلاً دوست هستید";
-
-            }
-
-            else {
-
-              addStatus.textContent =
-                "نمی‌تونی خودتو اضافه کنی";
-
-            }
-
-          } catch (error) {
-
-            console.error(error);
+          if (res.ok) {
 
             addStatus.textContent =
-              "ارسال درخواست انجام نشد";
+              "✅ درخواست دوستی ارسال شد!";
+
+            friendInput.value =
+              "";
+
+            friendCheck.style.display =
+              "none";
 
           }
 
+          else if (
+            res.reason ===
+            "not-found"
+          ) {
+
+            addStatus.textContent =
+              "❌ همچین کاربری پیدا نشد";
+
+          }
+
+          else if (
+            res.reason ===
+            "already-friends"
+          ) {
+
+            addStatus.textContent =
+              "✅ این کاربر از قبل دوست شماست";
+
+          }
+
+          else if (
+            res.reason ===
+            "request-pending"
+          ) {
+
+            addStatus.textContent =
+              "⏳ درخواست قبلاً ارسال شده";
+
+          }
+
+          else {
+
+            addStatus.textContent =
+              "❌ ارسال درخواست انجام نشد";
+
+          }
+
+
+        } catch (error) {
+
+          console.error(
+            error
+          );
+
+          addStatus.textContent =
+            "❌ خطا در ارسال درخواست";
+
         }
-      );
 
 
-    /* ================================================= */
-    /* FRIEND REQUESTS */
-    /* ================================================= */
+        await checkFriendInput();
+
+      }
+    );
+
+
+    // =================================================
+    // درخواست‌های دریافتی
+    // =================================================
 
     listenFriendRequests(
       myName,
@@ -397,11 +615,9 @@ waitForUser().then(
 
 
             row.innerHTML = `
-
               <span class="txt">
-                ${fromName}
+                👤 ${fromName}
               </span>
-
             `;
 
 
@@ -427,10 +643,20 @@ waitForUser().then(
               "click",
               async () => {
 
-                await acceptFriendRequest(
-                  myName,
-                  fromName
-                );
+                try {
+
+                  await acceptFriendRequest(
+                    myName,
+                    fromName
+                  );
+
+                } catch (error) {
+
+                  console.error(
+                    error
+                  );
+
+                }
 
               }
             );
@@ -452,10 +678,20 @@ waitForUser().then(
               "click",
               async () => {
 
-                await rejectFriendRequest(
-                  myName,
-                  fromName
-                );
+                try {
+
+                  await rejectFriendRequest(
+                    myName,
+                    fromName
+                  );
+
+                } catch (error) {
+
+                  console.error(
+                    error
+                  );
+
+                }
 
               }
             );
@@ -468,6 +704,7 @@ waitForUser().then(
             actions.appendChild(
               rejectBtn
             );
+
 
             row.appendChild(
               actions
@@ -484,9 +721,9 @@ waitForUser().then(
     );
 
 
-    /* ================================================= */
-    /* ALL FRIENDS */
-    /* ================================================= */
+    // =================================================
+    // دوستان
+    // =================================================
 
     listenFriends(
       myName,
@@ -502,13 +739,14 @@ waitForUser().then(
             "noFriends"
           );
 
-
-        document
-          .getElementById(
+        const friendCount =
+          document.getElementById(
             "friendCount"
-          )
-          .textContent =
-            list.length;
+          );
+
+
+        friendCount.textContent =
+          list.length;
 
 
         if (
@@ -533,14 +771,25 @@ waitForUser().then(
           "";
 
 
-        /*
-         * اینجا عمداً هیچ فیلتری نداریم.
-         *
-         * بنابراین:
-         * 🟢 آنلاین‌ها
-         * ⚪ آفلاین‌ها
-         * هر دو نمایش داده می‌شوند.
-         */
+        // آنلاین‌ها اول
+        list.sort(
+          (a, b) => {
+
+            if (
+              a.online &&
+              !b.online
+            ) return -1;
+
+            if (
+              !a.online &&
+              b.online
+            ) return 1;
+
+            return 0;
+
+          }
+        );
+
 
         list.forEach(
           (f) => {
@@ -553,8 +802,6 @@ waitForUser().then(
             row.className =
               "friend-row";
 
-
-            /* نام دوست */
 
             const nameLink =
               document.createElement(
@@ -576,7 +823,14 @@ waitForUser().then(
             );
 
 
-            /* وضعیت */
+            const status =
+              document.createElement(
+                "span"
+              );
+
+            status.className =
+              "friend-status";
+
 
             const dot =
               document.createElement(
@@ -591,41 +845,21 @@ waitForUser().then(
                   : " off"
               );
 
-            dot.title =
-              f.online
-                ? "آنلاین"
-                : "آفلاین";
-
 
             row.appendChild(
               dot
             );
 
 
-            const status =
-              document.createElement(
-                "span"
+            if (f.online) {
+
+              status.textContent =
+                "آنلاین";
+
+              row.appendChild(
+                status
               );
 
-            status.className =
-              "friend-status muted";
-
-            status.textContent =
-              f.online
-                ? "آنلاین"
-                : "آفلاین";
-
-
-            row.appendChild(
-              status
-            );
-
-
-            /* ================================================= */
-            /* INVITE — فقط آنلاین */
-            /* ================================================= */
-
-            if (f.online) {
 
               const btn =
                 document.createElement(
@@ -633,10 +867,10 @@ waitForUser().then(
                 );
 
               btn.className =
-                "friend-invite-btn";
+                "friend-action";
 
               btn.textContent =
-                "🎮 دعوت به بازی";
+                "دعوت به اتاق";
 
 
               btn.addEventListener(
@@ -685,11 +919,7 @@ waitForUser().then(
                       false;
 
                     btn.textContent =
-                      "🎮 دعوت به بازی";
-
-                    alert(
-                      "ارسال دعوت انجام نشد"
-                    );
+                      "دعوت به اتاق";
 
                   }
 
@@ -699,6 +929,17 @@ waitForUser().then(
 
               row.appendChild(
                 btn
+              );
+
+            }
+
+            else {
+
+              status.textContent =
+                "آفلاین";
+
+              row.appendChild(
+                status
               );
 
             }
@@ -720,4 +961,5 @@ waitForUser().then(
 </script>
 
 </body>
+
 </html>
