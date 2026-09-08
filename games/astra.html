@@ -2,40 +2,104 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0,
+  maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+>
+
 <title>Domito Astra</title>
+
 <link rel="stylesheet" href="astra.css">
 </head>
+
 <body class="astra-body">
 
+  <!-- حالت عمودی -->
   <div class="astra-rotate-screen" id="astraRotateScreen">
-    <div class="icon">📱</div>
+    <div class="rotate-icon">📱↻</div>
     <h2>گوشیتو بچرخون</h2>
-    <p>Domito Astra فقط در حالت افقی (landscape) بازی می‌شه</p>
+    <p>Domito Astra فقط در حالت افقی بازی می‌شه</p>
   </div>
 
-  <div class="astra-game-root">
-    <div class="astra-hud-top">
-      <span class="astra-title">🚀 ASTRA</span>
-      <span class="astra-hud-item" id="hudRound">راند ۱/۳</span>
-      <span class="astra-hud-item" id="hudTimer">۳۰</span>
-      <span class="astra-hud-item combo" id="hudCombo">بدون کمبو</span>
-      <span class="astra-hud-item">🪙 <span id="hudScore">0</span></span>
-    </div>
+  <main class="astra-game-root">
 
-    <div class="astra-arena-box" id="astraArenaBox">
-      <canvas id="astraCanvas"></canvas>
-      <div class="astra-overlay-msg" id="astraOverlayMsg" style="display:none;"></div>
-      <div class="astra-joystick-base" id="astraJoyBase">
-        <div class="astra-joystick-knob" id="astraJoyKnob"></div>
+    <!-- HUD -->
+    <header class="astra-hud">
+
+      <div class="hud-brand">
+        🚀 ASTRA
       </div>
-      <div class="astra-powerup-slot" id="astraPowerupSlot">⚡</div>
-      <button class="astra-fullscreen-btn" id="astraFullscreenBtn">⛶ تمام‌صفحه</button>
-      <button class="astra-mute-btn" id="astraMuteBtn">🔊</button>
-      <div class="astra-result" id="astraResult" style="display:none;"></div>
-    </div>
-  </div>
+
+      <div class="hud-center">
+        <div class="race-title">
+          🏁 RACE TO WORLD 2
+        </div>
+
+        <div id="hudStatus" class="hud-status">
+          آماده شو...
+        </div>
+      </div>
+
+      <div class="hud-actions">
+        <button id="astraMuteBtn">🔊</button>
+        <button id="astraFullscreenBtn">⛶</button>
+      </div>
+
+    </header>
+
+
+    <!-- اطلاعات بازیکن‌ها -->
+    <section class="players-panel" id="playersPanel"></section>
+
+
+    <!-- Arena -->
+    <section class="astra-arena-box" id="astraArenaBox">
+
+      <canvas id="astraCanvas"></canvas>
+
+      <div
+        class="astra-overlay-msg"
+        id="astraOverlayMsg"
+        style="display:none;"
+      ></div>
+
+
+      <!-- جوی‌استیک -->
+      <div
+        class="astra-joystick-base"
+        id="astraJoyBase"
+      >
+        <div
+          class="astra-joystick-knob"
+          id="astraJoyKnob"
+        ></div>
+      </div>
+
+
+      <!-- پاورآپ -->
+      <button
+        class="astra-powerup-slot"
+        id="astraPowerupSlot"
+      >
+        ⚡
+      </button>
+
+
+      <!-- نتیجه -->
+      <div
+        class="astra-result"
+        id="astraResult"
+        style="display:none;"
+      ></div>
+
+    </section>
+
+  </main>
+
 
 <script type="module" src="astra.js"></script>
+
 </body>
 </html>
