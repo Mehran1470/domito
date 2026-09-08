@@ -1,125 +1,723 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
 <title>دوستان | دومیتو</title>
-<link rel="stylesheet" href="css/style.css">
+
+<link
+  rel="stylesheet"
+  href="css/style.css"
+>
+
+<style>
+
+  .friend-status {
+    margin-right: 8px;
+    font-size: 12px;
+  }
+
+  .friend-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .friend-name-link {
+    flex: 1;
+    text-decoration: none;
+  }
+
+  .friend-invite-btn {
+    white-space: nowrap;
+  }
+
+</style>
+
 </head>
+
+
 <body>
-  <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">👥</div>
-      <h1>دوستان من</h1>
+
+<div class="wrap">
+
+  <!-- ================= BRAND ================= -->
+
+  <div class="brand">
+
+    <div class="brand-mark">
+      👥
     </div>
 
-    <div class="card" id="noNameCard" style="display:none">
-      <p class="status-line">هنوز وارد نشدی.</p>
-      <a href="index.html" class="btn btn-full">ورود</a>
-    </div>
+    <h1>
+      دوستان من
+    </h1>
 
-    <div id="content" style="display:none">
-      <div class="card">
-        <h2>➕ ارسال درخواست دوستی</h2>
-        <input type="text" id="friendInput" placeholder="نام‌کاربری" maxlength="20" />
-        <button id="addFriendBtn" class="btn-full">ارسال درخواست</button>
-        <p class="status-line" id="addStatus"></p>
-      </div>
-
-      <div class="card" id="requestsCard" style="display:none;">
-        <h2>📩 درخواست‌های دریافتی</h2>
-        <div id="requestList"></div>
-      </div>
-
-      <div class="card">
-        <h2>لیست دوستان (<span id="friendCount">0</span>)</h2>
-        <div id="friendList"></div>
-        <p class="muted" id="noFriends" style="display:none;">هنوز دوستی اضافه نکردی</p>
-      </div>
-    </div>
-
-    <a href="index.html" class="link-back">← بازگشت به خانه</a>
   </div>
 
+
+  <!-- ================= NO LOGIN ================= -->
+
+  <div
+    class="card"
+    id="noNameCard"
+    style="display:none"
+  >
+
+    <p class="status-line">
+      هنوز وارد نشدی.
+    </p>
+
+    <a
+      href="index.html"
+      class="btn btn-full"
+    >
+      ورود
+    </a>
+
+  </div>
+
+
+  <!-- ================= CONTENT ================= -->
+
+  <div
+    id="content"
+    style="display:none"
+  >
+
+
+    <!-- ================= ADD FRIEND ================= -->
+
+    <div class="card">
+
+      <h2>
+        ➕ ارسال درخواست دوستی
+      </h2>
+
+      <input
+        type="text"
+        id="friendInput"
+        placeholder="نام‌کاربری"
+        maxlength="20"
+      />
+
+      <button
+        id="addFriendBtn"
+        class="btn-full"
+      >
+        ارسال درخواست
+      </button>
+
+      <p
+        class="status-line"
+        id="addStatus"
+      ></p>
+
+    </div>
+
+
+    <!-- ================= REQUESTS ================= -->
+
+    <div
+      class="card"
+      id="requestsCard"
+      style="display:none;"
+    >
+
+      <h2>
+        📩 درخواست‌های دریافتی
+      </h2>
+
+      <div id="requestList"></div>
+
+    </div>
+
+
+    <!-- ================= ALL FRIENDS ================= -->
+
+    <div class="card">
+
+      <h2>
+
+        👥 لیست دوستان
+
+        (
+        <span id="friendCount">
+          0
+        </span>
+        )
+
+      </h2>
+
+
+      <div id="friendList"></div>
+
+
+      <p
+        class="muted"
+        id="noFriends"
+        style="display:none;"
+      >
+        هنوز دوستی اضافه نکردی
+      </p>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= BACK ================= -->
+
+  <a
+    href="index.html"
+    class="link-back"
+  >
+    ← بازگشت به خانه
+  </a>
+
+</div>
+
+
 <script type="module">
-  import {
-    getSavedName, waitForUser, sendFriendRequest, listenFriends, getSavedRoom, createRoom, inviteFriendToRoom,
-    listenFriendRequests, acceptFriendRequest, rejectFriendRequest
-  } from "./js/app.js";
 
-  waitForUser().then((user) => {
-    const myName = getSavedName();
-    if (!user || !myName) { document.getElementById("noNameCard").style.display = "block"; return; }
-    document.getElementById("content").style.display = "block";
+import {
 
-    const addStatus = document.getElementById("addStatus");
-    document.getElementById("addFriendBtn").addEventListener("click", async () => {
-      const targetName = document.getElementById("friendInput").value.trim();
-      if (!targetName) { addStatus.textContent = "نام‌کاربری رو بنویس"; return; }
-      addStatus.textContent = "در حال ارسال...";
-      const res = await sendFriendRequest(myName, targetName);
-      if (res.ok) { addStatus.textContent = "درخواست ارسال شد!"; document.getElementById("friendInput").value = ""; }
-      else if (res.reason === "not-found") addStatus.textContent = "همچین کاربری پیدا نشد";
-      else if (res.reason === "already-friends") addStatus.textContent = "قبلاً دوست هستید";
-      else addStatus.textContent = "نمی‌تونی خودتو اضافه کنی";
-    });
+  getSavedName,
+  waitForUser,
 
-    listenFriendRequests(myName, (requesters) => {
-      const card = document.getElementById("requestsCard");
-      const list = document.getElementById("requestList");
-      if (requesters.length === 0) { card.style.display = "none"; return; }
-      card.style.display = "block";
-      list.innerHTML = "";
-      requesters.forEach((fromName) => {
-        const row = document.createElement("div");
-        row.className = "request-row";
-        row.innerHTML = `<span class="txt">${fromName}</span>`;
-        const actions = document.createElement("div");
-        actions.className = "actions";
-        const acceptBtn = document.createElement("button");
-        acceptBtn.textContent = "قبول";
-        acceptBtn.addEventListener("click", async () => { await acceptFriendRequest(myName, fromName); });
-        const rejectBtn = document.createElement("button");
-        rejectBtn.textContent = "رد";
-        rejectBtn.className = "btn-ghost";
-        rejectBtn.addEventListener("click", async () => { await rejectFriendRequest(myName, fromName); });
-        actions.appendChild(acceptBtn);
-        actions.appendChild(rejectBtn);
-        row.appendChild(actions);
-        list.appendChild(row);
-      });
-    });
+  sendFriendRequest,
+  listenFriends,
 
-    listenFriends(myName, (list) => {
-      const friendList = document.getElementById("friendList");
-      const noFriends = document.getElementById("noFriends");
-      document.getElementById("friendCount").textContent = list.length;
-      if (list.length === 0) { noFriends.style.display = "block"; friendList.innerHTML = ""; return; }
-      noFriends.style.display = "none";
-      friendList.innerHTML = "";
-      list.forEach((f) => {
-        const row = document.createElement("div");
-        row.className = "friend-row";
-        row.innerHTML = `<a href="profile.html?user=${encodeURIComponent(f.name)}" class="friend-name-link">${f.name}</a>`;
-        if (f.online) {
-          const btn = document.createElement("button");
-          btn.textContent = "دعوت به اتاق";
-          btn.addEventListener("click", async () => {
-            let code = getSavedRoom();
-            if (!code) code = await createRoom();
-            await inviteFriendToRoom(myName, f.name, code);
-            btn.textContent = "دعوت شد ✓";
-            btn.disabled = true;
-          });
-          row.appendChild(btn);
+  getSavedRoom,
+  createRoom,
+  inviteFriendToRoom,
+
+  listenFriendRequests,
+  acceptFriendRequest,
+  rejectFriendRequest
+
+} from "./js/app.js";
+
+
+/* ================================================= */
+/* AUTH */
+/* ================================================= */
+
+waitForUser().then(
+  (user) => {
+
+    const myName =
+      getSavedName();
+
+
+    if (
+      !user ||
+      !myName
+    ) {
+
+      document
+        .getElementById(
+          "noNameCard"
+        )
+        .style.display =
+          "block";
+
+      return;
+
+    }
+
+
+    document
+      .getElementById(
+        "content"
+      )
+      .style.display =
+        "block";
+
+
+    const addStatus =
+      document.getElementById(
+        "addStatus"
+      );
+
+
+    /* ================================================= */
+    /* ADD FRIEND */
+    /* ================================================= */
+
+    document
+      .getElementById(
+        "addFriendBtn"
+      )
+      .addEventListener(
+        "click",
+        async () => {
+
+          const targetName =
+            document
+              .getElementById(
+                "friendInput"
+              )
+              .value
+              .trim();
+
+
+          if (!targetName) {
+
+            addStatus.textContent =
+              "نام‌کاربری رو بنویس";
+
+            return;
+
+          }
+
+
+          addStatus.textContent =
+            "در حال ارسال...";
+
+
+          try {
+
+            const res =
+              await sendFriendRequest(
+                myName,
+                targetName
+              );
+
+
+            if (res.ok) {
+
+              addStatus.textContent =
+                "درخواست ارسال شد!";
+
+              document
+                .getElementById(
+                  "friendInput"
+                )
+                .value =
+                  "";
+
+            }
+
+            else if (
+              res.reason ===
+              "not-found"
+            ) {
+
+              addStatus.textContent =
+                "همچین کاربری پیدا نشد";
+
+            }
+
+            else if (
+              res.reason ===
+              "already-friends"
+            ) {
+
+              addStatus.textContent =
+                "قبلاً دوست هستید";
+
+            }
+
+            else {
+
+              addStatus.textContent =
+                "نمی‌تونی خودتو اضافه کنی";
+
+            }
+
+          } catch (error) {
+
+            console.error(error);
+
+            addStatus.textContent =
+              "ارسال درخواست انجام نشد";
+
+          }
+
         }
-        const dot = document.createElement("span");
-        dot.className = "fdot" + (f.online ? "" : " off");
-        row.appendChild(dot);
-        friendList.appendChild(row);
-      });
-    });
-  });
+      );
+
+
+    /* ================================================= */
+    /* FRIEND REQUESTS */
+    /* ================================================= */
+
+    listenFriendRequests(
+      myName,
+      (requesters) => {
+
+        const card =
+          document.getElementById(
+            "requestsCard"
+          );
+
+        const list =
+          document.getElementById(
+            "requestList"
+          );
+
+
+        if (
+          requesters.length === 0
+        ) {
+
+          card.style.display =
+            "none";
+
+          return;
+
+        }
+
+
+        card.style.display =
+          "block";
+
+        list.innerHTML =
+          "";
+
+
+        requesters.forEach(
+          (fromName) => {
+
+            const row =
+              document.createElement(
+                "div"
+              );
+
+            row.className =
+              "request-row";
+
+
+            row.innerHTML = `
+
+              <span class="txt">
+                ${fromName}
+              </span>
+
+            `;
+
+
+            const actions =
+              document.createElement(
+                "div"
+              );
+
+            actions.className =
+              "actions";
+
+
+            const acceptBtn =
+              document.createElement(
+                "button"
+              );
+
+            acceptBtn.textContent =
+              "قبول";
+
+
+            acceptBtn.addEventListener(
+              "click",
+              async () => {
+
+                await acceptFriendRequest(
+                  myName,
+                  fromName
+                );
+
+              }
+            );
+
+
+            const rejectBtn =
+              document.createElement(
+                "button"
+              );
+
+            rejectBtn.textContent =
+              "رد";
+
+            rejectBtn.className =
+              "btn-ghost";
+
+
+            rejectBtn.addEventListener(
+              "click",
+              async () => {
+
+                await rejectFriendRequest(
+                  myName,
+                  fromName
+                );
+
+              }
+            );
+
+
+            actions.appendChild(
+              acceptBtn
+            );
+
+            actions.appendChild(
+              rejectBtn
+            );
+
+            row.appendChild(
+              actions
+            );
+
+            list.appendChild(
+              row
+            );
+
+          }
+        );
+
+      }
+    );
+
+
+    /* ================================================= */
+    /* ALL FRIENDS */
+    /* ================================================= */
+
+    listenFriends(
+      myName,
+      (list) => {
+
+        const friendList =
+          document.getElementById(
+            "friendList"
+          );
+
+        const noFriends =
+          document.getElementById(
+            "noFriends"
+          );
+
+
+        document
+          .getElementById(
+            "friendCount"
+          )
+          .textContent =
+            list.length;
+
+
+        if (
+          list.length === 0
+        ) {
+
+          noFriends.style.display =
+            "block";
+
+          friendList.innerHTML =
+            "";
+
+          return;
+
+        }
+
+
+        noFriends.style.display =
+          "none";
+
+        friendList.innerHTML =
+          "";
+
+
+        /*
+         * اینجا عمداً هیچ فیلتری نداریم.
+         *
+         * بنابراین:
+         * 🟢 آنلاین‌ها
+         * ⚪ آفلاین‌ها
+         * هر دو نمایش داده می‌شوند.
+         */
+
+        list.forEach(
+          (f) => {
+
+            const row =
+              document.createElement(
+                "div"
+              );
+
+            row.className =
+              "friend-row";
+
+
+            /* نام دوست */
+
+            const nameLink =
+              document.createElement(
+                "a"
+              );
+
+            nameLink.href =
+              `profile.html?user=${encodeURIComponent(f.name)}`;
+
+            nameLink.className =
+              "friend-name-link";
+
+            nameLink.textContent =
+              f.name;
+
+
+            row.appendChild(
+              nameLink
+            );
+
+
+            /* وضعیت */
+
+            const dot =
+              document.createElement(
+                "span"
+              );
+
+            dot.className =
+              "fdot" +
+              (
+                f.online
+                  ? ""
+                  : " off"
+              );
+
+            dot.title =
+              f.online
+                ? "آنلاین"
+                : "آفلاین";
+
+
+            row.appendChild(
+              dot
+            );
+
+
+            const status =
+              document.createElement(
+                "span"
+              );
+
+            status.className =
+              "friend-status muted";
+
+            status.textContent =
+              f.online
+                ? "آنلاین"
+                : "آفلاین";
+
+
+            row.appendChild(
+              status
+            );
+
+
+            /* ================================================= */
+            /* INVITE — فقط آنلاین */
+            /* ================================================= */
+
+            if (f.online) {
+
+              const btn =
+                document.createElement(
+                  "button"
+                );
+
+              btn.className =
+                "friend-invite-btn";
+
+              btn.textContent =
+                "🎮 دعوت به بازی";
+
+
+              btn.addEventListener(
+                "click",
+                async () => {
+
+                  try {
+
+                    btn.disabled =
+                      true;
+
+                    btn.textContent =
+                      "در حال ارسال...";
+
+
+                    let code =
+                      getSavedRoom();
+
+
+                    if (!code) {
+
+                      code =
+                        await createRoom();
+
+                    }
+
+
+                    await inviteFriendToRoom(
+                      myName,
+                      f.name,
+                      code
+                    );
+
+
+                    btn.textContent =
+                      "دعوت شد ✓";
+
+
+                  } catch (error) {
+
+                    console.error(
+                      error
+                    );
+
+                    btn.disabled =
+                      false;
+
+                    btn.textContent =
+                      "🎮 دعوت به بازی";
+
+                    alert(
+                      "ارسال دعوت انجام نشد"
+                    );
+
+                  }
+
+                }
+              );
+
+
+              row.appendChild(
+                btn
+              );
+
+            }
+
+
+            friendList.appendChild(
+              row
+            );
+
+          }
+        );
+
+      }
+    );
+
+  }
+);
+
 </script>
+
 </body>
 </html>
