@@ -10,7 +10,7 @@ const code = getSavedRoom();
 const R = (p) => roomRef(code, p);
 const A = (p) => ref(db, `rooms/${code}/astra/${p}`);
 
-const FUEL_PER_RESOURCE = 20; // ۵ منبع = ۱۰۰٪
+const FUEL_PER_RESOURCE = 20;
 const RESOURCE_COUNT = 4;
 const CARRY_RANGE_MULT = 1.15;
 const BASE_SPEED_FACTOR = 0.4;
@@ -33,6 +33,7 @@ const muteBtn = document.getElementById("astraMuteBtn");
 let W = 900, H = 450;
 let SHIP_R = 15, RES_R = 12, DOCK_R = 30, BASE_SPEED = 190;
 let stars = [];
+let entitiesInitialized = false;
 
 function recomputeScaledSizes() {
   const minDim = Math.min(W, H);
@@ -41,19 +42,18 @@ function recomputeScaledSizes() {
   DOCK_R = Math.max(20, minDim * 0.08);
   BASE_SPEED = minDim * BASE_SPEED_FACTOR;
 }
+
 function regenerateBackground() {
   stars = [];
   const count = Math.round((W * H) / 4500);
   for (let i = 0; i < count; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.4 + 0.3, tw: Math.random() * Math.PI * 2 });
 }
- let entitiesInitialized = false;
 
 function resizeCanvasResolution() {
-  async function startSolo() {
-  modeBadge.textContent = "تک‌نفره در برابر ربات";
-  resizeCanvasResolution();
-  computeDock();
-  entitiesInitialized = true;
+  const rect = arenaBox.getBoundingClientRect();
+  const cssW = Math.max(1, rect.width), cssH = Math.max(1, rect.height);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -63,7 +63,6 @@ function resizeCanvasResolution() {
   regenerateBackground();
   computeDock();
 
-  // اگه بازی از قبل شروع شده بود، همه‌ی موقعیت‌ها رو متناسب با اندازه جدید جابه‌جا کن
   if (entitiesInitialized && oldW > 0 && oldH > 0) {
     const rx = W / oldW, ry = H / oldH;
     if (isFinite(rx) && isFinite(ry) && rx > 0 && ry > 0) {
@@ -86,12 +85,11 @@ let myDock = { x: 0, y: 0 };
 let dockColor = "#4F7CFF";
 function computeDock() { myDock = { x: SHIP_R * 3, y: H / 2 }; }
 
-// ---------- وضعیت من ----------
 let me = { x: 0, y: 0, angle: -Math.PI / 2, fuel: 0, cargo: 0, carrying: null, trail: [] };
-let localResources = []; // فقط برای حالت سولو
+let localResources = [];
 let aiShip = null;
-let others = {}; // uid -> {x,y,angle,fuel,cargo,name,color}
-let firebaseResources = {}; // فقط برای اتاق: id -> {x,y,takenBy}
+let others = {};
+let firebaseResources = {};
 let particles = [], floaters = [];
 let running = false, paused = true, raceOver = false;
 let myName, myUid;
@@ -102,7 +100,6 @@ function rand(min, max) { return Math.random() * (max - min) + min; }
 function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 const COLORS = ["#4F7CFF", "#9B5CFF", "#FF4F81", "#3ECF8E"];
 
-// ---------- افکت‌ها ----------
 function burstParticles(x, y, color, count = 12) {
   for (let i = 0; i < count; i++) {
     const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
@@ -118,7 +115,6 @@ function updateEffects(dt) {
   floaters = floaters.filter((f) => f.life > 0);
 }
 
-// ---------- صدا ----------
 let audioCtx = null, muted = false;
 function playTone(freq, duration) {
   if (muted) return;
@@ -134,7 +130,6 @@ function playTone(freq, duration) {
 }
 muteBtn.addEventListener("click", () => { muted = !muted; muteBtn.textContent = muted ? "🔇" : "🔊"; });
 
-// ---------- حرکت من ----------
 function updateMe(dt) {
   const mag = Math.min(1, Math.hypot(joyVec.x, joyVec.y));
   if (mag > 0.02) {
@@ -150,17 +145,14 @@ function updateMe(dt) {
   }
 }
 
-// ---------- حالت سولو: منابع محلی + AI ----------
 function spawnLocalResource() {
   const margin = RES_R * 3;
   localResources.push({ id: "r" + Math.random(), x: rand(W * 0.3, W * 0.7), y: rand(margin, H - margin), spawnT: 0, pulse: Math.random() * Math.PI * 2, takenBy: null });
 }
 
 function soloTick(dt, now) {
-  // من: برداشتن/تحویل
   handleCarryLogic(me, localResources, myDock, true);
 
-  // AI
   if (!aiShip.launched) {
     if (aiShip.carrying) {
       moveToward(aiShip, aiShip.dock, dt);
@@ -230,7 +222,6 @@ function handleCarryLogic(ship, resourcesArr, dock, isMe) {
   }
 }
 
-// ---------- رسم ----------
 function drawBackground(t) {
   ctx.fillStyle = "#05060f"; ctx.fillRect(0, 0, W, H);
   const neb = ctx.createRadialGradient(W * 0.25, H * 0.2, 0, W * 0.25, H * 0.2, Math.max(W, H) * 0.5);
@@ -265,13 +256,11 @@ function drawTrail(trail, color) {
   });
 }
 
-// موشک واقعی: مثلث بدنه + شعله موتور
 function drawRocket(x, y, angle, color, label, carrying, boosted) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
 
-  // شعله موتور
   ctx.beginPath();
   ctx.moveTo(-SHIP_R * 1.1, -SHIP_R * 0.4);
   ctx.lineTo(-SHIP_R * (1.8 + Math.random() * 0.4), 0);
@@ -282,7 +271,6 @@ function drawRocket(x, y, angle, color, label, carrying, boosted) {
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // بدنه‌ی موشک (مثلث نوک‌تیز رو به جهت حرکت)
   ctx.beginPath();
   ctx.moveTo(SHIP_R * 1.3, 0);
   ctx.lineTo(-SHIP_R * 0.8, -SHIP_R * 0.75);
@@ -378,7 +366,6 @@ function updateHudRoom() {
   `).join("");
 }
 
-// ---------- حلقه‌ی اصلی ----------
 let lastTime = null, lastBroadcast = 0;
 function loop(ts) {
   if (!running) return;
@@ -409,12 +396,10 @@ function loop(ts) {
 }
 
 async function tryClaimWin() {
-  const res = await runTransaction(A("winner"), (curr) => (curr ? curr : myUid));
-  // نتیجه از طریق listener مدیریت می‌شه
+  await runTransaction(A("winner"), (curr) => (curr ? curr : myUid));
 }
 
-// ---------- شروع بازی ----------
-async function countdown(labelWin) {
+async function countdown() {
   paused = true;
   for (const step of ["۳", "۲", "۱", "برو!"]) {
     overlayMsg.innerHTML = `<div class="big">${step}</div>`;
@@ -458,6 +443,7 @@ async function startSolo() {
   aiShip = { x: W - SHIP_R * 3, y: H / 2, angle: Math.PI, fuel: 0, cargo: 0, carrying: null, trail: [], dock: { x: W - SHIP_R * 3, y: H / 2 }, launched: false };
   localResources = [];
   for (let i = 0; i < RESOURCE_COUNT; i++) spawnLocalResource();
+  entitiesInitialized = true;
   running = true;
   requestAnimationFrame(loop);
   await countdown();
@@ -467,7 +453,6 @@ async function startRoom() {
   modeBadge.textContent = "چندنفره — تا ۴ نفر";
   resizeCanvasResolution();
   computeDock();
-  entitiesInitialized = true;;
 
   const playersSnap = await get(R("players"));
   const roomPlayers = playersSnap.val() || {};
@@ -483,8 +468,8 @@ async function startRoom() {
   ];
   myDock = dockSpots[myIndex % dockSpots.length] || dockSpots[0];
   me = { x: myDock.x, y: myDock.y, angle: 0, fuel: 0, cargo: 0, carrying: null, trail: [] };
+  entitiesInitialized = true;
 
-  // فقط اولین کسی که می‌رسه منابع رو می‌سازه
   await runTransaction(A("resources"), (curr) => {
     if (curr) return curr;
     const obj = {};
@@ -502,13 +487,11 @@ async function startRoom() {
     const val = snap.val() || {};
     firebaseResources = {};
     Object.entries(val).forEach(([id, r]) => { if (!r.consumed) firebaseResources[id] = r; });
-    while (Object.keys(firebaseResources).length < RESOURCE_COUNT) {
+    if (Object.keys(firebaseResources).length < RESOURCE_COUNT) {
       const id = "r" + Date.now() + Math.random();
       const margin = RES_R * 3;
       const nr = { x: rand(W * 0.3, W * 0.7), y: rand(margin, H - margin), takenBy: null };
-      firebaseResources[id] = nr;
       set(A(`resources/${id}`), nr);
-      break; // فقط یکی اضافه کن، دور بعدی loop خودش کامل می‌کنه
     }
   }));
 
@@ -523,9 +506,7 @@ async function startRoom() {
 
   unsubs.push(onValue(A("winner"), async (snap) => {
     const winnerUid = snap.val();
-    if (winnerUid && !raceOver) {
-      await finishRace(winnerUid === myUid);
-    }
+    if (winnerUid && !raceOver) await finishRace(winnerUid === myUid);
   }));
 
   mountChat(myName, code);
@@ -534,7 +515,6 @@ async function startRoom() {
   await countdown();
 }
 
-// ---------- جوی‌استیک ----------
 function setupJoystick(baseEl, knobEl) {
   let active = false, origin = { x: 0, y: 0 }, pointerId = null;
   function start(clientX, clientY) {
@@ -565,7 +545,6 @@ function setupJoystick(baseEl, knobEl) {
 }
 setupJoystick(document.getElementById("astraJoyBaseP1"), document.getElementById("astraJoyKnobP1"));
 
-// ---------- کیبورد دسکتاپ ----------
 const keys = {};
 window.addEventListener("keydown", (e) => { keys[e.key] = true; updateKeyVec(); });
 window.addEventListener("keyup", (e) => { keys[e.key] = false; updateKeyVec(); });
@@ -578,7 +557,6 @@ function updateKeyVec() {
   joyVec = { x, y };
 }
 
-// ---------- Fullscreen ----------
 fullscreenBtn.addEventListener("click", async () => {
   try {
     if (!document.fullscreenElement) { await document.documentElement.requestFullscreen(); fullscreenBtn.textContent = "⛶ خروج"; }
@@ -586,7 +564,6 @@ fullscreenBtn.addEventListener("click", async () => {
   } catch (e) {}
 });
 
-// ---------- قفل landscape ----------
 let orientationLocked = false;
 function checkOrientation() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -602,7 +579,6 @@ window.addEventListener("resize", handleViewportChange);
 window.addEventListener("orientationchange", handleViewportChange);
 if (window.visualViewport) window.visualViewport.addEventListener("resize", handleViewportChange);
 
-// ---------- شروع ----------
 async function init() {
   const user = await waitForUser();
   myName = getSavedName();
