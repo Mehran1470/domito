@@ -467,6 +467,7 @@ async function startRoom() {
   modeBadge.textContent = "چندنفره — تا ۴ نفر";
   resizeCanvasResolution();
   computeDock();
+  entitiesInitialized = true;;
 
   const playersSnap = await get(R("players"));
   const roomPlayers = playersSnap.val() || {};
