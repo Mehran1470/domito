@@ -49,10 +49,11 @@ function regenerateBackground() {
  let entitiesInitialized = false;
 
 function resizeCanvasResolution() {
-  const rect = arenaBox.getBoundingClientRect();
-  const cssW = Math.max(1, rect.width), cssH = Math.max(1, rect.height);
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  canvas.width = Math.round(cssW * dpr);
+  async function startSolo() {
+  modeBadge.textContent = "تک‌نفره در برابر ربات";
+  resizeCanvasResolution();
+  computeDock();
+  entitiesInitialized = true;
   canvas.height = Math.round(cssH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
