@@ -46,6 +46,8 @@ function regenerateBackground() {
   const count = Math.round((W * H) / 4500);
   for (let i = 0; i < count; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.4 + 0.3, tw: Math.random() * Math.PI * 2 });
 }
+ let entitiesInitialized = false;
+
 function resizeCanvasResolution() {
   const rect = arenaBox.getBoundingClientRect();
   const cssW = Math.max(1, rect.width), cssH = Math.max(1, rect.height);
@@ -53,10 +55,30 @@ function resizeCanvasResolution() {
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const oldW = W, oldH = H;
   W = cssW; H = cssH;
   recomputeScaledSizes();
   regenerateBackground();
   computeDock();
+
+  // اگه بازی از قبل شروع شده بود، همه‌ی موقعیت‌ها رو متناسب با اندازه جدید جابه‌جا کن
+  if (entitiesInitialized && oldW > 0 && oldH > 0) {
+    const rx = W / oldW, ry = H / oldH;
+    if (isFinite(rx) && isFinite(ry) && rx > 0 && ry > 0) {
+      [me, aiShip].forEach((s) => {
+        if (!s) return;
+        s.x *= rx; s.y *= ry;
+        if (s.trail) s.trail.forEach((p) => { p.x *= rx; p.y *= ry; });
+      });
+      if (aiShip && aiShip.dock) { aiShip.dock.x *= rx; aiShip.dock.y *= ry; }
+      localResources.forEach((r) => { r.x *= rx; r.y *= ry; });
+      Object.values(firebaseResources).forEach((r) => { r.x *= rx; r.y *= ry; });
+      Object.values(others).forEach((o) => { o.x *= rx; o.y *= ry; });
+      me.x = Math.max(SHIP_R, Math.min(W - SHIP_R, me.x));
+      me.y = Math.max(SHIP_R, Math.min(H - SHIP_R, me.y));
+    }
+  }
 }
 
 let myDock = { x: 0, y: 0 };
