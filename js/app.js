@@ -664,16 +664,11 @@ export const GAMES = [
     icon: "🐍",
     soloThreshold: 8
   },
-
-  {
-    id: "astra",
-    name: "دومیتو استرا",
-    desc: "تسخیر تایل‌های فضایی، کمبو بگیر، ربات رو شکست بده",
-    icon: "🚀",
-    soloThreshold: 1
-  }
-
+{ id: "astra", name: "دومیتو استرا", desc: "تسخیر تایل‌های فضایی، کمبو بگیر، ربات رو شکست بده", icon: "🚀", soloThreshold: 1 },
+  { id: "gunball", name: "توپ تفنگ", desc: "حریف رو با تیراندازی از میدون به در کن، ۳ قلب داری", icon: "🔫", soloThreshold: 1 },
 ];
+
+
 
 
 export function soloWon(
