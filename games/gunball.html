@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>توپ تفنگ | دومیتو</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand"><div class="brand-mark">🔫</div><h1>توپ تفنگ</h1></div>
+
+    <div class="card">
+      <div class="gunball-hud-row" id="hudRow"></div>
+      <div class="gunball-arena-wrap" id="arenaWrap">
+        <canvas id="gunballCanvas"></canvas>
+        <div class="gunball-joy-base" id="joyBase"><div class="gunball-joy-knob" id="joyKnob"></div></div>
+        <button class="gunball-fire-btn" id="fireBtn">🔫</button>
+      </div>
+      <p class="gunball-mode-note" id="modeNote"></p>
+    </div>
+
+    <div class="card" id="scoreArea" style="display:none">
+      <div class="solo-result" id="soloResult"></div>
+    </div>
+  </div>
+
+<script type="module" src="gunball.js"></script>
+</body>
+</html>
