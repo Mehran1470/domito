@@ -34,6 +34,7 @@ let W = 900, H = 450;
 let SHIP_R = 15, RES_R = 12, DOCK_R = 30, BASE_SPEED = 190;
 let stars = [];
 let entitiesInitialized = false;
+let myColorIndex = 0;
 
 function recomputeScaledSizes() {
   const minDim = Math.min(W, H);
@@ -83,7 +84,17 @@ function resizeCanvasResolution() {
 
 let myDock = { x: 0, y: 0 };
 let dockColor = "#4F7CFF";
-function computeDock() { myDock = { x: SHIP_R * 3, y: H / 2 }; }
+const DOCK_SPOTS_FRACTIONS = [
+  { fx: 0.12, fy: 0.25 }, { fx: 0.88, fy: 0.25 },
+  { fx: 0.12, fy: 0.75 }, { fx: 0.88, fy: 0.75 },
+];
+function dockForColorIndex(idx) {
+  const d = DOCK_SPOTS_FRACTIONS[idx % DOCK_SPOTS_FRACTIONS.length];
+  return { x: W * d.fx, y: H * d.fy };
+}
+function computeDock() {
+  myDock = isSolo ? { x: SHIP_R * 3, y: H / 2 } : dockForColorIndex(myColorIndex || 0);
+}
 
 let me = { x: 0, y: 0, angle: -Math.PI / 2, fuel: 0, cargo: 0, carrying: null, trail: [] };
 let localResources = [];
@@ -200,7 +211,7 @@ function handleCarryLogic(ship, resourcesArr, dock, isMe) {
       if (isSolo) {
         localResources = localResources.filter((r) => r.id !== rid);
       } else {
-        update(A(`resources/${rid}`), { takenBy: null, consumed: true });
+        remove(A(`resources/${rid}`));
       }
     }
   } else {
@@ -334,6 +345,8 @@ function draw(t) {
   } else {
     drawResources(t, Object.entries(firebaseResources).map(([id, r]) => ({ ...r, id })));
     Object.values(others).forEach((o) => {
+      const oDock = dockForColorIndex(o.colorIndex || 0);
+      drawDock(oDock, o.color, (o.fuel || 0) >= 100);
       drawTrail(o.trail || [], o.color);
       drawRocket(o.x, o.y, o.angle || 0, o.color, o.name, o.carrying, false);
     });
@@ -452,21 +465,15 @@ async function startSolo() {
 async function startRoom() {
   modeBadge.textContent = "چندنفره — تا ۴ نفر";
   resizeCanvasResolution();
-  computeDock();
 
   const playersSnap = await get(R("players"));
   const roomPlayers = playersSnap.val() || {};
   const uids = Object.keys(roomPlayers).sort();
   const myIndex = uids.indexOf(myUid);
-  dockColor = COLORS[myIndex % COLORS.length] || COLORS[0];
+  myColorIndex = myIndex >= 0 ? myIndex : 0;
+  dockColor = COLORS[myColorIndex % COLORS.length] || COLORS[0];
 
-  const dockSpots = [
-    { x: SHIP_R * 3, y: H * 0.25 },
-    { x: W - SHIP_R * 3, y: H * 0.25 },
-    { x: SHIP_R * 3, y: H * 0.75 },
-    { x: W - SHIP_R * 3, y: H * 0.75 },
-  ];
-  myDock = dockSpots[myIndex % dockSpots.length] || dockSpots[0];
+  computeDock();
   me = { x: myDock.x, y: myDock.y, angle: 0, fuel: 0, cargo: 0, carrying: null, trail: [] };
   entitiesInitialized = true;
 
@@ -480,18 +487,20 @@ async function startRoom() {
     return obj;
   });
 
-  await set(A(`players/${myUid}`), { name: myName, x: me.x, y: me.y, angle: 0, fuel: 0, cargo: 0, carrying: false, colorIndex: myIndex % COLORS.length });
+  await set(A(`players/${myUid}`), { name: myName, x: me.x, y: me.y, angle: 0, fuel: 0, cargo: 0, carrying: false, colorIndex: myColorIndex % COLORS.length });
   onDisconnect(A(`players/${myUid}`)).remove();
 
   unsubs.push(onValue(A("resources"), (snap) => {
     const val = snap.val() || {};
-    firebaseResources = {};
-    Object.entries(val).forEach(([id, r]) => { if (!r.consumed) firebaseResources[id] = r; });
-    if (Object.keys(firebaseResources).length < RESOURCE_COUNT) {
-      const id = "r" + Date.now() + Math.random();
-      const margin = RES_R * 3;
-      const nr = { x: rand(W * 0.3, W * 0.7), y: rand(margin, H - margin), takenBy: null };
-      set(A(`resources/${id}`), nr);
+    firebaseResources = { ...val };
+    if (myColorIndex === 0 && Object.keys(firebaseResources).length < RESOURCE_COUNT) {
+      const needed = RESOURCE_COUNT - Object.keys(firebaseResources).length;
+      for (let i = 0; i < needed; i++) {
+        const id = "r" + Date.now() + Math.random().toString(36).slice(2);
+        const margin = RES_R * 3;
+        const nr = { x: rand(W * 0.3, W * 0.7), y: rand(margin, H - margin), takenBy: null };
+        set(A(`resources/${id}`), nr);
+      }
     }
   }));
 
