@@ -76,12 +76,14 @@ function blankProfile() {
     equippedTheme: "default",
     claimedMissions: [],
     friends: {},
-    friendRequests: {}
+    friendRequests: {},
+    lastLogin: 0
   };
 }
 
 export function profileRef(name, path = "") {
   const safe = encodeURIComponent(String(name || ""));
+
   return ref(
     db,
     `profiles/${safe}${path ? "/" + path : ""}`
@@ -145,7 +147,10 @@ async function cleanupPresenceConnection() {
   try {
     await remove(presenceConnectionRef);
   } catch (e) {
-    console.warn("Presence connection cleanup error:", e);
+    console.warn(
+      "Presence connection cleanup error:",
+      e
+    );
   }
 
   presenceConnectionRef = null;
@@ -159,7 +164,10 @@ export async function setPresence(name, online) {
 
   const pRef = presenceRootRef(name);
 
+  // ==========================================================
   // خاموش کردن Presence
+  // ==========================================================
+
   if (!online) {
     if (
       presenceConnectedUnsubscribe &&
@@ -168,6 +176,7 @@ export async function setPresence(name, online) {
       try {
         presenceConnectedUnsubscribe();
       } catch {}
+
       presenceConnectedUnsubscribe = null;
     }
 
@@ -181,8 +190,11 @@ export async function setPresence(name, online) {
     return;
   }
 
+  // ==========================================================
   // اگر همین کاربر از قبل connection دارد،
-  // connection جدید نساز.
+  // connection جدید نساز
+  // ==========================================================
+
   if (
     presenceConnectionRef &&
     presenceConnectionName === name
@@ -199,7 +211,7 @@ export async function setPresence(name, online) {
   presenceConnectionRef = connection;
   presenceConnectionName = name;
 
-  // وقتی این اتصال قطع شد فقط همان connection حذف شود.
+  // وقتی این اتصال قطع شد فقط همان connection حذف شود
   await onDisconnect(connection).remove();
 
   await set(connection, {
@@ -207,10 +219,38 @@ export async function setPresence(name, online) {
     connectedAt: serverTimestamp()
   });
 
+  // ==========================================================
+  // آخرین حضور واقعی
+  // ==========================================================
+
   await update(pRef, {
     online: true,
     lastSeen: serverTimestamp()
   });
+}
+
+// ============================================================
+// ثبت آخرین ورود
+// ============================================================
+
+async function updateLastLogin(username) {
+  username = String(username || "").trim();
+
+  if (!username) return;
+
+  try {
+    await update(
+      profileRef(username),
+      {
+        lastLogin: serverTimestamp()
+      }
+    );
+  } catch (e) {
+    console.warn(
+      "Last login update error:",
+      e
+    );
+  }
 }
 
 // ============================================================
@@ -238,6 +278,10 @@ export async function registerUser(username, password) {
     cred.user.uid
   );
 
+  // ثبت زمان ورود اولیه
+  await updateLastLogin(username);
+
+  // ثبت حضور آنلاین
   await setPresence(
     username,
     true
@@ -271,6 +315,14 @@ export async function loginUser(username, password) {
     cred.user.uid
   );
 
+  // ==========================================================
+  // مهم:
+  // هر بار ورود موفق، زمان آخرین ورود را با زمان سرور ثبت کن
+  // ==========================================================
+
+  await updateLastLogin(username);
+
+  // ثبت حضور آنلاین
   await setPresence(
     username,
     true
@@ -580,7 +632,11 @@ export function listenKickStatus(
 ) {
   const uid = currentUid();
 
-  if (!code || !uid || typeof callback !== "function") {
+  if (
+    !code ||
+    !uid ||
+    typeof callback !== "function"
+  ) {
     return () => {};
   }
 
@@ -652,7 +708,6 @@ export async function kickMember(
     throw new Error("player-not-found");
   }
 
-  // ثبت Kick
   await set(
     roomRef(
       code,
@@ -667,7 +722,6 @@ export async function kickMember(
     }
   );
 
-  // حذف بازیکن و اطلاعات دور
   await remove(
     roomRef(
       code,
@@ -724,7 +778,6 @@ export async function joinLobby(
     throw new Error("invalid-name");
   }
 
-  // جلوگیری از ورود فرد Kick شده
   const kicked =
     await checkKicked(
       code,
@@ -735,7 +788,6 @@ export async function joinLobby(
     throw new Error("kicked");
   }
 
-  // اطمینان از اینکه اتاق هنوز وجود دارد
   const meta =
     await getRoomMeta(code);
 
@@ -755,7 +807,6 @@ export async function joinLobby(
     }
   );
 
-  // اگر اتصال اینترنت قطع شد بازیکن از لابی حذف شود
   await onDisconnect(
     roomRef(
       code,
@@ -1103,6 +1154,9 @@ export async function recordRoundResult(
 
       curr.coins =
         curr.coins || 0;
+
+      curr.lastLogin =
+        curr.lastLogin || 0;
 
       curr.gamesPlayed++;
 
@@ -1762,6 +1816,10 @@ export function listenFriends(
             lastSeen:
               Number(
                 presence.lastSeen || 0
+              ),
+            lastLogin:
+              Number(
+                presence.lastLogin || 0
               )
           });
         } catch (e) {
@@ -1773,7 +1831,8 @@ export function listenFriends(
           results.push({
             name,
             online: false,
-            lastSeen: 0
+            lastSeen: 0,
+            lastLogin: 0
           });
         }
       }
@@ -2014,4 +2073,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-    }
+      }
