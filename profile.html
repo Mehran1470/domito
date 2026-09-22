@@ -157,9 +157,18 @@
             id="joinedGamesText"
           ></div>
 
+          <!-- وضعیت آنلاین / آخرین حضور -->
+
           <div
             id="presenceText"
             class="profile-presence"
+          ></div>
+
+          <!-- آخرین ورود واقعی به حساب -->
+
+          <div
+            id="lastLoginText"
+            class="profile-presence presence-offline"
           ></div>
 
         </div>
@@ -698,7 +707,7 @@ waitForUser().then(
                 "friendReqStatus"
               )
               .textContent =
-                "❌ ارسال درخواست انجام نشد";
+              "❌ ارسال درخواست انجام نشد";
 
 
             button.disabled =
@@ -759,7 +768,9 @@ waitForUser().then(
             purchased: [],
 
             equippedTheme:
-              "default"
+              "default",
+
+            lastLogin: 0
 
           };
 
@@ -798,6 +809,43 @@ waitForUser().then(
           )
           .textContent =
             `${p.gamesPlayed || 0} دور بازی کرده`;
+
+
+        // ---------------------------------------------
+        // LAST LOGIN
+        // ---------------------------------------------
+
+        const lastLoginText =
+          document.getElementById(
+            "lastLoginText"
+          );
+
+
+        const lastLogin =
+          Number(
+            p.lastLogin || 0
+          );
+
+
+        if (lastLogin) {
+
+          lastLoginText.className =
+            "profile-presence presence-offline";
+
+          lastLoginText.textContent =
+            `🔐 آخرین ورود: ${formatLastLogin(lastLogin)}`;
+
+        }
+
+        else {
+
+          lastLoginText.className =
+            "profile-presence presence-offline";
+
+          lastLoginText.textContent =
+            "🔐 هنوز ورود ثبت نشده";
+
+        }
 
 
         // ---------------------------------------------
@@ -1005,6 +1053,38 @@ waitForUser().then(
 
       }
     );
+
+
+    // =================================================
+    // LAST LOGIN FORMAT
+    // =================================================
+
+    function formatLastLogin(
+      timestamp
+    ) {
+
+      const date =
+        new Date(timestamp);
+
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
+        return "نامشخص";
+
+      }
+
+
+      return (
+        formatDate(date) +
+        "، ساعت " +
+        formatTime(date)
+      );
+
+    }
 
 
     // =================================================
