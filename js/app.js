@@ -58,7 +58,10 @@ export function getSavedName() {
 }
 
 export function saveName(name) {
-  localStorage.setItem("domito_name", String(name || "").trim());
+  localStorage.setItem(
+    "domito_name",
+    String(name || "").trim()
+  );
 }
 
 // ============================================================
@@ -82,7 +85,11 @@ function blankProfile() {
 }
 
 export function profileRef(name, path = "") {
-  const safe = encodeURIComponent(String(name || ""));
+  const safe =
+    encodeURIComponent(
+      String(name || "")
+    );
+
   return ref(
     db,
     `profiles/${safe}${path ? "/" + path : ""}`
@@ -90,55 +97,86 @@ export function profileRef(name, path = "") {
 }
 
 async function ensureProfile(username) {
-  const pRef = profileRef(username);
-  const snap = await get(pRef);
+  const pRef =
+    profileRef(username);
+
+  const snap =
+    await get(pRef);
 
   if (!snap.exists()) {
-    await set(pRef, blankProfile());
+    await set(
+      pRef,
+      blankProfile()
+    );
   }
 }
 
-export async function ensureOwnerLinks(username, uid) {
-  const ownerRef = ref(
-    db,
-    `profiles/${encodeURIComponent(username)}/ownerUid`
-  );
+export async function ensureOwnerLinks(
+  username,
+  uid
+) {
+  const ownerRef =
+    ref(
+      db,
+      `profiles/${encodeURIComponent(username)}/ownerUid`
+    );
 
-  const snap = await get(ownerRef);
+  const snap =
+    await get(ownerRef);
 
   if (!snap.exists()) {
-    await set(ownerRef, uid);
+    await set(
+      ownerRef,
+      uid
+    );
   }
 
   await set(
-    ref(db, `uidToName/${uid}`),
+    ref(
+      db,
+      `uidToName/${uid}`
+    ),
     username
   );
 
-  await ensureProfile(username);
+  await ensureProfile(
+    username
+  );
 }
 
 // ============================================================
 // ثبت آخرین ورود
 // ============================================================
 
-async function updateLastLogin(username) {
-  username = String(username || "").trim();
+async function updateLastLogin(
+  username
+) {
+  username =
+    String(
+      username || ""
+    ).trim();
 
-  if (!username) return;
+  if (!username) {
+    return;
+  }
 
   try {
+
     await update(
       profileRef(username),
       {
-        lastLogin: serverTimestamp()
+        lastLogin:
+          serverTimestamp()
       }
     );
+
   } catch (e) {
+
     console.warn(
       "Last login update error:",
       e
     );
+
   }
 }
 
@@ -165,49 +203,85 @@ function presenceConnectionsRef(name) {
 }
 
 async function cleanupPresenceConnection() {
-  if (!presenceConnectionRef) return;
+
+  if (!presenceConnectionRef) {
+    return;
+  }
 
   try {
-    await remove(presenceConnectionRef);
+
+    await remove(
+      presenceConnectionRef
+    );
+
   } catch (e) {
-    console.warn("Presence connection cleanup error:", e);
+
+    console.warn(
+      "Presence connection cleanup error:",
+      e
+    );
+
   }
 
   presenceConnectionRef = null;
   presenceConnectionName = "";
 }
 
-export async function setPresence(name, online) {
-  name = String(name || "").trim();
+export async function setPresence(
+  name,
+  online
+) {
+  name =
+    String(
+      name || ""
+    ).trim();
 
-  if (!name) return;
+  if (!name) {
+    return;
+  }
 
-  const pRef = presenceRootRef(name);
+  const pRef =
+    presenceRootRef(name);
 
+  // ----------------------------------------------------------
   // خاموش کردن Presence
+  // ----------------------------------------------------------
+
   if (!online) {
+
     if (
       presenceConnectedUnsubscribe &&
-      typeof presenceConnectedUnsubscribe === "function"
+      typeof presenceConnectedUnsubscribe ===
+        "function"
     ) {
+
       try {
         presenceConnectedUnsubscribe();
       } catch {}
-      presenceConnectedUnsubscribe = null;
+
+      presenceConnectedUnsubscribe =
+        null;
     }
 
     await cleanupPresenceConnection();
 
-    await update(pRef, {
-      online: false,
-      lastSeen: serverTimestamp()
-    });
+    await update(
+      pRef,
+      {
+        online: false,
+        lastSeen:
+          serverTimestamp()
+      }
+    );
 
     return;
   }
 
+  // ----------------------------------------------------------
   // اگر همین کاربر از قبل connection دارد،
-  // connection جدید نساز.
+  // connection جدید نساز
+  // ----------------------------------------------------------
+
   if (
     presenceConnectionRef &&
     presenceConnectionName === name
@@ -217,36 +291,72 @@ export async function setPresence(name, online) {
 
   await cleanupPresenceConnection();
 
-  const connection = push(
-    presenceConnectionsRef(name)
+  const connection =
+    push(
+      presenceConnectionsRef(name)
+    );
+
+  presenceConnectionRef =
+    connection;
+
+  presenceConnectionName =
+    name;
+
+  // ----------------------------------------------------------
+  // قطع شدن اتصال
+  // ----------------------------------------------------------
+
+  await onDisconnect(
+    connection
+  ).remove();
+
+  // ----------------------------------------------------------
+  // ایجاد connection
+  // ----------------------------------------------------------
+
+  await set(
+    connection,
+    {
+      online: true,
+      connectedAt:
+        serverTimestamp()
+    }
   );
 
-  presenceConnectionRef = connection;
-  presenceConnectionName = name;
+  // ----------------------------------------------------------
+  // وضعیت اصلی Presence
+  // ----------------------------------------------------------
 
-  // وقتی این اتصال قطع شد فقط همان connection حذف شود.
-  await onDisconnect(connection).remove();
-
-  await set(connection, {
-    online: true,
-    connectedAt: serverTimestamp()
-  });
-
-  await update(pRef, {
-    online: true,
-    lastSeen: serverTimestamp()
-  });
+  await update(
+    pRef,
+    {
+      online: true,
+      lastSeen:
+        serverTimestamp()
+    }
+  );
 }
 
 // ============================================================
 // ثبت نام
 // ============================================================
 
-export async function registerUser(username, password) {
-  username = String(username || "").trim();
+export async function registerUser(
+  username,
+  password
+) {
+  username =
+    String(
+      username || ""
+    ).trim();
 
-  if (!username || !password) {
-    throw new Error("invalid-credentials");
+  if (
+    !username ||
+    !password
+  ) {
+    throw new Error(
+      "invalid-credentials"
+    );
   }
 
   const cred =
@@ -263,8 +373,9 @@ export async function registerUser(username, password) {
     cred.user.uid
   );
 
-  // ثبت زمان آخرین ورود
-  await updateLastLogin(username);
+  await updateLastLogin(
+    username
+  );
 
   await setPresence(
     username,
@@ -275,14 +386,25 @@ export async function registerUser(username, password) {
 }
 
 // ============================================================
-// ورود
+// ورود دستی
 // ============================================================
 
-export async function loginUser(username, password) {
-  username = String(username || "").trim();
+export async function loginUser(
+  username,
+  password
+) {
+  username =
+    String(
+      username || ""
+    ).trim();
 
-  if (!username || !password) {
-    throw new Error("invalid-credentials");
+  if (
+    !username ||
+    !password
+  ) {
+    throw new Error(
+      "invalid-credentials"
+    );
   }
 
   const cred =
@@ -299,8 +421,9 @@ export async function loginUser(username, password) {
     cred.user.uid
   );
 
-  // ثبت زمان آخرین ورود
-  await updateLastLogin(username);
+  await updateLastLogin(
+    username
+  );
 
   await setPresence(
     username,
@@ -315,49 +438,170 @@ export async function loginUser(username, password) {
 // ============================================================
 
 export async function logoutUser() {
-  const name = getSavedName();
+  const name =
+    getSavedName();
 
   if (name) {
+
     try {
-      await setPresence(name, false);
+
+      await setPresence(
+        name,
+        false
+      );
+
     } catch (e) {
+
       console.warn(
         "Presence logout error:",
         e
       );
+
     }
   }
 
-  localStorage.removeItem("domito_name");
-  localStorage.removeItem("domito_room");
+  localStorage.removeItem(
+    "domito_name"
+  );
+
+  localStorage.removeItem(
+    "domito_room"
+  );
 
   await signOut(auth);
 }
 
 // ============================================================
-// وضعیت کاربر
+// وضعیت کاربر + Auto Login
 // ============================================================
 
 export function waitForUser() {
-  return new Promise((resolve) => {
-    let finished = false;
 
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        (user) => {
-          if (finished) return;
+  return new Promise(
+    (resolve) => {
 
-          finished = true;
+      let finished = false;
 
-          try {
-            unsubscribe();
-          } catch {}
+      const unsubscribe =
+        onAuthStateChanged(
+          auth,
+          async (user) => {
 
-          resolve(user);
-        }
-      );
-  });
+            if (finished) {
+              return;
+            }
+
+            finished = true;
+
+            try {
+              unsubscribe();
+            } catch {}
+
+            // ------------------------------------------------
+            // کاربر وارد نشده
+            // ------------------------------------------------
+
+            if (!user) {
+
+              resolve(null);
+
+              return;
+            }
+
+            // ------------------------------------------------
+            // پیدا کردن نام ذخیره‌شده
+            // ------------------------------------------------
+
+            let username =
+              getSavedName();
+
+            // ------------------------------------------------
+            // اگر نام در localStorage نبود،
+            // از uidToName پیدا کن
+            // ------------------------------------------------
+
+            if (!username) {
+
+              try {
+
+                const nameSnap =
+                  await get(
+                    ref(
+                      db,
+                      `uidToName/${user.uid}`
+                    )
+                  );
+
+                if (
+                  nameSnap.exists()
+                ) {
+
+                  username =
+                    String(
+                      nameSnap.val() ||
+                        ""
+                    ).trim();
+
+                  if (username) {
+
+                    saveName(
+                      username
+                    );
+
+                  }
+                }
+
+              } catch (e) {
+
+                console.warn(
+                  "Auto login username lookup error:",
+                  e
+                );
+
+              }
+            }
+
+            // ------------------------------------------------
+            // Auto Login
+            // ------------------------------------------------
+
+            if (username) {
+
+              try {
+
+                await ensureOwnerLinks(
+                  username,
+                  user.uid
+                );
+
+                // ثبت آخرین ورود
+                await updateLastLogin(
+                  username
+                );
+
+                // آنلاین کردن کاربر
+                await setPresence(
+                  username,
+                  true
+                );
+
+              } catch (e) {
+
+                console.warn(
+                  "Auto login update error:",
+                  e
+                );
+
+              }
+            }
+
+            resolve(user);
+
+          }
+        );
+
+    }
+  );
 }
 
 export function currentUid() {
@@ -371,17 +615,26 @@ export function currentUid() {
 // ============================================================
 
 function randomRoomCode() {
+
   const chars =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
   let code = "";
 
-  for (let i = 0; i < 5; i++) {
-    code += chars[
-      Math.floor(
-        Math.random() * chars.length
-      )
-    ];
+  for (
+    let i = 0;
+    i < 5;
+    i++
+  ) {
+
+    code +=
+      chars[
+        Math.floor(
+          Math.random() *
+            chars.length
+        )
+      ];
+
   }
 
   return code;
@@ -395,31 +648,46 @@ export function getSavedRoom() {
   );
 }
 
-export function saveRoom(code) {
+export function saveRoom(
+  code
+) {
+
   localStorage.setItem(
     "domito_room",
-    String(code || "").trim().toUpperCase()
+    String(
+      code || ""
+    )
+      .trim()
+      .toUpperCase()
   );
+
 }
 
 export function clearRoom() {
+
   localStorage.removeItem(
     "domito_room"
   );
+
 }
 
 export function roomRef(
   code,
   path = ""
 ) {
-  code = String(code || "")
-    .trim()
-    .toUpperCase();
+
+  code =
+    String(
+      code || ""
+    )
+      .trim()
+      .toUpperCase();
 
   return ref(
     db,
     `rooms/${code}${path ? "/" + path : ""}`
   );
+
 }
 
 // ============================================================
@@ -427,16 +695,32 @@ export function roomRef(
 // ============================================================
 
 export async function createRoom() {
-  const uid = currentUid();
-  const name = getSavedName();
 
-  if (!uid || !name) {
-    throw new Error("not-authenticated");
+  const uid =
+    currentUid();
+
+  const name =
+    getSavedName();
+
+  if (
+    !uid ||
+    !name
+  ) {
+
+    throw new Error(
+      "not-authenticated"
+    );
+
   }
 
   let code = null;
 
-  for (let i = 0; i < 10; i++) {
+  for (
+    let i = 0;
+    i < 10;
+    i++
+  ) {
+
     const candidate =
       randomRoomCode();
 
@@ -448,16 +732,23 @@ export async function createRoom() {
         )
       );
 
-    if (!snap.exists()) {
-      code = candidate;
+    if (
+      !snap.exists()
+    ) {
+
+      code =
+        candidate;
+
       break;
     }
   }
 
   if (!code) {
+
     throw new Error(
       "room-code-generation-failed"
     );
+
   }
 
   await set(
@@ -466,9 +757,12 @@ export async function createRoom() {
       "meta"
     ),
     {
-      createdAt: serverTimestamp(),
-      ownerUid: uid,
-      ownerName: name
+      createdAt:
+        serverTimestamp(),
+      ownerUid:
+        uid,
+      ownerName:
+        name
     }
   );
 
@@ -484,7 +778,10 @@ export async function createRoom() {
 export async function getRoomMeta(
   code = getSavedRoom()
 ) {
-  if (!code) return null;
+
+  if (!code) {
+    return null;
+  }
 
   const snap =
     await get(
@@ -502,9 +799,14 @@ export async function getRoomMeta(
 export async function isRoomOwner(
   code = getSavedRoom()
 ) {
-  const uid = currentUid();
 
-  if (!uid || !code) {
+  const uid =
+    currentUid();
+
+  if (
+    !uid ||
+    !code
+  ) {
     return false;
   }
 
@@ -524,16 +826,21 @@ export async function isRoomOwner(
 export async function joinRoomByCode(
   rawCode
 ) {
+
   const code =
-    String(rawCode || "")
+    String(
+      rawCode || ""
+    )
       .trim()
       .toUpperCase();
 
   if (!code) {
+
     return {
       ok: false,
       reason: "invalid-code"
     };
+
   }
 
   const metaSnap =
@@ -544,16 +851,22 @@ export async function joinRoomByCode(
       )
     );
 
-  if (!metaSnap.exists()) {
+  if (
+    !metaSnap.exists()
+  ) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
-  const uid = currentUid();
+  const uid =
+    currentUid();
 
   if (uid) {
+
     const kickedSnap =
       await get(
         roomRef(
@@ -562,11 +875,15 @@ export async function joinRoomByCode(
         )
       );
 
-    if (kickedSnap.exists()) {
+    if (
+      kickedSnap.exists()
+    ) {
+
       return {
         ok: false,
         reason: "kicked"
       };
+
     }
   }
 
@@ -586,7 +903,11 @@ export async function checkKicked(
   code = getSavedRoom(),
   uid = currentUid()
 ) {
-  if (!code || !uid) {
+
+  if (
+    !code ||
+    !uid
+  ) {
     return false;
   }
 
@@ -602,17 +923,26 @@ export async function checkKicked(
 }
 
 // ============================================================
-// شنیدن وضعیت Kick به صورت زنده
+// شنیدن وضعیت Kick
 // ============================================================
 
 export function listenKickStatus(
   code = getSavedRoom(),
   callback
 ) {
-  const uid = currentUid();
 
-  if (!code || !uid || typeof callback !== "function") {
+  const uid =
+    currentUid();
+
+  if (
+    !code ||
+    !uid ||
+    typeof callback !==
+      "function"
+  ) {
+
     return () => {};
+
   }
 
   return onValue(
@@ -621,11 +951,13 @@ export function listenKickStatus(
       `kicked/${uid}`
     ),
     (snap) => {
+
       callback(
         snap.exists()
           ? snap.val()
           : null
       );
+
     }
   );
 }
@@ -637,38 +969,59 @@ export function listenKickStatus(
 export async function kickMember(
   targetUid
 ) {
-  const code = getSavedRoom();
-  const uid = currentUid();
 
-  targetUid = String(
-    targetUid || ""
-  ).trim();
+  const code =
+    getSavedRoom();
+
+  const uid =
+    currentUid();
+
+  targetUid =
+    String(
+      targetUid || ""
+    ).trim();
 
   if (!code) {
-    throw new Error("no-room");
+    throw new Error(
+      "no-room"
+    );
   }
 
   if (!uid) {
-    throw new Error("not-authenticated");
+    throw new Error(
+      "not-authenticated"
+    );
   }
 
   if (!targetUid) {
-    throw new Error("invalid-target");
+    throw new Error(
+      "invalid-target"
+    );
   }
 
-  if (targetUid === uid) {
-    throw new Error("cannot-kick-self");
+  if (
+    targetUid === uid
+  ) {
+    throw new Error(
+      "cannot-kick-self"
+    );
   }
 
   const meta =
     await getRoomMeta(code);
 
   if (!meta) {
-    throw new Error("room-not-found");
+    throw new Error(
+      "room-not-found"
+    );
   }
 
-  if (meta.ownerUid !== uid) {
-    throw new Error("not-room-owner");
+  if (
+    meta.ownerUid !== uid
+  ) {
+    throw new Error(
+      "not-room-owner"
+    );
   }
 
   const targetSnap =
@@ -679,11 +1032,14 @@ export async function kickMember(
       )
     );
 
-  if (!targetSnap.exists()) {
-    throw new Error("player-not-found");
+  if (
+    !targetSnap.exists()
+  ) {
+    throw new Error(
+      "player-not-found"
+    );
   }
 
-  // ثبت Kick
   await set(
     roomRef(
       code,
@@ -694,11 +1050,11 @@ export async function kickMember(
       byName:
         meta.ownerName ||
         getSavedName(),
-      at: serverTimestamp()
+      at:
+        serverTimestamp()
     }
   );
 
-  // حذف بازیکن و اطلاعات دور
   await remove(
     roomRef(
       code,
@@ -733,29 +1089,36 @@ export async function kickMember(
 export async function joinLobby(
   name
 ) {
+
   const code =
     getSavedRoom();
 
   const uid =
     currentUid();
 
-  name = String(
-    name || getSavedName()
-  ).trim();
+  name =
+    String(
+      name || getSavedName()
+    ).trim();
 
   if (!code) {
-    throw new Error("no-room");
+    throw new Error(
+      "no-room"
+    );
   }
 
   if (!uid) {
-    throw new Error("not-authenticated");
+    throw new Error(
+      "not-authenticated"
+    );
   }
 
   if (!name) {
-    throw new Error("invalid-name");
+    throw new Error(
+      "invalid-name"
+    );
   }
 
-  // جلوگیری از ورود فرد Kick شده
   const kicked =
     await checkKicked(
       code,
@@ -763,15 +1126,18 @@ export async function joinLobby(
     );
 
   if (kicked) {
-    throw new Error("kicked");
+    throw new Error(
+      "kicked"
+    );
   }
 
-  // اطمینان از اینکه اتاق هنوز وجود دارد
   const meta =
     await getRoomMeta(code);
 
   if (!meta) {
-    throw new Error("room-not-found");
+    throw new Error(
+      "room-not-found"
+    );
   }
 
   await set(
@@ -786,7 +1152,6 @@ export async function joinLobby(
     }
   );
 
-  // اگر اتصال اینترنت قطع شد بازیکن از لابی حذف شود
   await onDisconnect(
     roomRef(
       code,
@@ -816,13 +1181,17 @@ export async function joinLobby(
 // ============================================================
 
 export async function leaveLobby() {
+
   const code =
     getSavedRoom();
 
   const uid =
     currentUid();
 
-  if (!code || !uid) {
+  if (
+    !code ||
+    !uid
+  ) {
     return;
   }
 
@@ -853,6 +1222,7 @@ export async function leaveLobby() {
 // ============================================================
 
 export const GAMES = [
+
   {
     id: "quiz",
     name: "کوییز اطلاعات عمومی",
@@ -860,6 +1230,7 @@ export const GAMES = [
     icon: "❓",
     soloThreshold: 30
   },
+
   {
     id: "reaction",
     name: "سرعت واکنش",
@@ -867,6 +1238,7 @@ export const GAMES = [
     icon: "⚡",
     soloThreshold: 500
   },
+
   {
     id: "memory",
     name: "بازی حافظه",
@@ -874,6 +1246,7 @@ export const GAMES = [
     icon: "🧠",
     soloThreshold: 3
   },
+
   {
     id: "math",
     name: "اسپرینت ریاضی",
@@ -881,6 +1254,7 @@ export const GAMES = [
     icon: "🔢",
     soloThreshold: 40
   },
+
   {
     id: "scramble",
     name: "حروف به‌هم‌ریخته",
@@ -888,6 +1262,7 @@ export const GAMES = [
     icon: "🔤",
     soloThreshold: 30
   },
+
   {
     id: "typing",
     name: "سرعت تایپ",
@@ -895,6 +1270,7 @@ export const GAMES = [
     icon: "⌨️",
     soloThreshold: 60
   },
+
   {
     id: "snake",
     name: "بازی مار",
@@ -902,6 +1278,7 @@ export const GAMES = [
     icon: "🐍",
     soloThreshold: 8
   },
+
   {
     id: "astra",
     name: "دومیتو استرا",
@@ -909,6 +1286,7 @@ export const GAMES = [
     icon: "🚀",
     soloThreshold: 1
   },
+
   {
     id: "gunball",
     name: "توپ تفنگ",
@@ -916,19 +1294,23 @@ export const GAMES = [
     icon: "🔫",
     soloThreshold: 1
   }
+
 ];
 
 export function soloWon(
   gameId,
   score
 ) {
+
   const game =
     GAMES.find(
-      x => x.id === gameId
+      x =>
+        x.id === gameId
     );
 
   return game
-    ? score >= game.soloThreshold
+    ? score >=
+      game.soloThreshold
     : false;
 }
 
@@ -939,12 +1321,15 @@ export function soloWon(
 export async function getPublicProfile(
   name
 ) {
+
   const snap =
     await get(
       profileRef(name)
     );
 
-  if (!snap.exists()) {
+  if (
+    !snap.exists()
+  ) {
     return null;
   }
 
@@ -955,12 +1340,15 @@ export function listenProfile(
   name,
   callback
 ) {
+
   return onValue(
     profileRef(name),
     snap => {
+
       callback(
         snap.val()
       );
+
     }
   );
 }
@@ -975,15 +1363,20 @@ export async function submitResult(
   name,
   score
 ) {
+
   const code =
     getSavedRoom();
 
   if (!code) {
-    throw new Error("no-room");
+    throw new Error(
+      "no-room"
+    );
   }
 
   if (!uid) {
-    throw new Error("not-authenticated");
+    throw new Error(
+      "not-authenticated"
+    );
   }
 
   await set(
@@ -1004,10 +1397,13 @@ export async function submitResult(
 // ============================================================
 
 export async function resetSessionForNextRound() {
+
   const code =
     getSavedRoom();
 
-  if (!code) return;
+  if (!code) {
+    return;
+  }
 
   await set(
     roomRef(
@@ -1040,8 +1436,13 @@ export async function resetSessionForNextRound() {
 
 export async function logTransaction(
   name,
-  { type, amount, note }
+  {
+    type,
+    amount,
+    note
+  }
 ) {
+
   await push(
     ref(
       db,
@@ -1060,6 +1461,7 @@ export async function getTransactions(
   name,
   limitN = 20
 ) {
+
   const snap =
     await get(
       ref(
@@ -1097,9 +1499,11 @@ export async function recordRoundResult(
   gameId,
   { won }
 ) {
+
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1141,15 +1545,22 @@ export async function recordRoundResult(
       curr.gamesPlayed++;
 
       if (won) {
+
         curr.wins++;
-        curr.coins += COIN_WIN;
+        curr.coins +=
+          COIN_WIN;
+
       } else {
+
         curr.losses++;
-        curr.coins += COIN_PLAY;
+        curr.coins +=
+          COIN_PLAY;
+
       }
 
       const game =
-        curr.byGame[gameId] || {
+        curr.byGame[gameId] ||
+        {
           wins: 0,
           plays: 0
         };
@@ -1164,21 +1575,27 @@ export async function recordRoundResult(
         game;
 
       return curr;
+
     }
   );
 
   await logTransaction(
     name,
     {
-      type: won
-        ? "win"
-        : "play",
-      amount: won
-        ? COIN_WIN
-        : COIN_PLAY,
-      note: won
-        ? "برد در بازی"
-        : "شرکت در بازی"
+      type:
+        won
+          ? "win"
+          : "play",
+
+      amount:
+        won
+          ? COIN_WIN
+          : COIN_PLAY,
+
+      note:
+        won
+          ? "برد در بازی"
+          : "شرکت در بازی"
     }
   );
 }
@@ -1188,6 +1605,7 @@ export async function recordRoundResult(
 // ============================================================
 
 export const SHOP_ITEMS = [
+
   {
     id: "theme-sunset",
     name: "تم غروب",
@@ -1197,6 +1615,7 @@ export const SHOP_ITEMS = [
       "#FFC845"
     ]
   },
+
   {
     id: "theme-ocean",
     name: "تم اقیانوس",
@@ -1206,6 +1625,7 @@ export const SHOP_ITEMS = [
       "#7C4DFF"
     ]
   },
+
   {
     id: "theme-forest",
     name: "تم جنگل",
@@ -1215,6 +1635,7 @@ export const SHOP_ITEMS = [
       "#1F9E56"
     ]
   },
+
   {
     id: "theme-gold",
     name: "تم طلایی",
@@ -1224,6 +1645,7 @@ export const SHOP_ITEMS = [
       "#FF8C00"
     ]
   },
+
   {
     id: "theme-neon",
     name: "تم نئون",
@@ -1233,6 +1655,7 @@ export const SHOP_ITEMS = [
       "#00E5FF"
     ]
   },
+
   {
     id: "theme-galaxy",
     name: "تم کهکشانی",
@@ -1242,6 +1665,7 @@ export const SHOP_ITEMS = [
       "#FF4F81"
     ]
   },
+
   {
     id: "theme-fire",
     name: "تم آتشین",
@@ -1251,6 +1675,7 @@ export const SHOP_ITEMS = [
       "#FFC107"
     ]
   },
+
   {
     id: "theme-royal",
     name: "تم سلطنتی",
@@ -1260,6 +1685,7 @@ export const SHOP_ITEMS = [
       "#D4AF37"
     ]
   },
+
   {
     id: "theme-diamond",
     name: "تم الماس",
@@ -1269,6 +1695,7 @@ export const SHOP_ITEMS = [
       "#5FD3F3"
     ]
   },
+
   {
     id: "theme-legend",
     name: "تم افسانه‌ای",
@@ -1278,6 +1705,7 @@ export const SHOP_ITEMS = [
       "#FF1744"
     ]
   }
+
 ];
 
 // ============================================================
@@ -1288,16 +1716,20 @@ export async function buyItem(
   name,
   itemId
 ) {
+
   const item =
     SHOP_ITEMS.find(
-      i => i.id === itemId
+      i =>
+        i.id === itemId
     );
 
   if (!item) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
   let result = {
@@ -1308,6 +1740,7 @@ export async function buyItem(
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1323,6 +1756,7 @@ export async function buyItem(
           itemId
         )
       ) {
+
         result = {
           ok: false,
           reason: "owned"
@@ -1335,6 +1769,7 @@ export async function buyItem(
         curr.coins <
         item.price
       ) {
+
         result = {
           ok: false,
           reason: "insufficient"
@@ -1343,7 +1778,8 @@ export async function buyItem(
         return curr;
       }
 
-      curr.coins -= item.price;
+      curr.coins -=
+        item.price;
 
       curr.purchased.push(
         itemId
@@ -1354,19 +1790,23 @@ export async function buyItem(
       };
 
       return curr;
+
     }
   );
 
   if (result.ok) {
+
     await logTransaction(
       name,
       {
         type: "purchase",
-        amount: -item.price,
+        amount:
+          -item.price,
         note:
           `خرید ${item.name}`
       }
     );
+
   }
 
   return result;
@@ -1380,9 +1820,11 @@ export async function equipTheme(
   name,
   itemId
 ) {
+
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1391,6 +1833,7 @@ export async function equipTheme(
         itemId;
 
       return curr;
+
     }
   );
 }
@@ -1400,6 +1843,7 @@ export async function equipTheme(
 // ============================================================
 
 export const MISSIONS = [
+
   {
     id: "m-play3",
     label: "۳ بازی انجام بده",
@@ -1407,6 +1851,7 @@ export const MISSIONS = [
     target: 3,
     statKey: "gamesPlayed"
   },
+
   {
     id: "m-win1",
     label: "یه برد کسب کن",
@@ -1414,6 +1859,7 @@ export const MISSIONS = [
     target: 1,
     statKey: "wins"
   },
+
   {
     id: "m-play10",
     label: "۱۰ بازی انجام بده",
@@ -1421,22 +1867,27 @@ export const MISSIONS = [
     target: 10,
     statKey: "gamesPlayed"
   }
+
 ];
 
 export async function claimMission(
   name,
   missionId
 ) {
+
   const mission =
     MISSIONS.find(
-      m => m.id === missionId
+      m =>
+        m.id === missionId
     );
 
   if (!mission) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
   let result = {
@@ -1446,18 +1897,21 @@ export async function claimMission(
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
 
       curr.claimedMissions =
-        curr.claimedMissions || [];
+        curr.claimedMissions ||
+        [];
 
       if (
         curr.claimedMissions.includes(
           missionId
         )
       ) {
+
         result = {
           ok: false,
           reason: "claimed"
@@ -1468,13 +1922,16 @@ export async function claimMission(
 
       const currentValue =
         Number(
-          curr[mission.statKey] || 0
+          curr[
+            mission.statKey
+          ] || 0
         );
 
       if (
         currentValue <
         mission.target
       ) {
+
         result = {
           ok: false,
           reason: "incomplete"
@@ -1493,22 +1950,28 @@ export async function claimMission(
 
       result = {
         ok: true,
-        reward: mission.reward
+        reward:
+          mission.reward
       };
 
       return curr;
+
     }
   );
 
   if (result.ok) {
+
     await logTransaction(
       name,
       {
         type: "mission",
-        amount: result.reward,
-        note: mission.label
+        amount:
+          result.reward,
+        note:
+          mission.label
       }
     );
+
   }
 
   return result;
@@ -1522,32 +1985,45 @@ export async function sendFriendRequest(
   myName,
   targetName
 ) {
+
   myName =
-    String(myName || "").trim();
+    String(
+      myName || ""
+    ).trim();
 
   targetName =
-    String(targetName || "").trim();
+    String(
+      targetName || ""
+    ).trim();
 
   if (
     !targetName ||
     targetName === myName
   ) {
+
     return {
       ok: false,
       reason: "invalid"
     };
+
   }
 
   const targetSnap =
     await get(
-      profileRef(targetName)
+      profileRef(
+        targetName
+      )
     );
 
-  if (!targetSnap.exists()) {
+  if (
+    !targetSnap.exists()
+  ) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
   const targetVal =
@@ -1557,20 +2033,26 @@ export async function sendFriendRequest(
     targetVal.friends &&
     targetVal.friends[myName]
   ) {
+
     return {
       ok: false,
-      reason: "already-friends"
+      reason:
+        "already-friends"
     };
+
   }
 
   if (
     targetVal.friendRequests &&
     targetVal.friendRequests[myName]
   ) {
+
     return {
       ok: false,
-      reason: "request-pending"
+      reason:
+        "request-pending"
     };
+
   }
 
   await update(
@@ -1579,7 +2061,8 @@ export async function sendFriendRequest(
       "friendRequests"
     ),
     {
-      [myName]: Date.now()
+      [myName]:
+        Date.now()
     }
   );
 
@@ -1596,41 +2079,54 @@ export async function getFriendStatus(
   myName,
   targetName
 ) {
+
   myName =
-    String(myName || "").trim();
+    String(
+      myName || ""
+    ).trim();
 
   targetName =
-    String(targetName || "").trim();
+    String(
+      targetName || ""
+    ).trim();
 
   if (
     !myName ||
     !targetName
   ) {
+
     return {
       isFriend: false,
       requestPending: false,
       isSelf: false
     };
+
   }
 
   if (
     myName === targetName
   ) {
+
     return {
       isFriend: false,
       requestPending: false,
       isSelf: true
     };
+
   }
 
   const myProfileSnap =
     await get(
-      profileRef(myName)
+      profileRef(
+        myName
+      )
     );
 
   const targetProfileSnap =
     await get(
-      profileRef(targetName)
+      profileRef(
+        targetName
+      )
     );
 
   const myProfile =
@@ -1642,13 +2138,17 @@ export async function getFriendStatus(
   const isFriend =
     !!(
       myProfile.friends &&
-      myProfile.friends[targetName]
+      myProfile.friends[
+        targetName
+      ]
     );
 
   const requestPending =
     !!(
       targetProfile.friendRequests &&
-      targetProfile.friendRequests[myName]
+      targetProfile.friendRequests[
+        myName
+      ]
     );
 
   return {
@@ -1666,18 +2166,21 @@ export function listenFriendRequests(
   myName,
   callback
 ) {
+
   return onValue(
     profileRef(
       myName,
       "friendRequests"
     ),
     snap => {
+
       const val =
         snap.val() || {};
 
       callback(
         Object.keys(val)
       );
+
     }
   );
 }
@@ -1686,6 +2189,7 @@ export async function acceptFriendRequest(
   myName,
   fromName
 ) {
+
   await update(
     profileRef(
       myName,
@@ -1718,12 +2222,14 @@ export async function rejectFriendRequest(
   myName,
   fromName
 ) {
+
   await remove(
     profileRef(
       myName,
       `friendRequests/${fromName}`
     )
   );
+
 }
 
 // ============================================================
@@ -1734,12 +2240,14 @@ export function listenFriends(
   myName,
   callback
 ) {
+
   return onValue(
     profileRef(
       myName,
       "friends"
     ),
     async snap => {
+
       const val =
         snap.val() || {};
 
@@ -1751,8 +2259,13 @@ export function listenFriends(
       for (
         const name of names
       ) {
+
         try {
+
+          // --------------------------------------------------
           // Presence
+          // --------------------------------------------------
+
           const pSnap =
             await get(
               profileRef(
@@ -1764,7 +2277,11 @@ export function listenFriends(
           const presence =
             pSnap.val() || {};
 
-          // پروفایل اصلی برای lastLogin
+          // --------------------------------------------------
+          // پروفایل اصلی
+          // lastLogin اینجاست، نه داخل presence
+          // --------------------------------------------------
+
           const profileSnap =
             await get(
               profileRef(name)
@@ -1792,42 +2309,60 @@ export function listenFriends(
           let online =
             hasOnlineConnection;
 
-          // سازگاری با کاربران قدیمی
           if (
             connectionList.length === 0
           ) {
+
             online =
               !!presence.online;
+
           }
 
           results.push({
+
             name,
+
             online,
+
             lastSeen:
               Number(
-                presence.lastSeen || 0
+                presence.lastSeen ||
+                  0
               ),
+
             lastLogin:
               Number(
-                profile.lastLogin || 0
+                profile.lastLogin ||
+                  0
               )
+
           });
+
         } catch (e) {
+
           console.warn(
             "Friend presence error:",
             e
           );
 
           results.push({
+
             name,
+
             online: false,
+
             lastSeen: 0,
+
             lastLogin: 0
+
           });
+
         }
+
       }
 
       callback(results);
+
     }
   );
 }
@@ -1841,6 +2376,7 @@ export async function inviteFriendToRoom(
   friendName,
   roomCode
 ) {
+
   await push(
     ref(
       db,
@@ -1852,6 +2388,7 @@ export async function inviteFriendToRoom(
       at: Date.now()
     }
   );
+
 }
 
 // ============================================================
@@ -1862,12 +2399,14 @@ export function listenInvites(
   myName,
   callback
 ) {
+
   return onValue(
     ref(
       db,
       `profiles/${encodeURIComponent(myName)}/invites`
     ),
     snap => {
+
       const val =
         snap.val() || {};
 
@@ -1886,6 +2425,7 @@ export function listenInvites(
           );
 
       callback(list);
+
     }
   );
 }
@@ -1898,12 +2438,14 @@ export async function dismissInvite(
   myName,
   inviteId
 ) {
+
   await remove(
     ref(
       db,
       `profiles/${encodeURIComponent(myName)}/invites/${inviteId}`
     )
   );
+
 }
 
 // ============================================================
@@ -1914,10 +2456,12 @@ export function chatRef(
   code,
   path = ""
 ) {
+
   return ref(
     db,
     `rooms/${code}/chat${path ? "/" + path : ""}`
   );
+
 }
 
 export async function sendChatMessage(
@@ -1925,12 +2469,17 @@ export async function sendChatMessage(
   name,
   text
 ) {
+
   const clean =
-    String(text || "")
+    String(
+      text || ""
+    )
       .slice(0, 200)
       .trim();
 
-  if (!clean) return;
+  if (!clean) {
+    return;
+  }
 
   const msgsRef =
     chatRef(
@@ -1948,8 +2497,11 @@ export async function sendChatMessage(
   );
 
   try {
+
     const snap =
-      await get(msgsRef);
+      await get(
+        msgsRef
+      );
 
     const val =
       snap.val() || {};
@@ -1957,7 +2509,10 @@ export async function sendChatMessage(
     const keys =
       Object.keys(val);
 
-    if (keys.length > 60) {
+    if (
+      keys.length > 60
+    ) {
+
       const sorted =
         keys.sort(
           (a, b) =>
@@ -1974,32 +2529,40 @@ export async function sendChatMessage(
       for (
         const key of oldKeys
       ) {
+
         await remove(
           chatRef(
             code,
             `messages/${key}`
           )
         );
+
       }
     }
+
   } catch (e) {
+
     console.warn(
       "Chat cleanup error:",
       e
     );
+
   }
+
 }
 
 export function listenChat(
   code,
   callback
 ) {
+
   return onValue(
     chatRef(
       code,
       "messages"
     ),
     snap => {
+
       const val =
         snap.val() || {};
 
@@ -2018,6 +2581,7 @@ export function listenChat(
           );
 
       callback(list);
+
     }
   );
 }
@@ -2029,6 +2593,7 @@ export function listenChat(
 export async function getLeaderboard(
   limitN = 5
 ) {
+
   const snap =
     await get(
       ref(
@@ -2044,12 +2609,15 @@ export async function getLeaderboard(
     Object.entries(val)
       .map(
         ([encodedName, profile]) => ({
+
           name:
             decodeURIComponent(
               encodedName
             ),
+
           wins:
             profile.wins || 0
+
         })
       );
 
@@ -2063,4 +2631,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-}
+      }
