@@ -491,30 +491,31 @@ export function waitForUser() {
             }
 
              
+                    if (username) {
+              try {
+                await ensureOwnerLinks(
+                  username,
+                  user.uid
+                );
+
+                await updateLastLogin(
+                  username
+                );
+
+                await setPresence(
+                  username,
+                  true
+                );
+
+              } catch (e) {
+                console.warn(
+                  "Auto login update error:",
+                  e
+                );
+              }
             }
-            resolve(user);if (username) {
-  try {
-    await ensureOwnerLinks(
-      username,
-      user.uid
-    );
 
-    await updateLastLogin(
-      username
-    );
-
-    await setPresence(
-      username,
-      true
-    );
-
-  } catch (e) {
-    console.warn(
-      "Auto login update error:",
-      e
-    );
-  }
-      }
+            resolve(user);
           }
         );
     }
