@@ -220,9 +220,9 @@ export async function setPresence(
 
   const pRef = presenceRootRef(name);
 
-  // ----------------------------------------------------------
-  // خاموش کردن Presence
-  // ----------------------------------------------------------
+  // ==========================================================
+  // خروج از دومیتو
+  // ==========================================================
 
   if (!online) {
     if (
@@ -238,6 +238,8 @@ export async function setPresence(
 
     await cleanupPresenceConnection();
 
+    // lastSeen = آخرین حضور واقعی در دومیتو
+    // زمان توسط سرور Firebase ثبت می‌شود.
     await update(
       pRef,
       {
@@ -249,9 +251,9 @@ export async function setPresence(
     return;
   }
 
-  // ----------------------------------------------------------
-  // اگر همین کاربر از قبل connection دارد
-  // ----------------------------------------------------------
+  // ==========================================================
+  // ورود / Auto Login
+  // ==========================================================
 
   if (
     presenceConnectionRef &&
@@ -269,17 +271,11 @@ export async function setPresence(
   presenceConnectionRef = connection;
   presenceConnectionName = name;
 
-  // ----------------------------------------------------------
-  // قطع شدن اتصال
-  // ----------------------------------------------------------
-
+  // اگر اتصال ناگهانی قطع شد،
+  // Firebase خودش connection را حذف می‌کند.
   await onDisconnect(
     connection
   ).remove();
-
-  // ----------------------------------------------------------
-  // ایجاد connection
-  // ----------------------------------------------------------
 
   await set(
     connection,
@@ -288,10 +284,6 @@ export async function setPresence(
       connectedAt: serverTimestamp()
     }
   );
-
-  // ----------------------------------------------------------
-  // وضعیت اصلی Presence
-  // ----------------------------------------------------------
 
   await update(
     pRef,
@@ -451,25 +443,13 @@ export function waitForUser() {
               unsubscribe();
             } catch {}
 
-            // ------------------------------------------------
-            // کاربر وارد نشده
-            // ------------------------------------------------
-
             if (!user) {
               resolve(null);
               return;
             }
 
-            // ------------------------------------------------
-            // نام ذخیره‌شده
-            // ------------------------------------------------
-
             let username =
               getSavedName();
-
-            // ------------------------------------------------
-            // پیدا کردن نام از UID
-            // ------------------------------------------------
 
             if (!username) {
               try {
@@ -500,10 +480,6 @@ export function waitForUser() {
               }
             }
 
-            // ------------------------------------------------
-            // Auto Login
-            // ------------------------------------------------
-
             if (username) {
               try {
                 await ensureOwnerLinks(
@@ -511,9 +487,9 @@ export function waitForUser() {
                   user.uid
                 );
 
-                await updateLastLogin(
-                  username
-                );
+                // Auto Login فقط حضور را آنلاین می‌کند.
+                // زمان «آخرین حضور در دومیتو»
+                // هنگام خروج یا قطع اتصال ثبت می‌شود.
 
                 await setPresence(
                   username,
@@ -2046,7 +2022,6 @@ export function listenFriends(
         const names =
           Object.keys(val);
 
-        // حذف Listener دوستانی که دیگر دوست نیستند
         Object.keys(
           friendUnsubs
         ).forEach(
@@ -2061,7 +2036,6 @@ export function listenFriends(
           }
         );
 
-        // ایجاد Listener برای دوستان جدید
         names.forEach(
           name => {
             if (
@@ -2111,11 +2085,15 @@ export function listenFriends(
                   latest[name] = {
                     name,
                     online,
+
+                    // آخرین حضور در دومیتو
                     lastSeen:
                       Number(
                         presence.lastSeen ||
                           0
                       ),
+
+                    // برای سازگاری با کدهای قدیمی
                     lastLogin:
                       Number(
                         profile.lastLogin ||
@@ -2389,4 +2367,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-  }
+}
