@@ -490,37 +490,31 @@ export function waitForUser() {
               }
             }
 
-            async function updateLastLogin(username) {
-  username = String(
-    username || ""
-  ).trim();
-
-  if (!username) {
-    return;
-  }
-
+             
+            }
+            resolve(user);if (username) {
   try {
-    await update(
-      profileRef(username),
-      {
-        lastLogin: Date.now()
-      }
+    await ensureOwnerLinks(
+      username,
+      user.uid
     );
 
-    console.log(
-      "LAST LOGIN UPDATED:",
+    await updateLastLogin(
+      username
+    );
+
+    await setPresence(
       username,
-      Date.now()
+      true
     );
 
   } catch (e) {
     console.warn(
-      "Last login update error:",
+      "Auto login update error:",
       e
     );
   }
-            }
-            resolve(user);
+      }
           }
         );
     }
