@@ -140,7 +140,6 @@ export async function ensureOwnerLinks(
 // ثبت آخرین ورود
 // ============================================================
 
-
 async function updateLastLogin(username) {
   username = String(
     username || ""
@@ -248,8 +247,6 @@ export async function setPresence(
 
     await cleanupPresenceConnection();
 
-    // lastSeen = آخرین حضور واقعی در دومیتو
-    // زمان توسط سرور Firebase ثبت می‌شود.
     await update(
       pRef,
       {
@@ -281,8 +278,6 @@ export async function setPresence(
   presenceConnectionRef = connection;
   presenceConnectionName = name;
 
-  // اگر اتصال ناگهانی قطع شد،
-  // Firebase خودش connection را حذف می‌کند.
   await onDisconnect(
     connection
   ).remove();
@@ -490,32 +485,46 @@ export function waitForUser() {
               }
             }
 
-             
-                    if (username) {
-              try {
-                await ensureOwnerLinks(
-                  username,
-                  user.uid
-                );
-
-                await updateLastLogin(
-                  username
-                );
-
-                await setPresence(
-                  username,
-                  true
-                );
-
-              } catch (e) {
-                console.warn(
-                  "Auto login update error:",
-                  e
-                );
-              }
-            }
+            // ==================================================
+            // کاربر را معطل Last Login / Presence نکن
+            // ==================================================
 
             resolve(user);
+
+            // عملیات جانبی در پس‌زمینه
+            if (username) {
+              Promise.resolve()
+                .then(
+                  async () => {
+                    await ensureOwnerLinks(
+                      username,
+                      user.uid
+                    );
+
+                    await updateLastLogin(
+                      username
+                    );
+
+                    await setPresence(
+                      username,
+                      true
+                    );
+
+                    console.log(
+                      "AUTO LOGIN SYNC OK:",
+                      username
+                    );
+                  }
+                )
+                .catch(
+                  (e) => {
+                    console.warn(
+                      "Auto login sync error:",
+                      e
+                    );
+                  }
+                );
+            }
           }
         );
     }
@@ -1142,11 +1151,9 @@ export const GAMES = [
     desc: "آینه، لنز و منشور را بچین و نور را به هدف‌ها برسان",
     icon: "💡",
     soloThreshold: 1
-  },
-
-
- 
+  }
 ];
+
 export function soloWon(
   gameId,
   score
@@ -2108,14 +2115,12 @@ export function listenFriends(
                     name,
                     online,
 
-                    // آخرین حضور در دومیتو
                     lastSeen:
                       Number(
                         presence.lastSeen ||
                           0
                       ),
 
-                    // برای سازگاری با کدهای قدیمی
                     lastLogin:
                       Number(
                         profile.lastLogin ||
@@ -2389,4 +2394,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-}
+          }
