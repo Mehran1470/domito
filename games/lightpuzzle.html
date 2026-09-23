@@ -1,0 +1,4573 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>پازل نوری | دومیتو</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap');
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+body{
+  background:
+    radial-gradient(circle at 50% -20%,#24243b 0,#090910 45%,#050508 100%);
+  color:#eee;
+  font-family:'Vazirmatn',Tahoma,sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:5px;
+  touch-action:none;
+}
+
+button{
+  font-family:inherit;
+}
+
+.header{
+  width:100%;
+  max-width:680px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:3px 7px;
+  flex-shrink:0;
+}
+
+.level-title{
+  font-size:clamp(.9rem,3.5vw,1.2rem);
+  font-weight:800;
+  background:linear-gradient(90deg,#ffd700,#ff9a3c);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.level-info{
+  font-size:clamp(.68rem,2.5vw,.88rem);
+  color:#aaa;
+  text-align:left;
+}
+
+.mode-badge{
+  position:fixed;
+  top:7px;
+  left:7px;
+  z-index:50;
+  background:rgba(20,20,30,.88);
+  border:1px solid rgba(255,215,0,.35);
+  border-radius:10px;
+  padding:5px 9px;
+  font-size:.7rem;
+  color:#ddd;
+  backdrop-filter:blur(8px);
+  display:none;
+}
+
+.game-wrap{
+  position:relative;
+  border:3px solid #c9a227;
+  border-radius:12px;
+  box-shadow:
+    0 0 25px rgba(201,162,39,.25),
+    inset 0 0 20px rgba(0,0,0,.7);
+  background:#050508;
+  overflow:hidden;
+  flex-shrink:1;
+  max-width:100%;
+}
+
+canvas{
+  display:block;
+  background:#050508;
+  width:100%;
+  height:auto;
+  touch-action:none;
+}
+
+.toolbar{
+  display:flex;
+  gap:5px;
+  margin-top:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  flex-shrink:0;
+  max-width:680px;
+}
+
+.tool-btn,
+.action-btn{
+  background:linear-gradient(180deg,#30303d,#181820);
+  border:2px solid #50505e;
+  color:#ddd;
+  border-radius:10px;
+  cursor:pointer;
+  user-select:none;
+  transition:all .12s;
+}
+
+.tool-btn{
+  padding:6px 10px;
+  font-size:clamp(.7rem,2.5vw,.88rem);
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+.action-btn{
+  padding:7px 12px;
+  font-size:clamp(.72rem,2.6vw,.9rem);
+}
+
+.tool-btn:active,
+.action-btn:active{
+  transform:scale(.94);
+}
+
+.tool-btn.active{
+  border-color:#ffd700;
+  box-shadow:0 0 10px rgba(255,215,0,.35);
+}
+
+.tool-btn .count{
+  background:#c9a227;
+  color:#111;
+  font-weight:800;
+  padding:1px 6px;
+  border-radius:10px;
+  min-width:18px;
+  text-align:center;
+}
+
+.action-btn.primary{
+  background:linear-gradient(180deg,#3a5a2a,#243817);
+  border-color:#5a9a3a;
+  color:#d8ffd0;
+}
+
+.action-btn.exit{
+  background:linear-gradient(180deg,#522727,#291717);
+  border-color:#8d4444;
+  color:#ffcaca;
+}
+
+.bottom-bar{
+  display:flex;
+  gap:6px;
+  margin-top:6px;
+  flex-shrink:0;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.level-hint{
+  font-size:clamp(.66rem,2.2vw,.83rem);
+  color:#b5a46b;
+  text-align:center;
+  margin-top:2px;
+  flex-shrink:0;
+  min-height:1.1em;
+}
+
+.hint{
+  font-size:clamp(.62rem,2vw,.75rem);
+  color:#666;
+  text-align:center;
+  margin-top:2px;
+  flex-shrink:0;
+  min-height:1em;
+}
+
+.multiplayer-panel{
+  width:min(680px,100%);
+  display:none;
+  background:rgba(20,20,30,.78);
+  border:1px solid rgba(255,215,0,.18);
+  border-radius:10px;
+  margin-top:5px;
+  padding:5px 7px;
+  backdrop-filter:blur(8px);
+  font-size:.68rem;
+}
+
+.mp-top{
+  display:flex;
+  justify-content:space-between;
+  gap:6px;
+  align-items:center;
+}
+
+.mp-players{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:4px;
+}
+
+.mp-player{
+  background:#171721;
+  border:1px solid #333;
+  border-radius:8px;
+  padding:3px 7px;
+  color:#bbb;
+}
+
+.mp-player.me{
+  border-color:#ffd700;
+  color:#fff;
+}
+
+.mp-player.active{
+  border-color:#55d6ff;
+  color:#bcefff;
+}
+
+.spectator-label{
+  display:none;
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:5;
+  background:rgba(10,10,15,.82);
+  border:1px solid #55d6ff;
+  color:#c9f6ff;
+  border-radius:12px;
+  padding:5px 12px;
+  font-size:.75rem;
+  pointer-events:none;
+}
+
+.overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.76);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+  border-radius:10px;
+}
+
+.overlay.show{
+  display:flex;
+}
+
+.overlay-box{
+  background:linear-gradient(160deg,#1e1e2a,#12121a);
+  border:2px solid #c9a227;
+  border-radius:16px;
+  padding:20px 24px;
+  text-align:center;
+  box-shadow:0 0 40px rgba(201,162,39,.3);
+  max-width:90%;
+}
+
+.overlay-box h2{
+  font-size:1.45rem;
+  background:linear-gradient(90deg,#ffd700,#ff9a3c);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:5px;
+}
+
+.overlay-box .stars{
+  font-size:1.7rem;
+  letter-spacing:4px;
+  margin:7px 0 10px;
+  color:#ffd700;
+}
+
+.overlay-box p{
+  color:#aaa;
+  margin-bottom:14px;
+  font-size:.9rem;
+}
+
+.overlay-btns{
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.level-select{
+  position:absolute;
+  inset:0;
+  background:rgba(5,5,10,.95);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:20;
+  border-radius:10px;
+  padding:14px;
+  overflow-y:auto;
+}
+
+.level-select.show{
+  display:flex;
+}
+
+.level-select h3{
+  color:#ffd700;
+  margin-bottom:12px;
+}
+
+.level-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  max-width:340px;
+}
+
+.level-card{
+  background:#1a1a26;
+  border:2px solid #444;
+  border-radius:10px;
+  padding:8px 3px;
+  text-align:center;
+  cursor:pointer;
+  font-size:.72rem;
+  color:#ccc;
+}
+
+.level-card.unlocked{
+  border-color:#c9a227;
+}
+
+.level-card.completed{
+  border-color:#4ade80;
+  color:#8f8;
+}
+
+.level-card.locked{
+  opacity:.4;
+  pointer-events:none;
+}
+
+.level-card .num{
+  font-size:1.15rem;
+  font-weight:800;
+  display:block;
+}
+
+.level-card .st{
+  font-size:.7rem;
+  color:#ffd700;
+  height:1em;
+}
+
+@media(max-height:700px){
+  .toolbar{margin-top:3px}
+  .bottom-bar{margin-top:3px}
+  .level-hint{display:none}
+  .hint{display:none}
+  .multiplayer-panel{margin-top:2px}
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="mode-badge" id="modeBadge"></div>
+
+<div class="header">
+  <div class="level-title" id="levelTitle">مرحله ۱</div>
+  <div class="level-info" id="levelInfo">قطعات: ۰ / پار ۳</div>
+</div>
+
+<div class="multiplayer-panel" id="mpPanel">
+  <div class="mp-top">
+    <span id="mpStatus">در حال اتصال...</span>
+    <b id="mpProgress">۰ / ۶</b>
+  </div>
+  <div class="mp-players" id="mpPlayers"></div>
+</div>
+
+<div class="game-wrap" id="container">
+
+  <canvas id="game" width="640" height="640"></canvas>
+
+  <div class="spectator-label" id="spectatorLabel">
+    👀 در حال تماشای هم‌تیمی
+  </div>
+
+  <div class="overlay" id="winOverlay">
+    <div class="overlay-box">
+      <h2 id="winTitle">حل شد! 🎉</h2>
+      <div class="stars" id="winStars">★★★</div>
+      <p id="winText">آفرین!</p>
+
+      <div class="overlay-btns">
+        <button class="action-btn" id="replayBtn">
+          ↻ دوباره
+        </button>
+
+        <button class="action-btn primary" id="nextBtn">
+          مرحله بعد ←
+        </button>
+
+        <button class="action-btn exit" id="overlayExitBtn">
+          🚪 خروج
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="level-select" id="levelSelect">
+    <h3>انتخاب مرحله</h3>
+
+    <div class="level-grid" id="levelGrid"></div>
+
+    <button class="action-btn" style="margin-top:12px" id="closeSelect">
+      بستن
+    </button>
+  </div>
+
+</div>
+
+<div class="toolbar" id="toolbar"></div>
+
+<div class="bottom-bar">
+
+  <button class="action-btn" id="undoBtn">
+    ↩ برگشت
+  </button>
+
+  <button class="action-btn" id="resetBtn">
+    ریست
+  </button>
+
+  <button class="action-btn" id="levelsBtn">
+    مراحل
+  </button>
+
+  <button class="action-btn exit" id="exitBtn">
+    🚪 خروج
+  </button>
+
+</div>
+
+<p class="level-hint" id="levelHint"></p>
+
+<p class="hint">
+  لمس=قرار/چرخش • کشیدن=جابه‌جایی • نگه‌داشتن=حذف
+</p>
+
+<script type="module">
+
+import {
+  waitForUser,
+  getSavedName,
+  currentUid,
+  getSavedRoom,
+  roomRef,
+  onValue,
+  set,
+  runTransaction,
+  recordRoundResult
+} from "../js/app.js";
+
+(function(){
+
+/* =========================================================
+   CONFIG
+========================================================= */
+
+const GAME_ID = "lightpuzzle";
+const SOLO_LEVEL_COUNT = 10;
+const MP_LEVEL_COUNT = 6;
+
+/*
+  صفحه اصلی دومیتو بازی را با ?solo=1 باز می‌کند.
+  لابی با ?round=... بازی را باز می‌کند.
+*/
+const params = new URLSearchParams(location.search);
+const SOLO = params.get("solo") === "1";
+const ROUND_ID = params.get("round") || "";
+
+const MAX_MP_LEVELS = MP_LEVEL_COUNT;
+
+/* =========================================================
+   ۱۰ مرحله کامل تک‌نفره
+========================================================= */
+
+const LEVELS = [
+
+{
+ name:"آغاز نور",
+ par:1,
+ hint:"آینه را بگذار و بچرخان تا نور به شعله برسد",
+ inventory:{mirror:2,lens:0,prism:0},
+ sun:{x:80,y:80,dir:{x:1,y:0}},
+ walls:[],
+ targets:[
+   {x:520,y:80,color:"white",r:26}
+ ]
+},
+
+{
+ name:"بازتاب دوگانه",
+ par:2,
+ hint:"با دو آینه نور را از شکاف به پایین بفرست",
+ inventory:{mirror:3,lens:0,prism:0},
+ sun:{x:80,y:100,dir:{x:1,y:0}},
+ walls:[
+   {x:300,y:0,w:20,h:280},
+   {x:300,y:360,w:20,h:280}
+ ],
+ targets:[
+   {x:520,y:500,color:"white",r:26}
+ ]
+},
+
+{
+ name:"شکست نور",
+ par:2,
+ hint:"منشور نور سفید را به رنگ‌ها می‌شکند",
+ inventory:{mirror:2,lens:0,prism:1},
+ sun:{x:100,y:80,dir:{x:0,y:1}},
+ walls:[],
+ targets:[
+   {x:480,y:420,color:"red",r:24},
+   {x:200,y:480,color:"blue",r:24}
+ ]
+},
+
+{
+ name:"فاصله هوایی",
+ par:4,
+ hint:"از شکاف دیوار رد شو و رنگ‌ها را جدا کن",
+ inventory:{mirror:3,lens:1,prism:1},
+ sun:{x:90,y:70,dir:{x:0,y:1}},
+ walls:[
+   {x:270,y:20,w:18,h:230},
+   {x:270,y:380,w:18,h:240}
+ ],
+ targets:[
+   {x:360,y:110,color:"green",r:24},
+   {x:530,y:150,color:"red",r:24},
+   {x:530,y:430,color:"blue",r:24},
+   {x:360,y:530,color:"yellow",r:24}
+ ]
+},
+
+{
+ name:"تمرکز",
+ par:2,
+ hint:"با دو آینه نور را به بالا و پایین بفرست",
+ inventory:{mirror:4,lens:1,prism:0},
+ sun:{x:80,y:320,dir:{x:1,y:0}},
+ walls:[
+   {x:300,y:0,w:18,h:200},
+   {x:300,y:440,w:18,h:200}
+ ],
+ targets:[
+   {x:520,y:120,color:"white",r:26},
+   {x:520,y:520,color:"white",r:26}
+ ]
+},
+
+{
+ name:"رنگین‌کمان",
+ par:4,
+ hint:"منشور + آینه برای سه رنگ",
+ inventory:{mirror:3,lens:1,prism:1},
+ sun:{x:100,y:100,dir:{x:1,y:.25}},
+ walls:[
+   {x:320,y:0,w:16,h:220},
+   {x:320,y:420,w:16,h:220}
+ ],
+ targets:[
+   {x:500,y:120,color:"red",r:22},
+   {x:520,y:300,color:"green",r:22},
+   {x:480,y:500,color:"blue",r:22}
+ ]
+},
+
+{
+ name:"مسیر باریک",
+ par:4,
+ hint:"از راهروهای باریک با دقت رد شو",
+ inventory:{mirror:4,lens:1,prism:0},
+ sun:{x:80,y:80,dir:{x:0,y:1}},
+ walls:[
+   {x:200,y:0,w:16,h:200},
+   {x:200,y:280,w:16,h:360},
+   {x:380,y:0,w:16,h:360},
+   {x:380,y:440,w:16,h:200}
+ ],
+ targets:[
+   {x:520,y:100,color:"white",r:24},
+   {x:300,y:540,color:"white",r:24}
+ ]
+},
+
+{
+ name:"استاد نور",
+ par:5,
+ hint:"همه ابزارها را با هم به کار ببر",
+ inventory:{mirror:4,lens:2,prism:1},
+ sun:{x:80,y:320,dir:{x:1,y:0}},
+ walls:[
+   {x:240,y:0,w:16,h:250},
+   {x:240,y:390,w:16,h:250},
+   {x:400,y:120,w:16,h:400}
+ ],
+ targets:[
+   {x:320,y:80,color:"red",r:22},
+   {x:520,y:200,color:"green",r:22},
+   {x:520,y:440,color:"blue",r:22},
+   {x:320,y:560,color:"yellow",r:22}
+ ]
+},
+
+{
+ name:"پژواک",
+ par:3,
+ hint:"چند بازتاب پشت‌سرهم",
+ inventory:{mirror:4,lens:0,prism:0},
+ sun:{x:80,y:80,dir:{x:1,y:0}},
+ walls:[
+   {x:200,y:200,w:240,h:16},
+   {x:200,y:420,w:240,h:16}
+ ],
+ targets:[
+   {x:520,y:520,color:"white",r:26}
+ ]
+},
+
+{
+ name:"طیف کامل",
+ par:5,
+ hint:"چهار رنگ را همزمان روشن کن",
+ inventory:{mirror:3,lens:1,prism:1},
+ sun:{x:100,y:320,dir:{x:1,y:0}},
+ walls:[
+   {x:300,y:0,w:16,h:200},
+   {x:300,y:440,w:16,h:200}
+ ],
+ targets:[
+   {x:480,y:100,color:"red",r:22},
+   {x:560,y:240,color:"green",r:22},
+   {x:560,y:400,color:"blue",r:22},
+   {x:480,y:540,color:"yellow",r:22}
+ ]
+}
+
+];
+
+/* =========================================================
+   ACTIVE LEVELS
+========================================================= */
+
+const ACTIVE_LEVEL_COUNT =
+  SOLO ? SOLO_LEVEL_COUNT : MP_LEVEL_COUNT;
+
+/*
+  Solo = هر ۱۰ مرحله
+  Multiplayer = فقط ۶ مرحله اول
+*/
+const ACTIVE_LEVELS =
+  LEVELS.slice(0,ACTIVE_LEVEL_COUNT);
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = 640;
+const H = 640;
+
+const levelTitle = document.getElementById("levelTitle");
+const levelInfo = document.getElementById("levelInfo");
+const levelHint = document.getElementById("levelHint");
+
+const toolbar = document.getElementById("toolbar");
+
+const winOverlay = document.getElementById("winOverlay");
+const winTitle = document.getElementById("winTitle");
+const winStars = document.getElementById("winStars");
+const winText = document.getElementById("winText");
+
+const levelSelect = document.getElementById("levelSelect");
+const levelGrid = document.getElementById("levelGrid");
+
+const spectatorLabel =
+  document.getElementById("spectatorLabel");
+
+const mpPanel =
+  document.getElementById("mpPanel");
+
+const mpStatus =
+  document.getElementById("mpStatus");
+
+const mpProgress =
+  document.getElementById("mpProgress");
+
+const mpPlayers =
+  document.getElementById("mpPlayers");
+
+const modeBadge =
+  document.getElementById("modeBadge");
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let currentLevel = 0;
+
+let inventory = {};
+let pieces = [];
+let history = [];
+
+let currentTool = "mirror";
+let selectedPiece = null;
+
+let isDragging = false;
+let dragStart = null;
+let longPressTimer = null;
+
+let won = false;
+let particles = [];
+
+let completed = {};
+let bestStars = {};
+let unlocked = 1;
+
+let audioCtx = null;
+
+let readOnly = false;
+
+/* =========================================================
+   MULTIPLAYER STATE
+========================================================= */
+
+let mpPlayersData = {};
+let mpUnsubscribers = [];
+
+let myUid = null;
+let myName = "";
+
+let mpMode = false;
+let mpPlayerCount = 0;
+
+let teamId = null;
+let myTeam = null;
+
+let teamState = null;
+
+let matchFinished = false;
+let resultRecorded = false;
+
+let currentRoundPath = null;
+
+let syncing = false;
+let lastSync = 0;
+
+/* =========================================================
+   SOLO SAVE
+========================================================= */
+
+function loadSoloSave(){
+
+  try{
+
+    const raw =
+      localStorage.getItem("lightPuzzleV3");
+
+    if(!raw) return;
+
+    const d =
+      JSON.parse(raw);
+
+    unlocked =
+      Number(d.unlocked || 1);
+
+    completed =
+      d.completed || {};
+
+    bestStars =
+      d.bestStars || {};
+
+    for(let i=0;i<LEVELS.length;i++){
+
+      if(completed[i]){
+        unlocked =
+          Math.max(
+            unlocked,
+            i + 2
+          );
+      }
+
+    }
+
+  }catch(e){
+
+    console.warn(
+      "light puzzle save error",
+      e
+    );
+
+  }
+
+}
+
+function saveSolo(){
+
+  if(!SOLO) return;
+
+  try{
+
+    localStorage.setItem(
+      "lightPuzzleV3",
+      JSON.stringify({
+        unlocked,
+        completed,
+        bestStars
+      })
+    );
+
+  }catch(e){}
+
+}
+
+/* =========================================================
+   AUDIO
+========================================================= */
+
+function beep(freq,dur,type,vol){
+
+  try{
+
+    if(!audioCtx){
+
+      audioCtx =
+        new (
+          window.AudioContext ||
+          window.webkitAudioContext
+        )();
+
+    }
+
+    const o =
+      audioCtx.createOscillator();
+
+    const g =
+      audioCtx.createGain();
+
+    o.type =
+      type || "sine";
+
+    o.frequency.value =
+      freq;
+
+    g.gain.value =
+      vol || .08;
+
+    o.connect(g);
+    g.connect(audioCtx.destination);
+
+    o.start();
+
+    g.gain.exponentialRampToValueAtTime(
+      .001,
+      audioCtx.currentTime +
+      (dur || .12)
+    );
+
+    o.stop(
+      audioCtx.currentTime +
+      (dur || .12) +
+      .02
+    );
+
+  }catch(e){}
+
+}
+
+function sfxPlace(){
+  beep(440,.06,"triangle",.06);
+}
+
+function sfxRotate(){
+  beep(520,.05,"sine",.05);
+}
+
+function sfxWin(){
+
+  beep(523,.1);
+
+  setTimeout(
+    ()=>beep(659,.1),
+    100
+  );
+
+  setTimeout(
+    ()=>beep(784,.18),
+    200
+  );
+
+}
+
+function sfxLit(){
+  beep(880,.08,"sine",.07);
+}
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+function resize(){
+
+  const maxW =
+    Math.min(
+      window.innerWidth - 16,
+      640
+    );
+
+  const maxH =
+    window.innerHeight -
+    (
+      mpMode
+        ? 225
+        : 175
+    );
+
+  const size =
+    Math.min(
+      maxW,
+      maxH,
+      640
+    );
+
+  canvas.style.width =
+    size + "px";
+
+  canvas.style.height =
+    size + "px";
+
+  canvas.width = W;
+  canvas.height = H;
+
+}
+
+resize();
+
+window.addEventListener(
+  "resize",
+  resize
+);
+
+window.addEventListener(
+  "orientationchange",
+  ()=>{
+    setTimeout(
+      resize,
+      200
+    );
+  }
+);
+
+/* =========================================================
+   TOOLBAR
+========================================================= */
+
+function buildToolbar(){
+
+  toolbar.innerHTML = "";
+
+  [
+    {
+      id:"mirror",
+      label:"🪞 آینه"
+    },
+    {
+      id:"lens",
+      label:"🔍 لنز"
+    },
+    {
+      id:"prism",
+      label:"🔺 منشور"
+    }
+  ].forEach(t=>{
+
+    if(
+      !(
+        (inventory[t.id] || 0) > 0 ||
+        pieces.some(
+          p=>p.type===t.id
+        )
+      )
+    ){
+      return;
+    }
+
+    const btn =
+      document.createElement(
+        "button"
+      );
+
+    btn.className =
+      "tool-btn" +
+      (
+        currentTool === t.id
+          ? " active"
+          : ""
+      );
+
+    btn.innerHTML =
+      `<span>${t.label}</span>
+       <span class="count"
+         id="cnt-${t.id}">
+         ${inventory[t.id] || 0}
+       </span>`;
+
+    btn.onclick = e=>{
+
+      e.preventDefault();
+
+      if(readOnly) return;
+
+      document
+        .querySelectorAll(".tool-btn")
+        .forEach(
+          b=>b.classList.remove("active")
+        );
+
+      btn.classList.add("active");
+
+      currentTool =
+        t.id;
+
+    };
+
+    toolbar.appendChild(btn);
+
+  });
+
+}
+
+function updateCounts(){
+
+  [
+    "mirror",
+    "lens",
+    "prism"
+  ].forEach(t=>{
+
+    const el =
+      document.getElementById(
+        "cnt-" + t
+      );
+
+    if(el){
+      el.textContent =
+        inventory[t] || 0;
+    }
+
+  });
+
+  const lv =
+    ACTIVE_LEVELS[currentLevel];
+
+  levelInfo.textContent =
+    "قطعات: " +
+    pieces.length +
+    " / پار " +
+    lv.par;
+
+}
+
+/* =========================================================
+   LEVEL UI
+========================================================= */
+
+function updateLevelUI(){
+
+  const lv =
+    ACTIVE_LEVELS[currentLevel];
+
+  levelTitle.textContent =
+    "مرحله " +
+    (currentLevel + 1) +
+    ": " +
+    lv.name;
+
+  levelHint.textContent =
+    lv.hint || "";
+
+  updateCounts();
+
+  if(mpMode){
+
+    mpProgress.textContent =
+      (
+        currentLevel + 1
+      ) +
+      " / " +
+      ACTIVE_LEVEL_COUNT;
+
+  }
+
+}
+
+function starsFor(
+  used,
+  par
+){
+
+  if(
+    used <= par
+  ){
+    return 3;
+  }
+
+  if(
+    used <= par + 2
+  ){
+    return 2;
+  }
+
+  return 1;
+}
+
+/* =========================================================
+   LOAD LEVEL
+========================================================= */
+
+function cloneLevelTargets(
+  targets
+){
+
+  return targets.map(
+    t=>({
+      ...t,
+      lit:false
+    })
+  );
+
+}
+
+function loadLevel(
+  idx,
+  externalState = null
+){
+
+  if(
+    idx < 0 ||
+    idx >= ACTIVE_LEVELS.length
+  ){
+    return;
+  }
+
+  currentLevel =
+    idx;
+
+  const lv =
+    ACTIVE_LEVELS[idx];
+
+  history = [];
+  selectedPiece = null;
+  isDragging = false;
+  dragStart = null;
+  won = false;
+  particles = [];
+
+  hideWin();
+
+  inventory =
+    Object.assign(
+      {},
+      lv.inventory
+    );
+
+  pieces = [];
+
+  currentTool =
+    Object.keys(
+      inventory
+    ).find(
+      k=>inventory[k] > 0
+    ) || "mirror";
+
+  /*
+    در حالت spectator:
+    state از Firebase می‌آید.
+  */
+  if(
+    externalState &&
+    Array.isArray(
+      externalState.pieces
+    )
+  ){
+
+    pieces =
+      JSON.parse(
+        JSON.stringify(
+          externalState.pieces
+        )
+      );
+
+    inventory =
+      Object.assign(
+        {},
+        lv.inventory,
+        externalState.inventory || {}
+      );
+
+  }
+
+  buildToolbar();
+  updateLevelUI();
+
+}
+
+/* =========================================================
+   WIN UI
+========================================================= */
+
+function hideWin(){
+
+  winOverlay.classList.remove(
+    "show"
+  );
+
+  won = false;
+
+}
+
+function showWin(
+  finalStage = false
+){
+
+  won = true;
+
+  const used =
+    pieces.length;
+
+  const par =
+    ACTIVE_LEVELS[
+      currentLevel
+    ].par;
+
+  const st =
+    starsFor(
+      used,
+      par
+    );
+
+  winStars.textContent =
+    "★".repeat(st) +
+    "☆".repeat(3-st);
+
+  if(finalStage){
+
+    winTitle.textContent =
+      mpMode
+        ? "مسابقه تمام شد! 🏆"
+        : "۱۰ مرحله تمام شد! 🎉";
+
+  }else{
+
+    winTitle.textContent =
+      "حل شد! 🎉";
+
+  }
+
+  winText.textContent =
+    used <= par
+      ? "عالی! با " + used + " قطعه"
+      : "حل شد با " +
+        used +
+        " قطعه (پار " +
+        par +
+        ")";
+
+  winOverlay.classList.add(
+    "show"
+  );
+
+  sfxWin();
+
+  ACTIVE_LEVELS[
+    currentLevel
+  ].targets.forEach(t=>{
+
+    for(
+      let i=0;
+      i<12;
+      i++
+    ){
+
+      particles.push({
+        x:t.x,
+        y:t.y,
+        vx:(Math.random()-.5)*6,
+        vy:(Math.random()-.5)*6,
+        life:40,
+        color:COLORS[t.color]
+      });
+
+    }
+
+  });
+
+}
+
+/* =========================================================
+   LEVEL SELECT
+========================================================= */
+
+function openLevelSelect(){
+
+  if(!SOLO) return;
+
+  levelGrid.innerHTML = "";
+
+  ACTIVE_LEVELS.forEach(
+    (lv,i)=>{
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+      const unlockedHere =
+        i < unlocked;
+
+      card.className =
+        "level-card" +
+        (
+          unlockedHere
+            ? " unlocked"
+            : " locked"
+        ) +
+        (
+          completed[i]
+            ? " completed"
+            : ""
+        );
+
+      const st =
+        bestStars[i] || 0;
+
+      card.innerHTML =
+        `<span class="num">
+           ${i+1}
+         </span>
+         ${lv.name}
+         <div class="st">
+           ${st ? "★".repeat(st) : ""}
+         </div>`;
+
+      card.onclick =
+        ()=>{
+          if(
+            i < unlocked
+          ){
+
+            loadLevel(i);
+
+            levelSelect
+              .classList
+              .remove("show");
+
+          }
+        };
+
+      levelGrid.appendChild(
+        card
+      );
+
+    }
+  );
+
+  levelSelect.classList.add(
+    "show"
+  );
+
+}
+
+/* =========================================================
+   EXIT
+========================================================= */
+
+function exitGame(){
+
+  /*
+    تک‌نفره → صفحه اصلی
+    چندنفره → لابی
+  */
+
+  if(mpMode){
+
+    location.href =
+      "../lobby.html";
+
+  }else{
+
+    location.href =
+      "../index.html";
+
+  }
+
+}
+
+document
+  .getElementById("exitBtn")
+  .onclick =
+  exitGame;
+
+document
+  .getElementById("overlayExitBtn")
+  .onclick =
+  exitGame;
+
+document
+  .getElementById("levelsBtn")
+  .onclick =
+  openLevelSelect;
+
+document
+  .getElementById("closeSelect")
+  .onclick =
+  ()=>{
+    levelSelect
+      .classList
+      .remove("show");
+  };
+
+document
+  .getElementById("resetBtn")
+  .onclick =
+  ()=>{
+    if(!readOnly){
+      loadLevel(
+        currentLevel
+      );
+      syncGameState();
+    }
+  };
+
+document
+  .getElementById("replayBtn")
+  .onclick =
+  ()=>{
+    if(!readOnly){
+      hideWin();
+      loadLevel(
+        currentLevel
+      );
+      syncGameState();
+    }
+  };
+
+document
+  .getElementById("nextBtn")
+  .onclick =
+  ()=>{
+    if(readOnly) return;
+
+    if(
+      currentLevel + 1 <
+      ACTIVE_LEVELS.length
+    ){
+
+      hideWin();
+
+      loadLevel(
+        currentLevel + 1
+      );
+
+      syncGameState();
+
+    }else{
+
+      exitGame();
+
+    }
+
+  };
+
+/* =========================================================
+   UNDO
+========================================================= */
+
+document
+  .getElementById("undoBtn")
+  .onclick =
+  ()=>{
+
+    if(
+      readOnly ||
+      !history.length ||
+      won
+    ){
+      return;
+    }
+
+    const last =
+      history.pop();
+
+    if(
+      last.action === "place"
+    ){
+
+      const i =
+        pieces.indexOf(
+          last.piece
+        );
+
+      if(i >= 0){
+
+        pieces.splice(
+          i,
+          1
+        );
+
+        inventory[
+          last.piece.type
+        ] =
+          (
+            inventory[
+              last.piece.type
+            ] || 0
+          ) + 1;
+
+      }
+
+    }else if(
+      last.action === "rotate"
+    ){
+
+      last.piece.angle =
+        last.oldAngle;
+
+    }else if(
+      last.action === "move"
+    ){
+
+      last.piece.x =
+        last.ox;
+
+      last.piece.y =
+        last.oy;
+
+    }else if(
+      last.action === "delete"
+    ){
+
+      pieces.push(
+        last.piece
+      );
+
+      inventory[
+        last.piece.type
+      ]--;
+
+    }
+
+    buildToolbar();
+    updateCounts();
+    syncGameState();
+
+  };
+
+/* =========================================================
+   POSITION
+========================================================= */
+
+function getPos(e){
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  let cx,cy;
+
+  if(
+    e.touches &&
+    e.touches[0]
+  ){
+
+    cx =
+      e.touches[0].clientX;
+
+    cy =
+      e.touches[0].clientY;
+
+  }else if(
+    e.changedTouches &&
+    e.changedTouches[0]
+  ){
+
+    cx =
+      e.changedTouches[0].clientX;
+
+    cy =
+      e.changedTouches[0].clientY;
+
+  }else{
+
+    cx =
+      e.clientX;
+
+    cy =
+      e.clientY;
+
+  }
+
+  return {
+    x:
+      (cx - rect.left) *
+      (W / rect.width),
+
+    y:
+      (cy - rect.top) *
+      (H / rect.height)
+  };
+
+}
+
+function findPieceAt(
+  x,
+  y,
+  r=38
+){
+
+  for(
+    let i=pieces.length-1;
+    i>=0;
+    i--
+  ){
+
+    const p =
+      pieces[i];
+
+    if(
+      Math.hypot(
+        x-p.x,
+        y-p.y
+      ) < r
+    ){
+      return i;
+    }
+
+  }
+
+  return -1;
+
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+function onDown(e){
+
+  if(
+    won ||
+    readOnly
+  ){
+    return;
+  }
+
+  e.preventDefault();
+
+  const pos =
+    getPos(e);
+
+  const idx =
+    findPieceAt(
+      pos.x,
+      pos.y
+    );
+
+  if(idx !== -1){
+
+    selectedPiece =
+      pieces[idx];
+
+    isDragging = true;
+
+    dragStart = {
+      x:pos.x,
+      y:pos.y,
+      px:selectedPiece.x,
+      py:selectedPiece.y,
+      ox:selectedPiece.x,
+      oy:selectedPiece.y
+    };
+
+    longPressTimer =
+      setTimeout(
+        ()=>{
+
+          if(
+            selectedPiece &&
+            isDragging
+          ){
+
+            history.push({
+              action:"delete",
+              piece:selectedPiece
+            });
+
+            inventory[
+              selectedPiece.type
+            ] =
+              (
+                inventory[
+                  selectedPiece.type
+                ] || 0
+              ) + 1;
+
+            pieces.splice(
+              pieces.indexOf(
+                selectedPiece
+              ),
+              1
+            );
+
+            selectedPiece =
+              null;
+
+            isDragging =
+              false;
+
+            buildToolbar();
+            updateCounts();
+            syncGameState();
+
+            if(
+              navigator.vibrate
+            ){
+              navigator.vibrate(25);
+            }
+
+          }
+
+        },
+        550
+      );
+
+  }else if(
+    (inventory[currentTool] || 0) > 0
+  ){
+
+    const p = {
+      type:currentTool,
+      x:pos.x,
+      y:pos.y,
+      angle:0
+    };
+
+    pieces.push(p);
+
+    inventory[currentTool]--;
+
+    history.push({
+      action:"place",
+      piece:p
+    });
+
+    selectedPiece =
+      p;
+
+    isDragging =
+      true;
+
+    dragStart = {
+      x:pos.x,
+      y:pos.y,
+      px:p.x,
+      py:p.y,
+      ox:p.x,
+      oy:p.y
+    };
+
+    buildToolbar();
+    updateCounts();
+
+    sfxPlace();
+
+  }
+
+}
+
+function onMove(e){
+
+  if(
+    !isDragging ||
+    !selectedPiece ||
+    !dragStart ||
+    readOnly
+  ){
+    return;
+  }
+
+  e.preventDefault();
+
+  if(longPressTimer){
+
+    clearTimeout(
+      longPressTimer
+    );
+
+    longPressTimer =
+      null;
+
+  }
+
+  const pos =
+    getPos(e);
+
+  selectedPiece.x =
+    Math.max(
+      28,
+      Math.min(
+        W-28,
+        dragStart.px +
+        (pos.x-dragStart.x)
+      )
+    );
+
+  selectedPiece.y =
+    Math.max(
+      28,
+      Math.min(
+        H-28,
+        dragStart.py +
+        (pos.y-dragStart.y)
+      )
+    );
+
+}
+
+function onUp(e){
+
+  e.preventDefault();
+
+  if(longPressTimer){
+
+    clearTimeout(
+      longPressTimer
+    );
+
+    longPressTimer =
+      null;
+
+  }
+
+  if(
+    isDragging &&
+    selectedPiece &&
+    dragStart &&
+    !readOnly
+  ){
+
+    const pos =
+      getPos(e);
+
+    const dx =
+      pos.x-dragStart.x;
+
+    const dy =
+      pos.y-dragStart.y;
+
+    if(
+      Math.hypot(dx,dy)<14
+    ){
+
+      history.push({
+        action:"rotate",
+        piece:selectedPiece,
+        oldAngle:selectedPiece.angle
+      });
+
+      selectedPiece.angle =
+        (
+          selectedPiece.angle +
+          15
+        ) % 360;
+
+      sfxRotate();
+
+    }else if(
+      Math.hypot(
+        selectedPiece.x-dragStart.ox,
+        selectedPiece.y-dragStart.oy
+      ) > 8
+    ){
+
+      history.push({
+        action:"move",
+        piece:selectedPiece,
+        ox:dragStart.ox,
+        oy:dragStart.oy
+      });
+
+    }
+
+    syncGameState();
+
+  }
+
+  isDragging = false;
+  dragStart = null;
+
+}
+
+canvas.addEventListener(
+  "mousedown",
+  onDown
+);
+
+window.addEventListener(
+  "mousemove",
+  onMove
+);
+
+window.addEventListener(
+  "mouseup",
+  onUp
+);
+
+canvas.addEventListener(
+  "touchstart",
+  onDown,
+  {passive:false}
+);
+
+canvas.addEventListener(
+  "touchmove",
+  onMove,
+  {passive:false}
+);
+
+canvas.addEventListener(
+  "touchend",
+  onUp,
+  {passive:false}
+);
+
+canvas.addEventListener(
+  "touchcancel",
+  onUp,
+  {passive:false}
+);
+
+canvas.addEventListener(
+  "contextmenu",
+  e=>e.preventDefault()
+);
+
+/* =========================================================
+   RAY ENGINE
+========================================================= */
+
+function normalize(v){
+
+  const l =
+    Math.hypot(
+      v.x,
+      v.y
+    ) || 1;
+
+  return {
+    x:v.x/l,
+    y:v.y/l
+  };
+
+}
+
+function reflect(
+  dir,
+  n
+){
+
+  const d =
+    dir.x*n.x +
+    dir.y*n.y;
+
+  return {
+    x:
+      dir.x -
+      2*d*n.x,
+
+    y:
+      dir.y -
+      2*d*n.y
+  };
+
+}
+
+function hitWalls(
+  pos,
+  d,
+  closestT
+){
+
+  const lv =
+    ACTIVE_LEVELS[
+      currentLevel
+    ];
+
+  let hit = null;
+
+  for(
+    const w of lv.walls
+  ){
+
+    if(d.x > .01){
+
+      const t =
+        (w.x-pos.x)/d.x;
+
+      if(
+        t>.5 &&
+        t<closestT
+      ){
+
+        const hy =
+          pos.y+d.y*t;
+
+        if(
+          hy>=w.y &&
+          hy<=w.y+w.h
+        ){
+
+          closestT=t;
+
+          hit={
+            t,
+            normal:{
+              x:-1,
+              y:0
+            }
+          };
+
+        }
+
+      }
+
+    }
+
+    if(d.x < -.01){
+
+      const t =
+        (w.x+w.w-pos.x)/d.x;
+
+      if(
+        t>.5 &&
+        t<closestT
+      ){
+
+        const hy =
+          pos.y+d.y*t;
+
+        if(
+          hy>=w.y &&
+          hy<=w.y+w.h
+        ){
+
+          closestT=t;
+
+          hit={
+            t,
+            normal:{
+              x:1,
+              y:0
+            }
+          };
+
+        }
+
+      }
+
+    }
+
+    if(d.y > .01){
+
+      const t =
+        (w.y-pos.y)/d.y;
+
+      if(
+        t>.5 &&
+        t<closestT
+      ){
+
+        const hx =
+          pos.x+d.x*t;
+
+        if(
+          hx>=w.x &&
+          hx<=w.x+w.w
+        ){
+
+          closestT=t;
+
+          hit={
+            t,
+            normal:{
+              x:0,
+              y:-1
+            }
+          };
+
+        }
+
+      }
+
+    }
+
+    if(d.y < -.01){
+
+      const t =
+        (w.y+w.h-pos.y)/d.y;
+
+      if(
+        t>.5 &&
+        t<closestT
+      ){
+
+        const hx =
+          pos.x+d.x*t;
+
+        if(
+          hx>=w.x &&
+          hx<=w.x+w.w
+        ){
+
+          closestT=t;
+
+          hit={
+            t,
+            normal:{
+              x:0,
+              y:1
+            }
+          };
+
+        }
+
+      }
+
+    }
+
+  }
+
+  [
+    {
+      t:
+        d.x>.01
+          ? (W-pos.x)/d.x
+          : Infinity,
+      n:{x:-1,y:0}
+    },
+    {
+      t:
+        d.x<-.01
+          ? (0-pos.x)/d.x
+          : Infinity,
+      n:{x:1,y:0}
+    },
+    {
+      t:
+        d.y>.01
+          ? (H-pos.y)/d.y
+          : Infinity,
+      n:{x:0,y:-1}
+    },
+    {
+      t:
+        d.y<-.01
+          ? (0-pos.y)/d.y
+          : Infinity,
+      n:{x:0,y:1}
+    }
+  ].forEach(b=>{
+
+    if(
+      b.t>.5 &&
+      b.t<closestT
+    ){
+
+      closestT=b.t;
+
+      hit={
+        t:b.t,
+        normal:b.n,
+        border:true
+      };
+
+    }
+
+  });
+
+  return {
+    closestT,
+    hit
+  };
+
+}
+
+function raycast(
+  start,
+  dir,
+  color,
+  maxDist=950,
+  allowPrism=true
+){
+
+  const segs=[];
+
+  let pos={
+    x:start.x,
+    y:start.y
+  };
+
+  let d =
+    normalize(dir);
+
+  let remaining =
+    maxDist;
+
+  let hops=0;
+
+  while(
+    remaining>0 &&
+    hops<14
+  ){
+
+    hops++;
+
+    let closestT =
+      remaining;
+
+    let hitType=null;
+    let hitPiece=null;
+    let hitNormal=null;
+
+    const wh =
+      hitWalls(
+        pos,
+        d,
+        closestT
+      );
+
+    closestT =
+      wh.closestT;
+
+    if(wh.hit){
+
+      hitType =
+        wh.hit.border
+          ? "border"
+          : "wall";
+
+      hitNormal =
+        wh.hit.normal;
+
+    }
+
+    for(
+      const p of pieces
+    ){
+
+      const t =
+        (p.x-pos.x)*d.x +
+        (p.y-pos.y)*d.y;
+
+      if(
+        t<1.5 ||
+        t>=closestT
+      ){
+        continue;
+      }
+
+      const px =
+        pos.x+d.x*t;
+
+      const py =
+        pos.y+d.y*t;
+
+      const dist =
+        Math.hypot(
+          px-p.x,
+          py-p.y
+        );
+
+      if(
+        p.type==="mirror" &&
+        dist<28
+      ){
+
+        closestT=t;
+        hitType="mirror";
+        hitPiece=p;
+
+        const ang =
+          (
+            p.angle+90
+          ) *
+          Math.PI/180;
+
+        hitNormal={
+          x:Math.cos(ang),
+          y:Math.sin(ang)
+        };
+
+      }else if(
+        p.type==="lens" &&
+        dist<24
+      ){
+
+        closestT=t;
+        hitType="lens";
+        hitPiece=p;
+
+      }else if(
+        p.type==="prism" &&
+        dist<26 &&
+        allowPrism
+      ){
+
+        closestT=t;
+        hitType="prism";
+        hitPiece=p;
+
+      }
+
+    }
+
+    for(
+      const t of ACTIVE_LEVELS[
+        currentLevel
+      ].targets
+    ){
+
+      const proj =
+        (
+          t.x-pos.x
+        )*d.x +
+        (
+          t.y-pos.y
+        )*d.y;
+
+      if(
+        proj<1 ||
+        proj>=closestT
+      ){
+        continue;
+      }
+
+      if(
+        Math.hypot(
+          pos.x+d.x*proj-t.x,
+          pos.y+d.y*proj-t.y
+        ) <
+        t.r+6
+      ){
+
+        closestT=proj;
+        hitType="target";
+        hitPiece=t;
+
+      }
+
+    }
+
+    const end={
+      x:
+        pos.x+d.x*closestT,
+      y:
+        pos.y+d.y*closestT
+    };
+
+    segs.push({
+      x1:pos.x,
+      y1:pos.y,
+      x2:end.x,
+      y2:end.y,
+      color
+    });
+
+    remaining -=
+      closestT;
+
+    if(
+      hitType==="wall" ||
+      hitType==="border"
+    ){
+      break;
+    }
+
+    if(
+      hitType==="mirror"
+    ){
+
+      d =
+        reflect(
+          d,
+          hitNormal
+        );
+
+      pos={
+        x:end.x+d.x*5,
+        y:end.y+d.y*5
+      };
+
+    }else if(
+      hitType==="lens"
+    ){
+
+      const a =
+        hitPiece.angle *
+        Math.PI/180;
+
+      const axis={
+        x:Math.cos(a),
+        y:Math.sin(a)
+      };
+
+      d =
+        normalize({
+          x:
+            d.x*.5 +
+            axis.x*.5,
+          y:
+            d.y*.5 +
+            axis.y*.5
+        });
+
+      pos={
+        x:end.x+d.x*5,
+        y:end.y+d.y*5
+      };
+
+    }else if(
+      hitType==="prism"
+    ){
+
+      segs._prism={
+        pos:end,
+        dir:d
+      };
+
+      break;
+
+    }else if(
+      hitType==="target"
+    ){
+
+      const need =
+        hitPiece.color;
+
+      if(
+        color==="white" ||
+        color===need ||
+        (
+          need==="yellow" &&
+          (
+            color==="red" ||
+            color==="green" ||
+            color==="yellow"
+          )
+        ) ||
+        (
+          need==="green" &&
+          (
+            color==="green" ||
+            color==="cyan"
+          )
+        ) ||
+        (
+          need==="blue" &&
+          (
+            color==="blue" ||
+            color==="cyan"
+          )
+        ) ||
+        (
+          need==="red" &&
+          (
+            color==="red" ||
+            color==="yellow"
+          )
+        )
+      ){
+
+        if(
+          !hitPiece.lit
+        ){
+
+          hitPiece.lit=true;
+
+          sfxLit();
+
+          for(
+            let i=0;
+            i<8;
+            i++
+          ){
+
+            particles.push({
+              x:hitPiece.x,
+              y:hitPiece.y,
+              vx:
+                (Math.random()-.5)*4,
+              vy:
+                (Math.random()-.5)*4-1,
+              life:25,
+              color:
+                COLORS[need]
+            });
+
+          }
+
+        }else{
+
+          hitPiece.lit=true;
+
+        }
+
+      }
+
+      break;
+
+    }else{
+
+      break;
+
+    }
+
+  }
+
+  return segs;
+
+}
+
+/* =========================================================
+   SIMULATION
+========================================================= */
+
+function simulate(){
+
+  const lv =
+    ACTIVE_LEVELS[
+      currentLevel
+    ];
+
+  lv.targets.forEach(
+    t=>t.lit=false
+  );
+
+  const all=[];
+
+  const sun =
+    lv.sun;
+
+  const main =
+    raycast(
+      {
+        x:
+          sun.x+
+          sun.dir.x*28,
+
+        y:
+          sun.y+
+          sun.dir.y*28
+      },
+      sun.dir,
+      "white"
+    );
+
+  all.push(
+    ...main
+  );
+
+  if(main._prism){
+
+    const {
+      pos,
+      dir
+    } =
+      main._prism;
+
+    const base =
+      Math.atan2(
+        dir.y,
+        dir.x
+      );
+
+    const cols=[
+      "red",
+      "yellow",
+      "green",
+      "cyan",
+      "blue"
+    ];
+
+    const offs=[
+      -.4,
+      -.2,
+      0,
+      .2,
+      .4
+    ];
+
+    cols.forEach(
+      (c,i)=>{
+
+        all.push(
+          ...raycast(
+            pos,
+            {
+              x:
+                Math.cos(
+                  base+offs[i]
+                ),
+              y:
+                Math.sin(
+                  base+offs[i]
+                )
+            },
+            c,
+            800,
+            false
+          )
+        );
+
+      }
+    );
+
+  }
+
+  return all;
+
+}
+
+/* =========================================================
+   DRAW
+========================================================= */
+
+function drawBG(){
+
+  ctx.fillStyle =
+    "#050508";
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+  ctx.strokeStyle =
+    "rgba(255,255,255,.03)";
+
+  ctx.lineWidth=1;
+
+  for(
+    let i=40;
+    i<W;
+    i+=40
+  ){
+
+    ctx.beginPath();
+    ctx.moveTo(i,0);
+    ctx.lineTo(i,H);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0,i);
+    ctx.lineTo(W,i);
+    ctx.stroke();
+
+  }
+
+  const lv =
+    ACTIVE_LEVELS[
+      currentLevel
+    ];
+
+  ctx.fillStyle =
+    "#1c1c28";
+
+  lv.walls.forEach(
+    w=>{
+
+      ctx.fillRect(
+        w.x,
+        w.y,
+        w.w,
+        w.h
+      );
+
+      ctx.strokeStyle =
+        "#333";
+
+      ctx.lineWidth=1;
+
+      ctx.strokeRect(
+        w.x,
+        w.y,
+        w.w,
+        w.h
+      );
+
+    }
+  );
+
+  ctx.strokeStyle =
+    "#c9a227";
+
+  ctx.lineWidth=3;
+
+  ctx.strokeRect(
+    5,
+    5,
+    W-10,
+    H-10
+  );
+
+}
+
+function drawSun(){
+
+  const s =
+    ACTIVE_LEVELS[
+      currentLevel
+    ].sun;
+
+  const g =
+    ctx.createRadialGradient(
+      s.x,
+      s.y,
+      4,
+      s.x,
+      s.y,
+      50
+    );
+
+  g.addColorStop(
+    0,
+    "#fff9c8"
+  );
+
+  g.addColorStop(
+    .35,
+    "#ffd700"
+  );
+
+  g.addColorStop(
+    1,
+    "transparent"
+  );
+
+  ctx.fillStyle=g;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    s.x,
+    s.y,
+    50,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  ctx.fillStyle =
+    "#fff8e0";
+
+  ctx.beginPath();
+
+  ctx.arc(
+    s.x,
+    s.y,
+    14,
+    0,
+    Math.PI*2
+  );
+
+  ctx.fill();
+
+  ctx.strokeStyle =
+    "#ffd700";
+
+  ctx.lineWidth=2.5;
+
+  for(
+    let i=0;
+    i<8;
+    i++
+  ){
+
+    const a =
+      i*Math.PI/4;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      s.x+
+      Math.cos(a)*18,
+      s.y+
+      Math.sin(a)*18
+    );
+
+    ctx.lineTo(
+      s.x+
+      Math.cos(a)*28,
+      s.y+
+      Math.sin(a)*28
+    );
+
+    ctx.stroke();
+
+  }
+
+}
+
+function drawTarget(t){
+
+  ctx.strokeStyle =
+    t.lit
+      ? COLORS[t.color]
+      : "#3a3a48";
+
+  ctx.lineWidth=3;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    t.x,
+    t.y,
+    t.r+8,
+    0,
+    Math.PI*2
+  );
+
+  ctx.stroke();
+
+  if(t.lit){
+
+    const g =
+      ctx.createRadialGradient(
+        t.x,
+        t.y,
+        2,
+        t.x,
+        t.y,
+        t.r+28
+      );
+
+    g.addColorStop(
+      0,
+      COLORS[t.color]
+    );
+
+    g.addColorStop(
+      .45,
+      COLORS[t.color]+"99"
+    );
+
+    g.addColorStop(
+      1,
+      "transparent"
+    );
+
+    ctx.fillStyle=g;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      t.x,
+      t.y,
+      t.r+28,
+      0,
+      Math.PI*2
+    );
+
+    ctx.fill();
+
+  }
+
+  ctx.fillStyle =
+    t.lit
+      ? COLORS[t.color]
+      : "#2a2a35";
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    t.x,
+    t.y-t.r
+  );
+
+  ctx.quadraticCurveTo(
+    t.x+t.r*.9,
+    t.y-t.r*.2,
+    t.x+t.r*.55,
+    t.y+t.r*.5
+  );
+
+  ctx.quadraticCurveTo(
+    t.x,
+    t.y+t.r*.3,
+    t.x-t.r*.55,
+    t.y+t.r*.5
+  );
+
+  ctx.quadraticCurveTo(
+    t.x-t.r*.9,
+    t.y-t.r*.2,
+    t.x,
+    t.y-t.r
+  );
+
+  ctx.fill();
+
+  ctx.fillStyle =
+    "#4a3020";
+
+  ctx.fillRect(
+    t.x-12,
+    t.y+t.r*.4,
+    24,
+    10
+  );
+
+  ctx.fillRect(
+    t.x-8,
+    t.y+t.r*.4+8,
+    16,
+    7
+  );
+
+}
+
+function drawPiece(p){
+
+  ctx.save();
+
+  ctx.translate(
+    p.x,
+    p.y
+  );
+
+  ctx.rotate(
+    p.angle *
+    Math.PI/180
+  );
+
+  if(
+    p.type==="mirror"
+  ){
+
+    ctx.fillStyle =
+      "#888";
+
+    ctx.fillRect(
+      -26,
+      -5,
+      52,
+      10
+    );
+
+    ctx.fillStyle =
+      "#eee";
+
+    ctx.fillRect(
+      -24,
+      -3,
+      48,
+      6
+    );
+
+    ctx.fillStyle =
+      "rgba(255,255,255,.5)";
+
+    ctx.fillRect(
+      -18,
+      -1.5,
+      14,
+      3
+    );
+
+  }else if(
+    p.type==="lens"
+  ){
+
+    ctx.beginPath();
+
+    ctx.ellipse(
+      0,
+      0,
+      10,
+      26,
+      0,
+      0,
+      Math.PI*2
+    );
+
+    ctx.fillStyle =
+      "rgba(160,210,255,.4)";
+
+    ctx.fill();
+
+    ctx.strokeStyle =
+      "#7cf";
+
+    ctx.lineWidth=2.5;
+
+    ctx.stroke();
+
+  }else if(
+    p.type==="prism"
+  ){
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      -24
+    );
+
+    ctx.lineTo(
+      22,
+      18
+    );
+
+    ctx.lineTo(
+      -22,
+      18
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle =
+      "rgba(190,230,255,.45)";
+
+    ctx.fill();
+
+    ctx.strokeStyle =
+      "#aef";
+
+    ctx.lineWidth=2.5;
+
+    ctx.stroke();
+
+  }
+
+  ctx.restore();
+
+  if(
+    p===selectedPiece &&
+    !readOnly
+  ){
+
+    ctx.strokeStyle =
+      "#ffd700";
+
+    ctx.lineWidth=2;
+
+    ctx.setLineDash([
+      5,
+      4
+    ]);
+
+    ctx.beginPath();
+
+    ctx.arc(
+      p.x,
+      p.y,
+      36,
+      0,
+      Math.PI*2
+    );
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+  }
+
+}
+
+function drawBeams(
+  segs
+){
+
+  segs.forEach(
+    s=>{
+
+      const c =
+        COLORS[s.color] ||
+        "#fff";
+
+      ctx.strokeStyle=c;
+      ctx.globalAlpha=.2;
+      ctx.lineWidth=14;
+      ctx.lineCap="round";
+
+      ctx.beginPath();
+
+      ctx.moveTo(
+        s.x1,
+        s.y1
+      );
+
+      ctx.lineTo(
+        s.x2,
+        s.y2
+      );
+
+      ctx.stroke();
+
+      ctx.globalAlpha=.95;
+      ctx.lineWidth=3.5;
+
+      ctx.beginPath();
+
+      ctx.moveTo(
+        s.x1,
+        s.y1
+      );
+
+      ctx.lineTo(
+        s.x2,
+        s.y2
+      );
+
+      ctx.stroke();
+
+      ctx.globalAlpha=1;
+
+    }
+  );
+
+}
+
+function drawParticles(){
+
+  particles =
+    particles.filter(
+      p=>p.life>0
+    );
+
+  particles.forEach(
+    p=>{
+
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += .08;
+      p.life--;
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          p.life/30
+        );
+
+      ctx.fillStyle =
+        p.color;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        2.5,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fill();
+
+    }
+  );
+
+  ctx.globalAlpha=1;
+
+}
+
+/* =========================================================
+   MULTIPLAYER FIREBASE
+========================================================= */
+
+function getRoundRoot(){
+
+  if(
+    !mpMode ||
+    !ROUND_ID
+  ){
+    return null;
+  }
+
+  const code =
+    getSavedRoom();
+
+  if(!code){
+    return null;
+  }
+
+  return roomRef(
+    code,
+    `lightpuzzle/${ROUND_ID}`
+  );
+
+}
+
+function safeState(){
+
+  return {
+    level:currentLevel,
+    pieces:
+      JSON.parse(
+        JSON.stringify(
+          pieces
+        )
+      ),
+    inventory:
+      {...inventory},
+    finished:false,
+    updatedAt:Date.now()
+  };
+
+}
+
+async function syncGameState(){
+
+  if(
+    !mpMode ||
+    readOnly ||
+    !myUid ||
+    syncing
+  ){
+    return;
+  }
+
+  const now =
+    Date.now();
+
+  if(
+    now-lastSync<80
+  ){
+    return;
+  }
+
+  lastSync=now;
+
+  const root =
+    getRoundRoot();
+
+  if(!root) return;
+
+  try{
+
+    await set(
+      roomRef(
+        getSavedRoom(),
+        `lightpuzzle/${ROUND_ID}/players/${myUid}`
+      ),
+      {
+        name:myName,
+        level:currentLevel,
+        pieces:
+          JSON.parse(
+            JSON.stringify(
+              pieces
+            )
+          ),
+        inventory:
+          {...inventory},
+        finished:false,
+        updatedAt:Date.now()
+      }
+    );
+
+  }catch(e){
+
+    console.warn(
+      "LightPuzzle sync error:",
+      e
+    );
+
+  }
+
+}
+
+/* =========================================================
+   INITIALIZE MULTIPLAYER MATCH
+========================================================= */
+
+async function ensureMatch(){
+
+  const root =
+    getRoundRoot();
+
+  if(!root) return;
+
+  const players =
+    Object.entries(
+      mpPlayersData
+    )
+    .sort(
+      (a,b)=>{
+        const aa =
+          Number(
+            a[1]?.joinedAt || 0
+          );
+
+        const bb =
+          Number(
+            b[1]?.joinedAt || 0
+          );
+
+        if(
+          aa === bb
+        ){
+          return a[0]
+            .localeCompare(
+              b[0]
+            );
+        }
+
+        return aa-bb;
+      }
+    );
+
+  const uids =
+    players
+      .map(
+        x=>x[0]
+      )
+      .slice(
+        0,
+        4
+      );
+
+  if(
+    uids.length<2
+  ){
+
+    mpStatus.textContent =
+      "حداقل ۲ بازیکن لازم است";
+
+    return;
+
+  }
+
+  const matchRef =
+    roomRef(
+      getSavedRoom(),
+      `lightpuzzle/${ROUND_ID}/match`
+    );
+
+  await runTransaction(
+    matchRef,
+    current=>{
+
+      if(
+        current &&
+        current.mode
+      ){
+        return current;
+      }
+
+      const count =
+        uids.length;
+
+      if(
+        count===4
+      ){
+
+        return {
+          mode:"teams",
+          playerCount:4,
+          teams:{
+            A:{
+              uids:[
+                uids[0],
+                uids[1]
+              ],
+              stage:0,
+              activeIndex:0,
+              finished:false
+            },
+            B:{
+              uids:[
+                uids[2],
+                uids[3]
+              ],
+              stage:0,
+              activeIndex:0,
+              finished:false
+            }
+          },
+          winner:null,
+          createdAt:Date.now()
+        };
+
+      }
+
+      return {
+        mode:
+          count===3
+            ? "three"
+            : "two",
+
+        playerCount:count,
+
+        winner:null,
+
+        createdAt:Date.now()
+      };
+
+    }
+  );
+
+}
+
+/* =========================================================
+   4 PLAYER TEAM STATE
+========================================================= */
+
+function myTeamFromMatch(
+  match
+){
+
+  if(
+    !match ||
+    match.mode!=="teams"
+  ){
+    return null;
+  }
+
+  if(
+    match.teams?.A?.uids
+      ?.includes(myUid)
+  ){
+    return "A";
+  }
+
+  if(
+    match.teams?.B?.uids
+      ?.includes(myUid)
+  ){
+    return "B";
+  }
+
+  return null;
+
+}
+
+function isTeamActivePlayer(
+  match
+){
+
+  if(
+    !match ||
+    match.mode!=="teams" ||
+    !myTeam
+  ){
+    return false;
+  }
+
+  const team =
+    match.teams?.[myTeam];
+
+  if(!team) return false;
+
+  return (
+    team.uids?.[
+      team.activeIndex || 0
+    ] === myUid
+  );
+
+}
+
+/* =========================================================
+   MULTIPLAYER LISTENERS
+========================================================= */
+
+function startMultiplayer(){
+
+  const code =
+    getSavedRoom();
+
+  if(
+    !code ||
+    !ROUND_ID
+  ){
+
+    mpStatus.textContent =
+      "اطلاعات اتاق پیدا نشد";
+
+    return;
+
+  }
+
+  mpMode=true;
+
+  modeBadge.style.display =
+    "block";
+
+  modeBadge.textContent =
+    "👥 چندنفره";
+
+  mpPanel.style.display =
+    "block";
+
+  resize();
+
+  /*
+    بازیکنان اتاق
+  */
+  const playersRef =
+    roomRef(
+      code,
+      "players"
+    );
+
+  const unsubPlayers =
+    onValue(
+      playersRef,
+      async snap=>{
+
+        mpPlayersData =
+          snap.val() || {};
+
+        mpPlayerCount =
+          Object.keys(
+            mpPlayersData
+          ).length;
+
+        renderMPPlayers();
+
+        await ensureMatch();
+
+      }
+    );
+
+  mpUnsubscribers.push(
+    unsubPlayers
+  );
+
+  /*
+    وضعیت مسابقه
+  */
+  const matchRef =
+    roomRef(
+      code,
+      `lightpuzzle/${ROUND_ID}/match`
+    );
+
+  const unsubMatch =
+    onValue(
+      matchRef,
+      snap=>{
+
+        const match =
+          snap.val();
+
+        if(!match) return;
+
+        myTeam =
+          myTeamFromMatch(
+            match
+          );
+
+        updateMPStatus(
+          match
+        );
+
+        if(
+          match.winner
+        ){
+
+          finishMatchUI(
+            match.winner
+          );
+
+          return;
+
+        }
+
+        if(
+          match.mode==="teams"
+        ){
+
+          teamState =
+            match.teams?.[
+              myTeam
+            ] || null;
+
+          if(
+            !teamState
+          ){
+            return;
+          }
+
+          const activeUid =
+            teamState.uids?.[
+              teamState.activeIndex || 0
+            ];
+
+          const active =
+            activeUid === myUid;
+
+          readOnly =
+            !active;
+
+          spectatorLabel.style.display =
+            active
+              ? "none"
+              : "block";
+
+          currentLevel =
+            Number(
+              teamState.stage || 0
+            );
+
+          if(
+            active
+          ){
+
+            loadLevel(
+              currentLevel
+            );
+
+            syncGameState();
+
+          }
+
+        }else{
+
+          readOnly=false;
+
+        }
+
+      }
+    );
+
+  mpUnsubscribers.push(
+    unsubMatch
+  );
+
+  /*
+    وضعیت خودم
+  */
+  const myStateRef =
+    roomRef(
+      code,
+      `lightpuzzle/${ROUND_ID}/players/${myUid}`
+    );
+
+  const unsubMine =
+    onValue(
+      myStateRef,
+      snap=>{
+
+        if(
+          !snap.exists()
+        ){
+          return;
+        }
+
+        const state =
+          snap.val();
+
+        /*
+          در ۲/۳ نفره:
+          وضعیت بازی خود بازیکن
+        */
+        if(
+          mpPlayerCount <= 3
+        ){
+
+          const remoteLevel =
+            Number(
+              state.level || 0
+            );
+
+          if(
+            remoteLevel !==
+            currentLevel &&
+            !won
+          ){
+
+            loadLevel(
+              remoteLevel,
+              state
+            );
+
+          }
+
+        }
+
+      }
+    );
+
+  mpUnsubscribers.push(
+    unsubMine
+  );
+
+  /*
+    برای حالت ۴ نفره:
+    اگر هم‌تیمی من فعال است،
+    من state او را می‌بینم.
+  */
+  const allStateRef =
+    roomRef(
+      code,
+      `lightpuzzle/${ROUND_ID}/players`
+    );
+
+  const unsubAll =
+    onValue(
+      allStateRef,
+      snap=>{
+
+        if(
+          !mpMode ||
+          mpPlayerCount!==4 ||
+          !myTeam
+        ){
+          return;
+        }
+
+        const val =
+          snap.val() || {};
+
+        const currentTeam =
+          teamState;
+
+        if(!currentTeam){
+          return;
+        }
+
+        const activeUid =
+          currentTeam.uids?.[
+            currentTeam.activeIndex || 0
+          ];
+
+        if(
+          !activeUid ||
+          activeUid===myUid
+        ){
+          return;
+        }
+
+        const activeState =
+          val[activeUid];
+
+        if(!activeState){
+          return;
+        }
+
+        const remoteLevel =
+          Number(
+            currentTeam.stage || 0
+          );
+
+        if(
+          remoteLevel !==
+          currentLevel
+        ){
+
+          loadLevel(
+            remoteLevel,
+            activeState
+          );
+
+        }else{
+
+          pieces =
+            JSON.parse(
+              JSON.stringify(
+                activeState.pieces || []
+              )
+            );
+
+          inventory =
+            {
+              ...ACTIVE_LEVELS[
+                currentLevel
+              ].inventory,
+              ...(activeState.inventory || {})
+            };
+
+          buildToolbar();
+          updateCounts();
+
+        }
+
+      }
+    );
+
+  mpUnsubscribers.push(
+    unsubAll
+  );
+
+}
+
+/* =========================================================
+   RENDER MP PLAYERS
+========================================================= */
+
+function renderMPPlayers(){
+
+  const entries =
+    Object.entries(
+      mpPlayersData
+    );
+
+  mpPlayers.innerHTML="";
+
+  entries.forEach(
+    ([uid,p])=>{
+
+      const el =
+        document.createElement(
+          "div"
+        );
+
+      el.className =
+        "mp-player" +
+        (
+          uid===myUid
+            ? " me"
+            : ""
+        );
+
+      el.textContent =
+        uid===myUid
+          ? "👤 " +
+            (p.name || "تو")
+          : "👤 " +
+            (p.name || "بازیکن");
+
+      mpPlayers.appendChild(
+        el
+      );
+
+    }
+  );
+
+  mpStatus.textContent =
+    entries.length +
+    " بازیکن در مسابقه";
+
+}
+
+/* =========================================================
+   MP STATUS
+========================================================= */
+
+function updateMPStatus(
+  match
+){
+
+  if(
+    match.mode==="teams"
+  ){
+
+    const a =
+      match.teams?.A;
+
+    const b =
+      match.teams?.B;
+
+    if(
+      myTeam &&
+      match.teams?.[myTeam]
+    ){
+
+      const t =
+        match.teams[
+          myTeam
+        ];
+
+      const activeUid =
+        t.uids?.[
+          t.activeIndex || 0
+        ];
+
+      const activeName =
+        mpPlayersData[
+          activeUid
+        ]?.name ||
+        "هم‌تیمی";
+
+      mpStatus.textContent =
+        "تیم " +
+        myTeam +
+        " • مرحله " +
+        (
+          Number(
+            t.stage || 0
+          ) + 1
+        ) +
+        " از 6 • نوبت: " +
+        activeName;
+
+      mpProgress.textContent =
+        (
+          Number(
+            t.stage || 0
+          ) + 1
+        ) +
+        " / 6";
+
+    }
+
+  }else{
+
+    mpStatus.textContent =
+      "رقابت انفرادی • " +
+      mpPlayerCount +
+      " نفر";
+
+    mpProgress.textContent =
+      (
+        currentLevel+1
+      ) +
+      " / 6";
+
+  }
+
+}
+
+/* =========================================================
+   COMPLETE STAGE
+========================================================= */
+
+async function completeMultiplayerStage(){
+
+  if(
+    !mpMode ||
+    readOnly ||
+    !myUid
+  ){
+    return;
+  }
+
+  const code =
+    getSavedRoom();
+
+  const matchRef =
+    roomRef(
+      code,
+      `lightpuzzle/${ROUND_ID}/match`
+    );
+
+  /*
+    ۲ یا ۳ نفر:
+    هر بازیکن مسیر خودش را جلو می‌برد.
+  */
+  if(
+    mpPlayerCount <= 3
+  ){
+
+    const nextStage =
+      currentLevel + 1;
+
+    await set(
+      roomRef(
+        code,
+        `lightpuzzle/${ROUND_ID}/players/${myUid}`
+      ),
+      {
+        name:myName,
+        level:
+          nextStage,
+        pieces:[],
+        inventory:{},
+        finished:
+          nextStage >=
+          MP_LEVEL_COUNT,
+        finishedAt:
+          nextStage >=
+          MP_LEVEL_COUNT
+            ? Date.now()
+            : null,
+        updatedAt:
+          Date.now()
+      }
+    );
+
+    if(
+      nextStage >=
+      MP_LEVEL_COUNT
+    ){
+
+      await runTransaction(
+        matchRef,
+        current=>{
+
+          if(
+            !current
+          ){
+            return current;
+          }
+
+          if(
+            current.winner
+          ){
+            return current;
+          }
+
+          return {
+            ...current,
+            winner:myUid,
+            winnerName:myName,
+            finishedAt:Date.now()
+          };
+
+        }
+      );
+
+    }else{
+
+      loadLevel(
+        nextStage
+      );
+
+      syncGameState();
+
+    }
+
+    return;
+
+  }
+
+  /*
+    ۴ نفر:
+    تیمی
+  */
+
+  if(
+    mpPlayerCount===4 &&
+    myTeam
+  ){
+
+    await runTransaction(
+      matchRef,
+      current=>{
+
+        if(
+          !current ||
+          current.mode!=="teams"
+        ){
+          return current;
+        }
+
+        const team =
+          current.teams?.[
+            myTeam
+          ];
+
+        if(!team){
+          return current;
+        }
+
+        const activeUid =
+          team.uids?.[
+            team.activeIndex || 0
+          ];
+
+        /*
+          فقط بازیکن فعال اجازه جلو بردن تیم را دارد.
+        */
+        if(
+          activeUid !== myUid
+        ){
+          return current;
+        }
+
+        const nextStage =
+          Number(
+            team.stage || 0
+          ) + 1;
+
+        if(
+          nextStage >=
+          MP_LEVEL_COUNT
+        ){
+
+          return {
+            ...current,
+            teams:{
+              ...current.teams,
+              [myTeam]:{
+                ...team,
+                stage:MP_LEVEL_COUNT,
+                finished:true,
+                finishedAt:Date.now()
+              }
+            },
+            winner:
+              current.winner ||
+              myTeam,
+            winnerName:
+              current.winnerName ||
+              (
+                "تیم " +
+                myTeam
+              ),
+            finishedAt:
+              current.finishedAt ||
+              Date.now()
+          };
+
+        }
+
+        return {
+          ...current,
+          teams:{
+            ...current.teams,
+            [myTeam]:{
+              ...team,
+              stage:nextStage,
+              activeIndex:
+                (
+                  (
+                    team.activeIndex ||
+                    0
+                  ) + 1
+                ) % 2
+            }
+          }
+        };
+
+      }
+    );
+
+  }
+
+}
+
+/* =========================================================
+   MATCH FINISH UI
+========================================================= */
+
+function finishMatchUI(
+  winner
+){
+
+  if(matchFinished){
+    return;
+  }
+
+  matchFinished=true;
+  readOnly=true;
+
+  spectatorLabel.style.display =
+    "none";
+
+  if(
+    mpPlayerCount===4
+  ){
+
+    const wonTeam =
+      winner === myTeam;
+
+    winTitle.textContent =
+      wonTeam
+        ? "تیمت برنده شد! 🏆"
+        : "مسابقه تمام شد";
+
+    winStars.textContent =
+      wonTeam
+        ? "★★★"
+        : "☆☆☆";
+
+    winText.textContent =
+      wonTeam
+        ? "تیم " +
+          myTeam +
+          " تمام ۶ مرحله را زودتر تمام کرد."
+        : "تیم " +
+          winner +
+          " برنده مسابقه شد.";
+
+  }else{
+
+    const wonPlayer =
+      winner === myUid;
+
+    winTitle.textContent =
+      wonPlayer
+        ? "برنده شدی! 🏆"
+        : "مسابقه تمام شد";
+
+    winStars.textContent =
+      wonPlayer
+        ? "★★★"
+        : "☆☆☆";
+
+    winText.textContent =
+      wonPlayer
+        ? "تو زودتر از همه ۶ مرحله را تمام کردی."
+        : (
+          mpPlayersData[winner]?.name ||
+          "یک بازیکن"
+        ) +
+        " زودتر از همه ۶ مرحله را تمام کرد.";
+
+  }
+
+  winOverlay.classList.add(
+    "show"
+  );
+
+  recordMultiplayerResult(
+    winner
+  );
+
+}
+
+/* =========================================================
+   RECORD RESULT
+========================================================= */
+
+async function recordMultiplayerResult(
+  winner
+){
+
+  if(
+    resultRecorded
+  ){
+    return;
+  }
+
+  resultRecorded=true;
+
+  try{
+
+    const won =
+      mpPlayerCount===4
+        ? winner===myTeam
+        : winner===myUid;
+
+    await recordRoundResult(
+      myName,
+      GAME_ID,
+      {
+        won
+      }
+    );
+
+  }catch(e){
+
+    console.warn(
+      "record result error",
+      e
+    );
+
+  }
+
+}
+
+/* =========================================================
+   CHECK LEVEL WIN
+========================================================= */
+
+let previousLit=false;
+
+function checkPuzzleWin(){
+
+  if(
+    won ||
+    readOnly
+  ){
+    return;
+  }
+
+  const lv =
+    ACTIVE_LEVELS[
+      currentLevel
+    ];
+
+  if(
+    !lv.targets.length
+  ){
+    return;
+  }
+
+  const all =
+    lv.targets.every(
+      t=>t.lit
+    );
+
+  if(
+    !all
+  ){
+
+    previousLit=false;
+    return;
+
+  }
+
+  if(
+    previousLit
+  ){
+    return;
+  }
+
+  previousLit=true;
+
+  /*
+    SOLO
+  */
+  if(SOLO){
+
+    const st =
+      starsFor(
+        pieces.length,
+        lv.par
+      );
+
+    completed[
+      currentLevel
+    ]=true;
+
+    bestStars[
+      currentLevel
+    ] =
+      Math.max(
+        bestStars[
+          currentLevel
+        ] || 0,
+        st
+      );
+
+    unlocked =
+      Math.max(
+        unlocked,
+        currentLevel+2
+      );
+
+    saveSolo();
+
+    const finalStage =
+      currentLevel ===
+      ACTIVE_LEVELS.length-1;
+
+    showWin(
+      finalStage
+    );
+
+    /*
+      فقط بعد از تمام ۱۰ مرحله،
+      نتیجه تک‌نفره ثبت می‌شود.
+    */
+    if(
+      finalStage
+    ){
+
+      recordSoloResult();
+
+    }
+
+    return;
+
+  }
+
+  /*
+    MULTIPLAYER
+  */
+  showWin(false);
+
+  completeMultiplayerStage();
+
+}
+
+async function recordSoloResult(){
+
+  if(
+    resultRecorded
+  ){
+    return;
+  }
+
+  resultRecorded=true;
+
+  try{
+
+    await recordRoundResult(
+      myName,
+      GAME_ID,
+      {
+        won:true
+      }
+    );
+
+  }catch(e){
+
+    console.warn(
+      "solo result error",
+      e
+    );
+
+  }
+
+}
+
+/* =========================================================
+   COLORS
+========================================================= */
+
+const COLORS={
+  white:"#f0f0f0",
+  red:"#ff3b3b",
+  green:"#3bff6a",
+  blue:"#3b8bff",
+  yellow:"#ffcc22",
+  cyan:"#22e0ff"
+};
+
+/* =========================================================
+   GAME LOOP
+========================================================= */
+
+function frame(){
+
+  drawBG();
+
+  drawSun();
+
+  const beams =
+    simulate();
+
+  drawBeams(
+    beams
+  );
+
+  pieces.forEach(
+    drawPiece
+  );
+
+  ACTIVE_LEVELS[
+    currentLevel
+  ].targets.forEach(
+    drawTarget
+  );
+
+  drawParticles();
+
+  checkPuzzleWin();
+
+  requestAnimationFrame(
+    frame
+  );
+
+}
+
+/* =========================================================
+   INITIALIZATION
+========================================================= */
+
+async function init(){
+
+  const user =
+    await waitForUser();
+
+  if(!user){
+
+    location.href =
+      "../index.html";
+
+    return;
+
+  }
+
+  myUid =
+    currentUid();
+
+  myName =
+    getSavedName() ||
+    "بازیکن";
+
+  /*
+    SOLO
+  */
+  if(SOLO){
+
+    modeBadge.style.display =
+      "block";
+
+    modeBadge.textContent =
+      "👤 تک‌نفره • ۱۰ مرحله";
+
+    loadSoloSave();
+
+    loadLevel(0);
+
+    frame();
+
+    return;
+
+  }
+
+  /*
+    MULTIPLAYER
+  */
+  if(ROUND_ID){
+
+    startMultiplayer();
+
+    /*
+      موقتاً مرحله اول را نمایش می‌دهیم.
+      وقتی match مشخص شود،
+      state درست جایگزین می‌شود.
+    */
+    loadLevel(0);
+
+    frame();
+
+    return;
+
+  }
+
+  /*
+    اگر بازی بدون solo و بدون round باز شد،
+    به صفحه اصلی برگرد.
+  */
+  location.href =
+    "../index.html";
+
+}
+
+init();
+
+})();
+
+</script>
+
+</body>
+</html>
