@@ -480,33 +480,36 @@ export function waitForUser() {
               }
             }
 
-            if (username) {
+            async function updateLastLogin(username) {
+  username = String(
+    username || ""
+  ).trim();
+
+  if (!username) {
+    return;
+  }
+
   try {
-    await ensureOwnerLinks(
-      username,
-      user.uid
+    await update(
+      profileRef(username),
+      {
+        lastLogin: Date.now()
+      }
     );
 
-    // ثبت زمان آخرین ورود
-    // حتی در حالت Auto Login
-    await updateLastLogin(
-      username
-    );
-
-    // آنلاین کردن کاربر
-    await setPresence(
+    console.log(
+      "LAST LOGIN UPDATED:",
       username,
-      true
+      Date.now()
     );
 
   } catch (e) {
     console.warn(
-      "Auto login update error:",
+      "Last login update error:",
       e
     );
   }
             }
-
             resolve(user);
           }
         );
