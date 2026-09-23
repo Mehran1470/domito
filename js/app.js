@@ -1124,7 +1124,13 @@ export const GAMES = [
     soloThreshold: 1
   }
 ];
-
+{
+  id: "lightpuzzle",
+  name: "پازل نوری",
+  desc: "آینه، لنز و منشور را بچین و نور را به هدف‌ها برسان",
+  icon: "💡",
+  soloThreshold: 1
+},
 export function soloWon(
   gameId,
   score
