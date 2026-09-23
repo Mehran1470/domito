@@ -141,6 +141,7 @@ export async function ensureOwnerLinks(
 // ============================================================
 
 async function updateLastLogin(username) {
+async function updateLastLogin(username) {
   username = String(
     username || ""
   ).trim();
@@ -150,12 +151,21 @@ async function updateLastLogin(username) {
   }
 
   try {
+    const now = Date.now();
+
     await update(
       profileRef(username),
       {
-        lastLogin: serverTimestamp()
+        lastLogin: now
       }
     );
+
+    console.log(
+      "LAST LOGIN UPDATED:",
+      username,
+      now
+    );
+
   } catch (e) {
     console.warn(
       "Last login update error:",
