@@ -157,12 +157,14 @@
             id="joinedGamesText"
           ></div>
 
+
           <!-- وضعیت آنلاین / آخرین حضور -->
 
           <div
             id="presenceText"
             class="profile-presence"
           ></div>
+
 
           <!-- آخرین ورود واقعی به حساب -->
 
@@ -990,18 +992,17 @@ waitForUser().then(
     // =================================================
 
     onValue(
-      profileRef(
-        targetName,
-        "presence"
-      ),
+      profileRef(targetName),
       (snap) => {
 
-        const presence =
-          snap.val() || {
+        const profile =
+          snap.val() || {};
 
+
+        const presence =
+          profile.presence || {
             online: false,
             lastSeen: 0
-
           };
 
 
