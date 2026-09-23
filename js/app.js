@@ -2330,41 +2330,55 @@ export function listenFriends(
                   0
               ),
 
-            lastLogin:
-              Number(
-                profile.lastLogin ||
-                  0
-              )
+export function listenFriends(myName, callback) {
+  let friendUnsubs = {};
+  let latest = {};
 
-          });
+  function emit(names) {
+    callback(names.map((n) => latest[n] || { name: n, online: false, lastSeen: 0, lastLogin: 0 }));
+  }
 
-        } catch (e) {
+  const mainUnsub = onValue(profileRef(myName, "friends"), (snap) => {
+    const val = snap.val() || {};
+    const names = Object.keys(val);
 
-          console.warn(
-            "Friend presence error:",
-            e
-          );
-
-          results.push({
-
-            name,
-
-            online: false,
-
-            lastSeen: 0,
-
-            lastLogin: 0
-
-          });
-
-        }
-
+    Object.keys(friendUnsubs).forEach((n) => {
+      if (!names.includes(n)) {
+        friendUnsubs[n]();
+        delete friendUnsubs[n];
+        delete latest[n];
       }
+    });
 
-      callback(results);
+    names.forEach((name) => {
+      if (friendUnsubs[name]) return;
 
-    }
-  );
+      friendUnsubs[name] = onValue(profileRef(name), (pSnap) => {
+        const profile = pSnap.val() || {};
+        const presence = profile.presence || {};
+        const connections = presence.connections || {};
+        const connectionList = Object.values(connections);
+        const hasOnlineConnection = connectionList.some((x) => x && x.online === true);
+        let online = hasOnlineConnection;
+        if (connectionList.length === 0) online = !!presence.online;
+
+        latest[name] = {
+          name,
+          online,
+          lastSeen: Number(presence.lastSeen || 0),
+          lastLogin: Number(profile.lastLogin || 0),
+        };
+        emit(names);
+      });
+    });
+
+    emit(names);
+  });
+
+  return () => {
+    mainUnsub();
+    Object.values(friendUnsubs).forEach((u) => u());
+  };
 }
 
 // ============================================================
