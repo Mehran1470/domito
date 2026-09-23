@@ -227,10 +227,11 @@ export async function setPresence(
     return;
   }
 
-  const pRef = presenceRootRef(name);
+  const pRef =
+    presenceRootRef(name);
 
   // ==========================================================
-  // خروج از دومیتو
+  // خروج دستی
   // ==========================================================
 
   if (!online) {
@@ -259,7 +260,7 @@ export async function setPresence(
   }
 
   // ==========================================================
-  // ورود / Auto Login
+  // اگر همین اتصال قبلاً ثبت شده، دوباره نساز
   // ==========================================================
 
   if (
@@ -271,30 +272,59 @@ export async function setPresence(
 
   await cleanupPresenceConnection();
 
-  const connection = push(
-    presenceConnectionsRef(name)
-  );
+  // ==========================================================
+  // ساخت اتصال جدید
+  // ==========================================================
+
+  const connection =
+    push(
+      presenceConnectionsRef(name)
+    );
 
   presenceConnectionRef = connection;
   presenceConnectionName = name;
+
+  // ==========================================================
+  // قطع اتصال:
+  // اتصال حذف شود
+  // کاربر آفلاین شود
+  // آخرین حضور ثبت شود
+  // ==========================================================
 
   await onDisconnect(
     connection
   ).remove();
 
+  await onDisconnect(
+    pRef
+  ).update({
+    online: false,
+    lastSeen: serverTimestamp()
+  });
+
+  // ==========================================================
+  // ثبت اتصال فعلی
+  // ==========================================================
+
   await set(
     connection,
     {
       online: true,
-      connectedAt: serverTimestamp()
+      connectedAt:
+        serverTimestamp()
     }
   );
+
+  // ==========================================================
+  // ثبت حضور فعلی
+  // ==========================================================
 
   await update(
     pRef,
     {
       online: true,
-      lastSeen: serverTimestamp()
+      lastSeen:
+        serverTimestamp()
     }
   );
 }
@@ -491,7 +521,10 @@ export function waitForUser() {
 
             resolve(user);
 
+            // ==================================================
             // عملیات جانبی در پس‌زمینه
+            // ==================================================
+
             if (username) {
               Promise.resolve()
                 .then(
@@ -2394,4 +2427,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-          }
+      }
