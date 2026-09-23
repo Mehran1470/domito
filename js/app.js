@@ -481,26 +481,30 @@ export function waitForUser() {
             }
 
             if (username) {
-              try {
-                await ensureOwnerLinks(
-                  username,
-                  user.uid
-                );
+  try {
+    await ensureOwnerLinks(
+      username,
+      user.uid
+    );
 
-                // Auto Login فقط حضور را آنلاین می‌کند.
-                // زمان «آخرین حضور در دومیتو»
-                // هنگام خروج یا قطع اتصال ثبت می‌شود.
+    // ثبت زمان آخرین ورود
+    // حتی در حالت Auto Login
+    await updateLastLogin(
+      username
+    );
 
-                await setPresence(
-                  username,
-                  true
-                );
-              } catch (e) {
-                console.warn(
-                  "Auto login update error:",
-                  e
-                );
-              }
+    // آنلاین کردن کاربر
+    await setPresence(
+      username,
+      true
+    );
+
+  } catch (e) {
+    console.warn(
+      "Auto login update error:",
+      e
+    );
+  }
             }
 
             resolve(user);
