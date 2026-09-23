@@ -1122,15 +1122,16 @@ export const GAMES = [
     desc: "حریف رو با تیراندازی از میدون به در کن، ۳ قلب داری",
     icon: "🔫",
     soloThreshold: 1
+  },
+
+  {
+    id: "lightpuzzle",
+    name: "پازل نوری",
+    desc: "آینه، لنز و منشور را بچین و نور را به هدف‌ها برسان",
+    icon: "💡",
+    soloThreshold: 1
   }
 ];
-{
-  id: "lightpuzzle",
-  name: "پازل نوری",
-  desc: "آینه، لنز و منشور را بچین و نور را به هدف‌ها برسان",
-  icon: "💡",
-  soloThreshold: 1
-},
 export function soloWon(
   gameId,
   score
