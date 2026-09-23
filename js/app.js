@@ -140,7 +140,7 @@ export async function ensureOwnerLinks(
 // ثبت آخرین ورود
 // ============================================================
 
-async function updateLastLogin(username) {
+
 async function updateLastLogin(username) {
   username = String(
     username || ""
