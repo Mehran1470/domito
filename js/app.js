@@ -85,10 +85,9 @@ function blankProfile() {
 }
 
 export function profileRef(name, path = "") {
-  const safe =
-    encodeURIComponent(
-      String(name || "")
-    );
+  const safe = encodeURIComponent(
+    String(name || "")
+  );
 
   return ref(
     db,
@@ -97,11 +96,8 @@ export function profileRef(name, path = "") {
 }
 
 async function ensureProfile(username) {
-  const pRef =
-    profileRef(username);
-
-  const snap =
-    await get(pRef);
+  const pRef = profileRef(username);
+  const snap = await get(pRef);
 
   if (!snap.exists()) {
     await set(
@@ -115,14 +111,12 @@ export async function ensureOwnerLinks(
   username,
   uid
 ) {
-  const ownerRef =
-    ref(
-      db,
-      `profiles/${encodeURIComponent(username)}/ownerUid`
-    );
+  const ownerRef = ref(
+    db,
+    `profiles/${encodeURIComponent(username)}/ownerUid`
+  );
 
-  const snap =
-    await get(ownerRef);
+  const snap = await get(ownerRef);
 
   if (!snap.exists()) {
     await set(
@@ -139,44 +133,34 @@ export async function ensureOwnerLinks(
     username
   );
 
-  await ensureProfile(
-    username
-  );
+  await ensureProfile(username);
 }
 
 // ============================================================
 // ثبت آخرین ورود
 // ============================================================
 
-async function updateLastLogin(
-  username
-) {
-  username =
-    String(
-      username || ""
-    ).trim();
+async function updateLastLogin(username) {
+  username = String(
+    username || ""
+  ).trim();
 
   if (!username) {
     return;
   }
 
   try {
-
     await update(
       profileRef(username),
       {
-        lastLogin:
-          serverTimestamp()
+        lastLogin: serverTimestamp()
       }
     );
-
   } catch (e) {
-
     console.warn(
       "Last login update error:",
       e
     );
-
   }
 }
 
@@ -203,24 +187,19 @@ function presenceConnectionsRef(name) {
 }
 
 async function cleanupPresenceConnection() {
-
   if (!presenceConnectionRef) {
     return;
   }
 
   try {
-
     await remove(
       presenceConnectionRef
     );
-
   } catch (e) {
-
     console.warn(
       "Presence connection cleanup error:",
       e
     );
-
   }
 
   presenceConnectionRef = null;
@@ -231,36 +210,30 @@ export async function setPresence(
   name,
   online
 ) {
-  name =
-    String(
-      name || ""
-    ).trim();
+  name = String(
+    name || ""
+  ).trim();
 
   if (!name) {
     return;
   }
 
-  const pRef =
-    presenceRootRef(name);
+  const pRef = presenceRootRef(name);
 
   // ----------------------------------------------------------
   // خاموش کردن Presence
   // ----------------------------------------------------------
 
   if (!online) {
-
     if (
       presenceConnectedUnsubscribe &&
-      typeof presenceConnectedUnsubscribe ===
-        "function"
+      typeof presenceConnectedUnsubscribe === "function"
     ) {
-
       try {
         presenceConnectedUnsubscribe();
       } catch {}
 
-      presenceConnectedUnsubscribe =
-        null;
+      presenceConnectedUnsubscribe = null;
     }
 
     await cleanupPresenceConnection();
@@ -269,8 +242,7 @@ export async function setPresence(
       pRef,
       {
         online: false,
-        lastSeen:
-          serverTimestamp()
+        lastSeen: serverTimestamp()
       }
     );
 
@@ -278,8 +250,7 @@ export async function setPresence(
   }
 
   // ----------------------------------------------------------
-  // اگر همین کاربر از قبل connection دارد،
-  // connection جدید نساز
+  // اگر همین کاربر از قبل connection دارد
   // ----------------------------------------------------------
 
   if (
@@ -291,16 +262,12 @@ export async function setPresence(
 
   await cleanupPresenceConnection();
 
-  const connection =
-    push(
-      presenceConnectionsRef(name)
-    );
+  const connection = push(
+    presenceConnectionsRef(name)
+  );
 
-  presenceConnectionRef =
-    connection;
-
-  presenceConnectionName =
-    name;
+  presenceConnectionRef = connection;
+  presenceConnectionName = name;
 
   // ----------------------------------------------------------
   // قطع شدن اتصال
@@ -318,8 +285,7 @@ export async function setPresence(
     connection,
     {
       online: true,
-      connectedAt:
-        serverTimestamp()
+      connectedAt: serverTimestamp()
     }
   );
 
@@ -331,8 +297,7 @@ export async function setPresence(
     pRef,
     {
       online: true,
-      lastSeen:
-        serverTimestamp()
+      lastSeen: serverTimestamp()
     }
   );
 }
@@ -345,10 +310,9 @@ export async function registerUser(
   username,
   password
 ) {
-  username =
-    String(
-      username || ""
-    ).trim();
+  username = String(
+    username || ""
+  ).trim();
 
   if (
     !username ||
@@ -393,10 +357,9 @@ export async function loginUser(
   username,
   password
 ) {
-  username =
-    String(
-      username || ""
-    ).trim();
+  username = String(
+    username || ""
+  ).trim();
 
   if (
     !username ||
@@ -438,25 +401,19 @@ export async function loginUser(
 // ============================================================
 
 export async function logoutUser() {
-  const name =
-    getSavedName();
+  const name = getSavedName();
 
   if (name) {
-
     try {
-
       await setPresence(
         name,
         false
       );
-
     } catch (e) {
-
       console.warn(
         "Presence logout error:",
         e
       );
-
     }
   }
 
@@ -476,17 +433,14 @@ export async function logoutUser() {
 // ============================================================
 
 export function waitForUser() {
-
   return new Promise(
     (resolve) => {
-
       let finished = false;
 
       const unsubscribe =
         onAuthStateChanged(
           auth,
           async (user) => {
-
             if (finished) {
               return;
             }
@@ -502,28 +456,23 @@ export function waitForUser() {
             // ------------------------------------------------
 
             if (!user) {
-
               resolve(null);
-
               return;
             }
 
             // ------------------------------------------------
-            // پیدا کردن نام ذخیره‌شده
+            // نام ذخیره‌شده
             // ------------------------------------------------
 
             let username =
               getSavedName();
 
             // ------------------------------------------------
-            // اگر نام در localStorage نبود،
-            // از uidToName پیدا کن
+            // پیدا کردن نام از UID
             // ------------------------------------------------
 
             if (!username) {
-
               try {
-
                 const nameSnap =
                   await get(
                     ref(
@@ -535,29 +484,19 @@ export function waitForUser() {
                 if (
                   nameSnap.exists()
                 ) {
-
-                  username =
-                    String(
-                      nameSnap.val() ||
-                        ""
-                    ).trim();
+                  username = String(
+                    nameSnap.val() || ""
+                  ).trim();
 
                   if (username) {
-
-                    saveName(
-                      username
-                    );
-
+                    saveName(username);
                   }
                 }
-
               } catch (e) {
-
                 console.warn(
                   "Auto login username lookup error:",
                   e
                 );
-
               }
             }
 
@@ -566,40 +505,31 @@ export function waitForUser() {
             // ------------------------------------------------
 
             if (username) {
-
               try {
-
                 await ensureOwnerLinks(
                   username,
                   user.uid
                 );
 
-                // ثبت آخرین ورود
                 await updateLastLogin(
                   username
                 );
 
-                // آنلاین کردن کاربر
                 await setPresence(
                   username,
                   true
                 );
-
               } catch (e) {
-
                 console.warn(
                   "Auto login update error:",
                   e
                 );
-
               }
             }
 
             resolve(user);
-
           }
         );
-
     }
   );
 }
@@ -615,7 +545,6 @@ export function currentUid() {
 // ============================================================
 
 function randomRoomCode() {
-
   const chars =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -626,7 +555,6 @@ function randomRoomCode() {
     i < 5;
     i++
   ) {
-
     code +=
       chars[
         Math.floor(
@@ -634,7 +562,6 @@ function randomRoomCode() {
             chars.length
         )
       ];
-
   }
 
   return code;
@@ -648,46 +575,35 @@ export function getSavedRoom() {
   );
 }
 
-export function saveRoom(
-  code
-) {
-
+export function saveRoom(code) {
   localStorage.setItem(
     "domito_room",
-    String(
-      code || ""
-    )
+    String(code || "")
       .trim()
       .toUpperCase()
   );
-
 }
 
 export function clearRoom() {
-
   localStorage.removeItem(
     "domito_room"
   );
-
 }
 
 export function roomRef(
   code,
   path = ""
 ) {
-
-  code =
-    String(
-      code || ""
-    )
-      .trim()
-      .toUpperCase();
+  code = String(
+    code || ""
+  )
+    .trim()
+    .toUpperCase();
 
   return ref(
     db,
     `rooms/${code}${path ? "/" + path : ""}`
   );
-
 }
 
 // ============================================================
@@ -695,22 +611,16 @@ export function roomRef(
 // ============================================================
 
 export async function createRoom() {
-
-  const uid =
-    currentUid();
-
-  const name =
-    getSavedName();
+  const uid = currentUid();
+  const name = getSavedName();
 
   if (
     !uid ||
     !name
   ) {
-
     throw new Error(
       "not-authenticated"
     );
-
   }
 
   let code = null;
@@ -720,7 +630,6 @@ export async function createRoom() {
     i < 10;
     i++
   ) {
-
     const candidate =
       randomRoomCode();
 
@@ -732,23 +641,16 @@ export async function createRoom() {
         )
       );
 
-    if (
-      !snap.exists()
-    ) {
-
-      code =
-        candidate;
-
+    if (!snap.exists()) {
+      code = candidate;
       break;
     }
   }
 
   if (!code) {
-
     throw new Error(
       "room-code-generation-failed"
     );
-
   }
 
   await set(
@@ -759,10 +661,8 @@ export async function createRoom() {
     {
       createdAt:
         serverTimestamp(),
-      ownerUid:
-        uid,
-      ownerName:
-        name
+      ownerUid: uid,
+      ownerName: name
     }
   );
 
@@ -778,7 +678,6 @@ export async function createRoom() {
 export async function getRoomMeta(
   code = getSavedRoom()
 ) {
-
   if (!code) {
     return null;
   }
@@ -799,9 +698,7 @@ export async function getRoomMeta(
 export async function isRoomOwner(
   code = getSavedRoom()
 ) {
-
-  const uid =
-    currentUid();
+  const uid = currentUid();
 
   if (
     !uid ||
@@ -826,21 +723,17 @@ export async function isRoomOwner(
 export async function joinRoomByCode(
   rawCode
 ) {
-
-  const code =
-    String(
-      rawCode || ""
-    )
-      .trim()
-      .toUpperCase();
+  const code = String(
+    rawCode || ""
+  )
+    .trim()
+    .toUpperCase();
 
   if (!code) {
-
     return {
       ok: false,
       reason: "invalid-code"
     };
-
   }
 
   const metaSnap =
@@ -851,22 +744,16 @@ export async function joinRoomByCode(
       )
     );
 
-  if (
-    !metaSnap.exists()
-  ) {
-
+  if (!metaSnap.exists()) {
     return {
       ok: false,
       reason: "not-found"
     };
-
   }
 
-  const uid =
-    currentUid();
+  const uid = currentUid();
 
   if (uid) {
-
     const kickedSnap =
       await get(
         roomRef(
@@ -875,15 +762,11 @@ export async function joinRoomByCode(
         )
       );
 
-    if (
-      kickedSnap.exists()
-    ) {
-
+    if (kickedSnap.exists()) {
       return {
         ok: false,
         reason: "kicked"
       };
-
     }
   }
 
@@ -903,7 +786,6 @@ export async function checkKicked(
   code = getSavedRoom(),
   uid = currentUid()
 ) {
-
   if (
     !code ||
     !uid
@@ -930,19 +812,14 @@ export function listenKickStatus(
   code = getSavedRoom(),
   callback
 ) {
-
-  const uid =
-    currentUid();
+  const uid = currentUid();
 
   if (
     !code ||
     !uid ||
-    typeof callback !==
-      "function"
+    typeof callback !== "function"
   ) {
-
     return () => {};
-
   }
 
   return onValue(
@@ -951,13 +828,11 @@ export function listenKickStatus(
       `kicked/${uid}`
     ),
     (snap) => {
-
       callback(
         snap.exists()
           ? snap.val()
           : null
       );
-
     }
   );
 }
@@ -969,17 +844,12 @@ export function listenKickStatus(
 export async function kickMember(
   targetUid
 ) {
+  const code = getSavedRoom();
+  const uid = currentUid();
 
-  const code =
-    getSavedRoom();
-
-  const uid =
-    currentUid();
-
-  targetUid =
-    String(
-      targetUid || ""
-    ).trim();
+  targetUid = String(
+    targetUid || ""
+  ).trim();
 
   if (!code) {
     throw new Error(
@@ -999,9 +869,7 @@ export async function kickMember(
     );
   }
 
-  if (
-    targetUid === uid
-  ) {
+  if (targetUid === uid) {
     throw new Error(
       "cannot-kick-self"
     );
@@ -1016,9 +884,7 @@ export async function kickMember(
     );
   }
 
-  if (
-    meta.ownerUid !== uid
-  ) {
+  if (meta.ownerUid !== uid) {
     throw new Error(
       "not-room-owner"
     );
@@ -1032,9 +898,7 @@ export async function kickMember(
       )
     );
 
-  if (
-    !targetSnap.exists()
-  ) {
+  if (!targetSnap.exists()) {
     throw new Error(
       "player-not-found"
     );
@@ -1050,8 +914,7 @@ export async function kickMember(
       byName:
         meta.ownerName ||
         getSavedName(),
-      at:
-        serverTimestamp()
+      at: serverTimestamp()
     }
   );
 
@@ -1089,17 +952,12 @@ export async function kickMember(
 export async function joinLobby(
   name
 ) {
+  const code = getSavedRoom();
+  const uid = currentUid();
 
-  const code =
-    getSavedRoom();
-
-  const uid =
-    currentUid();
-
-  name =
-    String(
-      name || getSavedName()
-    ).trim();
+  name = String(
+    name || getSavedName()
+  ).trim();
 
   if (!code) {
     throw new Error(
@@ -1181,12 +1039,8 @@ export async function joinLobby(
 // ============================================================
 
 export async function leaveLobby() {
-
-  const code =
-    getSavedRoom();
-
-  const uid =
-    currentUid();
+  const code = getSavedRoom();
+  const uid = currentUid();
 
   if (
     !code ||
@@ -1222,7 +1076,6 @@ export async function leaveLobby() {
 // ============================================================
 
 export const GAMES = [
-
   {
     id: "quiz",
     name: "کوییز اطلاعات عمومی",
@@ -1294,23 +1147,19 @@ export const GAMES = [
     icon: "🔫",
     soloThreshold: 1
   }
-
 ];
 
 export function soloWon(
   gameId,
   score
 ) {
-
   const game =
     GAMES.find(
-      x =>
-        x.id === gameId
+      x => x.id === gameId
     );
 
   return game
-    ? score >=
-      game.soloThreshold
+    ? score >= game.soloThreshold
     : false;
 }
 
@@ -1321,15 +1170,12 @@ export function soloWon(
 export async function getPublicProfile(
   name
 ) {
-
   const snap =
     await get(
       profileRef(name)
     );
 
-  if (
-    !snap.exists()
-  ) {
+  if (!snap.exists()) {
     return null;
   }
 
@@ -1340,15 +1186,12 @@ export function listenProfile(
   name,
   callback
 ) {
-
   return onValue(
     profileRef(name),
     snap => {
-
       callback(
         snap.val()
       );
-
     }
   );
 }
@@ -1363,9 +1206,7 @@ export async function submitResult(
   name,
   score
 ) {
-
-  const code =
-    getSavedRoom();
+  const code = getSavedRoom();
 
   if (!code) {
     throw new Error(
@@ -1397,9 +1238,7 @@ export async function submitResult(
 // ============================================================
 
 export async function resetSessionForNextRound() {
-
-  const code =
-    getSavedRoom();
+  const code = getSavedRoom();
 
   if (!code) {
     return;
@@ -1442,7 +1281,6 @@ export async function logTransaction(
     note
   }
 ) {
-
   await push(
     ref(
       db,
@@ -1461,7 +1299,6 @@ export async function getTransactions(
   name,
   limitN = 20
 ) {
-
   const snap =
     await get(
       ref(
@@ -1499,11 +1336,9 @@ export async function recordRoundResult(
   gameId,
   { won }
 ) {
-
   await runTransaction(
     profileRef(name),
     curr => {
-
       curr =
         curr ||
         blankProfile();
@@ -1545,22 +1380,17 @@ export async function recordRoundResult(
       curr.gamesPlayed++;
 
       if (won) {
-
         curr.wins++;
         curr.coins +=
           COIN_WIN;
-
       } else {
-
         curr.losses++;
         curr.coins +=
           COIN_PLAY;
-
       }
 
       const game =
-        curr.byGame[gameId] ||
-        {
+        curr.byGame[gameId] || {
           wins: 0,
           plays: 0
         };
@@ -1575,7 +1405,6 @@ export async function recordRoundResult(
         game;
 
       return curr;
-
     }
   );
 
@@ -1605,7 +1434,6 @@ export async function recordRoundResult(
 // ============================================================
 
 export const SHOP_ITEMS = [
-
   {
     id: "theme-sunset",
     name: "تم غروب",
@@ -1705,7 +1533,6 @@ export const SHOP_ITEMS = [
       "#FF1744"
     ]
   }
-
 ];
 
 // ============================================================
@@ -1716,20 +1543,16 @@ export async function buyItem(
   name,
   itemId
 ) {
-
   const item =
     SHOP_ITEMS.find(
-      i =>
-        i.id === itemId
+      i => i.id === itemId
     );
 
   if (!item) {
-
     return {
       ok: false,
       reason: "not-found"
     };
-
   }
 
   let result = {
@@ -1740,7 +1563,6 @@ export async function buyItem(
   await runTransaction(
     profileRef(name),
     curr => {
-
       curr =
         curr ||
         blankProfile();
@@ -1756,7 +1578,6 @@ export async function buyItem(
           itemId
         )
       ) {
-
         result = {
           ok: false,
           reason: "owned"
@@ -1769,7 +1590,6 @@ export async function buyItem(
         curr.coins <
         item.price
       ) {
-
         result = {
           ok: false,
           reason: "insufficient"
@@ -1790,12 +1610,10 @@ export async function buyItem(
       };
 
       return curr;
-
     }
   );
 
   if (result.ok) {
-
     await logTransaction(
       name,
       {
@@ -1806,7 +1624,6 @@ export async function buyItem(
           `خرید ${item.name}`
       }
     );
-
   }
 
   return result;
@@ -1820,11 +1637,9 @@ export async function equipTheme(
   name,
   itemId
 ) {
-
   await runTransaction(
     profileRef(name),
     curr => {
-
       curr =
         curr ||
         blankProfile();
@@ -1833,7 +1648,6 @@ export async function equipTheme(
         itemId;
 
       return curr;
-
     }
   );
 }
@@ -1843,7 +1657,6 @@ export async function equipTheme(
 // ============================================================
 
 export const MISSIONS = [
-
   {
     id: "m-play3",
     label: "۳ بازی انجام بده",
@@ -1867,27 +1680,22 @@ export const MISSIONS = [
     target: 10,
     statKey: "gamesPlayed"
   }
-
 ];
 
 export async function claimMission(
   name,
   missionId
 ) {
-
   const mission =
     MISSIONS.find(
-      m =>
-        m.id === missionId
+      m => m.id === missionId
     );
 
   if (!mission) {
-
     return {
       ok: false,
       reason: "not-found"
     };
-
   }
 
   let result = {
@@ -1897,7 +1705,6 @@ export async function claimMission(
   await runTransaction(
     profileRef(name),
     curr => {
-
       curr =
         curr ||
         blankProfile();
@@ -1911,7 +1718,6 @@ export async function claimMission(
           missionId
         )
       ) {
-
         result = {
           ok: false,
           reason: "claimed"
@@ -1931,7 +1737,6 @@ export async function claimMission(
         currentValue <
         mission.target
       ) {
-
         result = {
           ok: false,
           reason: "incomplete"
@@ -1955,12 +1760,10 @@ export async function claimMission(
       };
 
       return curr;
-
     }
   );
 
   if (result.ok) {
-
     await logTransaction(
       name,
       {
@@ -1971,7 +1774,6 @@ export async function claimMission(
           mission.label
       }
     );
-
   }
 
   return result;
@@ -1985,27 +1787,22 @@ export async function sendFriendRequest(
   myName,
   targetName
 ) {
+  myName = String(
+    myName || ""
+  ).trim();
 
-  myName =
-    String(
-      myName || ""
-    ).trim();
-
-  targetName =
-    String(
-      targetName || ""
-    ).trim();
+  targetName = String(
+    targetName || ""
+  ).trim();
 
   if (
     !targetName ||
     targetName === myName
   ) {
-
     return {
       ok: false,
       reason: "invalid"
     };
-
   }
 
   const targetSnap =
@@ -2015,15 +1812,11 @@ export async function sendFriendRequest(
       )
     );
 
-  if (
-    !targetSnap.exists()
-  ) {
-
+  if (!targetSnap.exists()) {
     return {
       ok: false,
       reason: "not-found"
     };
-
   }
 
   const targetVal =
@@ -2033,26 +1826,22 @@ export async function sendFriendRequest(
     targetVal.friends &&
     targetVal.friends[myName]
   ) {
-
     return {
       ok: false,
       reason:
         "already-friends"
     };
-
   }
 
   if (
     targetVal.friendRequests &&
     targetVal.friendRequests[myName]
   ) {
-
     return {
       ok: false,
       reason:
         "request-pending"
     };
-
   }
 
   await update(
@@ -2079,40 +1868,33 @@ export async function getFriendStatus(
   myName,
   targetName
 ) {
+  myName = String(
+    myName || ""
+  ).trim();
 
-  myName =
-    String(
-      myName || ""
-    ).trim();
-
-  targetName =
-    String(
-      targetName || ""
-    ).trim();
+  targetName = String(
+    targetName || ""
+  ).trim();
 
   if (
     !myName ||
     !targetName
   ) {
-
     return {
       isFriend: false,
       requestPending: false,
       isSelf: false
     };
-
   }
 
   if (
     myName === targetName
   ) {
-
     return {
       isFriend: false,
       requestPending: false,
       isSelf: true
     };
-
   }
 
   const myProfileSnap =
@@ -2166,21 +1948,18 @@ export function listenFriendRequests(
   myName,
   callback
 ) {
-
   return onValue(
     profileRef(
       myName,
       "friendRequests"
     ),
     snap => {
-
       const val =
         snap.val() || {};
 
       callback(
         Object.keys(val)
       );
-
     }
   );
 }
@@ -2189,7 +1968,6 @@ export async function acceptFriendRequest(
   myName,
   fromName
 ) {
-
   await update(
     profileRef(
       myName,
@@ -2222,14 +2000,12 @@ export async function rejectFriendRequest(
   myName,
   fromName
 ) {
-
   await remove(
     profileRef(
       myName,
       `friendRequests/${fromName}`
     )
   );
-
 }
 
 // ============================================================
@@ -2240,144 +2016,138 @@ export function listenFriends(
   myName,
   callback
 ) {
-
-  return onValue(
-    profileRef(
-      myName,
-      "friends"
-    ),
-    async snap => {
-
-      const val =
-        snap.val() || {};
-
-      const names =
-        Object.keys(val);
-
-      const results = [];
-
-      for (
-        const name of names
-      ) {
-
-        try {
-
-          // --------------------------------------------------
-          // Presence
-          // --------------------------------------------------
-
-          const pSnap =
-            await get(
-              profileRef(
-                name,
-                "presence"
-              )
-            );
-
-          const presence =
-            pSnap.val() || {};
-
-          // --------------------------------------------------
-          // پروفایل اصلی
-          // lastLogin اینجاست، نه داخل presence
-          // --------------------------------------------------
-
-          const profileSnap =
-            await get(
-              profileRef(name)
-            );
-
-          const profile =
-            profileSnap.val() || {};
-
-          const connections =
-            presence.connections ||
-            {};
-
-          const connectionList =
-            Object.values(
-              connections
-            );
-
-          const hasOnlineConnection =
-            connectionList.some(
-              x =>
-                x &&
-                x.online === true
-            );
-
-          let online =
-            hasOnlineConnection;
-
-          if (
-            connectionList.length === 0
-          ) {
-
-            online =
-              !!presence.online;
-
-          }
-
-          results.push({
-
-            name,
-
-            online,
-
-            lastSeen:
-              Number(
-                presence.lastSeen ||
-                  0
-              ),
-
-export function listenFriends(myName, callback) {
   let friendUnsubs = {};
   let latest = {};
 
   function emit(names) {
-    callback(names.map((n) => latest[n] || { name: n, online: false, lastSeen: 0, lastLogin: 0 }));
+    callback(
+      names.map(
+        n =>
+          latest[n] || {
+            name: n,
+            online: false,
+            lastSeen: 0,
+            lastLogin: 0
+          }
+      )
+    );
   }
 
-  const mainUnsub = onValue(profileRef(myName, "friends"), (snap) => {
-    const val = snap.val() || {};
-    const names = Object.keys(val);
+  const mainUnsub =
+    onValue(
+      profileRef(
+        myName,
+        "friends"
+      ),
+      snap => {
+        const val =
+          snap.val() || {};
 
-    Object.keys(friendUnsubs).forEach((n) => {
-      if (!names.includes(n)) {
-        friendUnsubs[n]();
-        delete friendUnsubs[n];
-        delete latest[n];
-      }
-    });
+        const names =
+          Object.keys(val);
 
-    names.forEach((name) => {
-      if (friendUnsubs[name]) return;
+        // حذف Listener دوستانی که دیگر دوست نیستند
+        Object.keys(
+          friendUnsubs
+        ).forEach(
+          n => {
+            if (
+              !names.includes(n)
+            ) {
+              friendUnsubs[n]();
+              delete friendUnsubs[n];
+              delete latest[n];
+            }
+          }
+        );
 
-      friendUnsubs[name] = onValue(profileRef(name), (pSnap) => {
-        const profile = pSnap.val() || {};
-        const presence = profile.presence || {};
-        const connections = presence.connections || {};
-        const connectionList = Object.values(connections);
-        const hasOnlineConnection = connectionList.some((x) => x && x.online === true);
-        let online = hasOnlineConnection;
-        if (connectionList.length === 0) online = !!presence.online;
+        // ایجاد Listener برای دوستان جدید
+        names.forEach(
+          name => {
+            if (
+              friendUnsubs[name]
+            ) {
+              return;
+            }
 
-        latest[name] = {
-          name,
-          online,
-          lastSeen: Number(presence.lastSeen || 0),
-          lastLogin: Number(profile.lastLogin || 0),
-        };
+            friendUnsubs[name] =
+              onValue(
+                profileRef(name),
+                pSnap => {
+                  const profile =
+                    pSnap.val() || {};
+
+                  const presence =
+                    profile.presence ||
+                    {};
+
+                  const connections =
+                    presence.connections ||
+                    {};
+
+                  const connectionList =
+                    Object.values(
+                      connections
+                    );
+
+                  const hasOnlineConnection =
+                    connectionList.some(
+                      x =>
+                        x &&
+                        x.online === true
+                    );
+
+                  let online =
+                    hasOnlineConnection;
+
+                  if (
+                    connectionList.length ===
+                    0
+                  ) {
+                    online =
+                      !!presence.online;
+                  }
+
+                  latest[name] = {
+                    name,
+                    online,
+                    lastSeen:
+                      Number(
+                        presence.lastSeen ||
+                          0
+                      ),
+                    lastLogin:
+                      Number(
+                        profile.lastLogin ||
+                          0
+                      )
+                  };
+
+                  emit(names);
+                }
+              );
+          }
+        );
+
         emit(names);
-      });
-    });
-
-    emit(names);
-  });
+      }
+    );
 
   return () => {
     mainUnsub();
-    Object.values(friendUnsubs).forEach((u) => u());
+
+    Object.values(
+      friendUnsubs
+    ).forEach(
+      unsubscribe => {
+        try {
+          unsubscribe();
+        } catch {}
+      }
+    );
+
+    friendUnsubs = {};
+    latest = {};
   };
 }
 
@@ -2390,7 +2160,6 @@ export async function inviteFriendToRoom(
   friendName,
   roomCode
 ) {
-
   await push(
     ref(
       db,
@@ -2402,7 +2171,6 @@ export async function inviteFriendToRoom(
       at: Date.now()
     }
   );
-
 }
 
 // ============================================================
@@ -2413,14 +2181,12 @@ export function listenInvites(
   myName,
   callback
 ) {
-
   return onValue(
     ref(
       db,
       `profiles/${encodeURIComponent(myName)}/invites`
     ),
     snap => {
-
       const val =
         snap.val() || {};
 
@@ -2439,7 +2205,6 @@ export function listenInvites(
           );
 
       callback(list);
-
     }
   );
 }
@@ -2452,14 +2217,12 @@ export async function dismissInvite(
   myName,
   inviteId
 ) {
-
   await remove(
     ref(
       db,
       `profiles/${encodeURIComponent(myName)}/invites/${inviteId}`
     )
   );
-
 }
 
 // ============================================================
@@ -2470,12 +2233,10 @@ export function chatRef(
   code,
   path = ""
 ) {
-
   return ref(
     db,
     `rooms/${code}/chat${path ? "/" + path : ""}`
   );
-
 }
 
 export async function sendChatMessage(
@@ -2483,11 +2244,8 @@ export async function sendChatMessage(
   name,
   text
 ) {
-
   const clean =
-    String(
-      text || ""
-    )
+    String(text || "")
       .slice(0, 200)
       .trim();
 
@@ -2511,7 +2269,6 @@ export async function sendChatMessage(
   );
 
   try {
-
     const snap =
       await get(
         msgsRef
@@ -2526,7 +2283,6 @@ export async function sendChatMessage(
     if (
       keys.length > 60
     ) {
-
       const sorted =
         keys.sort(
           (a, b) =>
@@ -2543,40 +2299,32 @@ export async function sendChatMessage(
       for (
         const key of oldKeys
       ) {
-
         await remove(
           chatRef(
             code,
             `messages/${key}`
           )
         );
-
       }
     }
-
   } catch (e) {
-
     console.warn(
       "Chat cleanup error:",
       e
     );
-
   }
-
 }
 
 export function listenChat(
   code,
   callback
 ) {
-
   return onValue(
     chatRef(
       code,
       "messages"
     ),
     snap => {
-
       const val =
         snap.val() || {};
 
@@ -2595,7 +2343,6 @@ export function listenChat(
           );
 
       callback(list);
-
     }
   );
 }
@@ -2607,7 +2354,6 @@ export function listenChat(
 export async function getLeaderboard(
   limitN = 5
 ) {
-
   const snap =
     await get(
       ref(
@@ -2623,7 +2369,6 @@ export async function getLeaderboard(
     Object.entries(val)
       .map(
         ([encodedName, profile]) => ({
-
           name:
             decodeURIComponent(
               encodedName
@@ -2631,7 +2376,6 @@ export async function getLeaderboard(
 
           wins:
             profile.wins || 0
-
         })
       );
 
@@ -2645,4 +2389,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-      }
+  }
