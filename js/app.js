@@ -1130,8 +1130,8 @@ export const GAMES = [
     desc: "آینه، لنز و منشور را بچین و نور را به هدف‌ها برسان",
     icon: "💡",
     soloThreshold: 1
-  }
-];
+  },
+]
 
  
 ];
