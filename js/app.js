@@ -1131,7 +1131,7 @@ export const GAMES = [
     icon: "💡",
     soloThreshold: 1
   }
-];},
+];
 
  
 ];
