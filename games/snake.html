@@ -2,186 +2,2596 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <title>بازی مار | دومیتو</title>
+
 <link rel="stylesheet" href="../css/style.css">
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  overflow-x:hidden;
+}
+
+.wrap{
+  width:min(100%,520px);
+  margin:auto;
+  padding:18px 12px 35px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin-bottom:15px;
+}
+
+.brand-mark{
+  font-size:42px;
+  filter:drop-shadow(0 0 12px rgba(80,255,150,.55));
+  animation:
+    snakeLogo 2s ease-in-out infinite,
+    logoGlow 1.7s ease-in-out infinite alternate;
+}
+
+@keyframes snakeLogo{
+  0%,100%{transform:rotate(-5deg) translateY(0)}
+  50%{transform:rotate(5deg) translateY(-5px)}
+}
+
+@keyframes logoGlow{
+  from{filter:drop-shadow(0 0 5px rgba(80,255,150,.35))}
+  to{filter:drop-shadow(0 0 18px rgba(80,255,150,.9))}
+}
+
+.card{
+  position:relative;
+  overflow:hidden;
+}
+
+.game-card{
+  padding:12px;
+}
+
+.game-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.stat-box{
+  flex:1;
+  padding:9px 10px;
+  border-radius:15px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);
+  text-align:center;
+}
+
+.stat-label{
+  display:block;
+  font-size:11px;
+  opacity:.65;
+  margin-bottom:2px;
+}
+
+.stat-value{
+  display:block;
+  font-size:20px;
+  font-weight:900;
+}
+
+#scoreText{
+  color:#7dffad;
+  text-shadow:0 0 12px rgba(80,255,140,.35);
+}
+
+#speedText{
+  color:#7dd3fc;
+}
+
+.snake-wrap{
+  position:relative;
+  width:min(100%,400px);
+  aspect-ratio:1;
+  margin:auto;
+  border-radius:25px;
+  overflow:hidden;
+
+  background:
+    radial-gradient(circle at 50% 45%,
+      rgba(60,255,150,.07),
+      transparent 45%),
+    linear-gradient(
+      135deg,
+      rgba(10,35,25,.98),
+      rgba(5,15,12,.98)
+    );
+
+  border:1px solid rgba(100,255,160,.15);
+
+  box-shadow:
+    0 0 35px rgba(0,255,130,.08),
+    inset 0 0 30px rgba(0,0,0,.45);
+
+  transition:
+    transform .12s ease,
+    box-shadow .2s ease;
+}
+
+.snake-wrap.shake{
+  animation:shake .28s ease;
+}
+
+@keyframes shake{
+  0%{transform:translate(0,0)}
+  20%{transform:translate(5px,-3px)}
+  40%{transform:translate(-5px,3px)}
+  60%{transform:translate(4px,2px)}
+  80%{transform:translate(-3px,-2px)}
+  100%{transform:translate(0,0)}
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
+  touch-action:none;
+}
+
+.speed-flash{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0;
+  background:
+    radial-gradient(
+      circle,
+      rgba(80,220,255,.28),
+      transparent 65%
+    );
+}
+
+.speed-flash.active{
+  animation:speedFlash .7s ease;
+}
+
+@keyframes speedFlash{
+  0%{opacity:0}
+  20%{opacity:1}
+  100%{opacity:0}
+}
+
+.game-message{
+  text-align:center;
+  margin-top:12px;
+  min-height:24px;
+  font-size:13px;
+  opacity:.72;
+}
+
+.dpad{
+  display:grid;
+  grid-template-columns:repeat(3,62px);
+  grid-template-rows:repeat(2,62px);
+  justify-content:center;
+  gap:8px;
+  margin-top:14px;
+}
+
+.dpad button{
+  border:0;
+  border-radius:18px;
+  font-size:25px;
+  color:white;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.12),
+      rgba(255,255,255,.045)
+    );
+
+  border:1px solid rgba(255,255,255,.1);
+
+  box-shadow:
+    0 7px 18px rgba(0,0,0,.2),
+    inset 0 1px 0 rgba(255,255,255,.08);
+
+  transition:
+    transform .08s ease,
+    background .15s ease;
+}
+
+.dpad button:active{
+  transform:scale(.88);
+  background:rgba(80,255,150,.18);
+}
+
+.dp-up{
+  grid-column:2;
+}
+
+.dp-left{
+  grid-column:1;
+  grid-row:2;
+}
+
+.dp-right{
+  grid-column:3;
+  grid-row:2;
+}
+
+.dp-down{
+  grid-column:2;
+  grid-row:2;
+}
+
+#waitArea{
+  animation:cardIn .55s cubic-bezier(.2,.8,.2,1);
+}
+
+#scoreArea{
+  animation:cardIn .65s cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes cardIn{
+  from{
+    opacity:0;
+    transform:translateY(25px) scale(.94);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+.score-board{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.score-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:13px 15px;
+  border-radius:15px;
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.06);
+  animation:rowIn .45s ease both;
+}
+
+.score-row:nth-child(2){
+  animation-delay:.08s;
+}
+
+.score-row:nth-child(3){
+  animation-delay:.16s;
+}
+
+.score-row:nth-child(4){
+  animation-delay:.24s;
+}
+
+@keyframes rowIn{
+  from{
+    opacity:0;
+    transform:translateX(25px);
+  }
+  to{
+    opacity:1;
+    transform:translateX(0);
+  }
+}
+
+.score-row.winner{
+  background:
+    linear-gradient(
+      90deg,
+      rgba(80,255,150,.16),
+      rgba(255,215,80,.09)
+    );
+
+  border-color:rgba(100,255,160,.35);
+
+  box-shadow:
+    0 0 22px rgba(80,255,150,.12);
+
+  animation:
+    rowIn .45s ease both,
+    winnerGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes winnerGlow{
+  from{
+    box-shadow:0 0 8px rgba(80,255,150,.08);
+  }
+  to{
+    box-shadow:0 0 25px rgba(80,255,150,.28);
+  }
+}
+
+.points{
+  font-size:19px;
+  font-weight:900;
+}
+
+.winner .points{
+  color:#7dffad;
+}
+
+.solo-result{
+  text-align:center;
+  padding:18px 5px;
+}
+
+.big-emoji{
+  font-size:64px;
+  animation:
+    resultPop .65s cubic-bezier(.2,1.5,.4,1),
+    resultFloat 2s ease-in-out .65s infinite;
+}
+
+@keyframes resultPop{
+  from{
+    opacity:0;
+    transform:scale(.2) rotate(-20deg);
+  }
+  to{
+    opacity:1;
+    transform:scale(1) rotate(0);
+  }
+}
+
+@keyframes resultFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-8px)}
+}
+
+.score-big{
+  font-size:27px;
+  font-weight:900;
+  margin:10px 0 18px;
+  color:#7dffad;
+}
+
+#nextStatus{
+  animation:pulseText 1.5s ease-in-out infinite;
+}
+
+@keyframes pulseText{
+  0%,100%{opacity:.45}
+  50%{opacity:1}
+}
+
+@media(max-width:430px){
+  .dpad{
+    grid-template-columns:repeat(3,55px);
+    grid-template-rows:repeat(2,55px);
+  }
+
+  .dpad button{
+    font-size:22px;
+  }
+}
+</style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="brand"><div class="brand-mark">🐍</div><h1>بازی مار</h1></div>
-    <div class="card" id="playArea">
-      <h2>طول مار: <span id="lengthText">1</span></h2>
-      <div class="snake-wrap">
-        <canvas id="snakeCanvas" width="300" height="300"></canvas>
-        <div class="dpad">
-          <button class="dp-up">⬆️</button>
-          <button class="dp-left">⬅️</button>
-          <button class="dp-right">➡️</button>
-          <button class="dp-down">⬇️</button>
-        </div>
-      </div>
-    </div>
-    <div class="card" id="waitArea" style="display:none">
-      <h2>نتیجه تو ثبت شد</h2>
-      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
-    </div>
-    <div class="card" id="scoreArea" style="display:none">
-      <h2 id="scoreAreaTitle">نتیجه این دور</h2>
-      <div class="score-board" id="scoreBoard"></div>
-      <div class="solo-result" id="soloResult" style="display:none"></div>
-      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
-    </div>
+
+<div class="wrap">
+
+  <div class="brand">
+    <div class="brand-mark">🐍</div>
+    <h1>بازی مار</h1>
   </div>
 
+  <div class="card game-card" id="playArea">
+
+    <div class="game-header">
+
+      <div class="stat-box">
+        <span class="stat-label">امتیاز</span>
+        <span class="stat-value" id="scoreText">0</span>
+      </div>
+
+      <div class="stat-box">
+        <span class="stat-label">رکورد</span>
+        <span class="stat-value" id="highScoreText">0</span>
+      </div>
+
+      <div class="stat-box">
+        <span class="stat-label">سرعت</span>
+        <span class="stat-value" id="speedText">1×</span>
+      </div>
+
+    </div>
+
+    <div class="snake-wrap" id="snakeWrap">
+
+      <canvas
+        id="snakeCanvas"
+        width="400"
+        height="400"
+      ></canvas>
+
+      <div
+        class="speed-flash"
+        id="speedFlash"
+      ></div>
+
+    </div>
+
+    <div
+      class="game-message"
+      id="gameMessage"
+    >
+      غذا بخور و بزرگ‌تر شو! 🍎
+    </div>
+
+    <div class="dpad">
+
+      <button
+        class="dp-up"
+        aria-label="بالا"
+      >⬆️</button>
+
+      <button
+        class="dp-left"
+        aria-label="چپ"
+      >⬅️</button>
+
+      <button
+        class="dp-right"
+        aria-label="راست"
+      >➡️</button>
+
+      <button
+        class="dp-down"
+        aria-label="پایین"
+      >⬇️</button>
+
+    </div>
+
+  </div>
+
+
+  <div
+    class="card"
+    id="waitArea"
+    style="display:none"
+  >
+
+    <h2>نتیجه تو ثبت شد 🐍</h2>
+
+    <p
+      class="status-line"
+      id="waitStatus"
+    >
+      در انتظار بقیه بازیکن‌ها...
+    </p>
+
+  </div>
+
+
+  <div
+    class="card"
+    id="scoreArea"
+    style="display:none"
+  >
+
+    <h2 id="scoreAreaTitle">
+      🏆 نتیجه این دور
+    </h2>
+
+    <div
+      class="score-board"
+      id="scoreBoard"
+    ></div>
+
+    <div
+      class="solo-result"
+      id="soloResult"
+      style="display:none"
+    ></div>
+
+    <p
+      class="status-line"
+      id="nextStatus"
+    >
+      به زودی برمی‌گردیم به سالن...
+    </p>
+
+  </div>
+
+</div>
+
+
 <script type="module">
-  import {
-    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
-    submitResult, resetSessionForNextRound, recordRoundResult, soloWon
-  } from "../js/app.js";
-  import { mountChat } from "../js/chat.js";
 
-  const isSolo = new URLSearchParams(location.search).has("solo");
-  const code = getSavedRoom();
-  const R = (p) => roomRef(code, p);
+import {
+  roomRef,
+  getSavedRoom,
+  onValue,
+  waitForUser,
+  currentUid,
+  getSavedName,
+  submitResult,
+  resetSessionForNextRound,
+  recordRoundResult,
+  soloWon
+} from "../js/app.js";
 
-  const canvas = document.getElementById("snakeCanvas");
-  const ctx = canvas.getContext("2d");
-  const GRID = 15;
-  const CELL = canvas.width / GRID;
+import {
+  mountChat
+} from "../js/chat.js";
 
-  let snake = [{ x: 7, y: 7 }];
-  let dir = { x: 1, y: 0 };
-  let nextDir = { x: 1, y: 0 };
-  let food = randomFood();
-  let done = false;
-  let myUid, myName, players = {};
 
-  function randomFood() {
-    return { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
+/* =========================================================
+   حالت بازی
+========================================================= */
+
+const isSolo =
+  new URLSearchParams(location.search).has("solo");
+
+const code = getSavedRoom();
+
+const R = (p) =>
+  roomRef(code, p);
+
+
+/* =========================================================
+   Canvas
+========================================================= */
+
+const canvas =
+  document.getElementById("snakeCanvas");
+
+const ctx =
+  canvas.getContext("2d");
+
+const snakeWrap =
+  document.getElementById("snakeWrap");
+
+const speedFlash =
+  document.getElementById("speedFlash");
+
+const scoreText =
+  document.getElementById("scoreText");
+
+const highScoreText =
+  document.getElementById("highScoreText");
+
+const speedText =
+  document.getElementById("speedText");
+
+const gameMessage =
+  document.getElementById("gameMessage");
+
+
+/* =========================================================
+   تنظیمات
+========================================================= */
+
+const GRID = 20;
+
+const CELL =
+  canvas.width / GRID;
+
+const FOOD_SCORE = 10;
+
+
+/*
+   اول بازی آرام است.
+   هر چند ثانیه کمی سریع‌تر می‌شود.
+*/
+
+const START_SPEED = 190;
+
+const MIN_SPEED = 62;
+
+const SPEED_STEP = 10;
+
+const SPEED_INTERVAL = 12000;
+
+
+/* =========================================================
+   وضعیت بازی
+========================================================= */
+
+let snake = [
+  {x:9, y:10},
+  {x:8, y:10},
+  {x:7, y:10}
+];
+
+let dir = {
+  x:1,
+  y:0
+};
+
+let nextDir = {
+  x:1,
+  y:0
+};
+
+let food =
+  randomFood();
+
+let done = false;
+
+let score = 0;
+
+let speed = START_SPEED;
+
+let speedLevel = 1;
+
+let gameLoop = null;
+
+let speedTimer = null;
+
+let animationFrame = null;
+
+let myUid = null;
+
+let myName = "";
+
+let players = {};
+
+let handled = false;
+
+
+/* =========================================================
+   رکورد محلی
+========================================================= */
+
+const HIGH_SCORE_KEY =
+  "domito_snake_highscore";
+
+let highScore =
+  Number(
+    localStorage.getItem(HIGH_SCORE_KEY) || 0
+  );
+
+highScoreText.textContent =
+  highScore;
+
+
+/* =========================================================
+   Web Audio
+========================================================= */
+
+let audioCtx = null;
+
+
+function initAudio(){
+
+  if(audioCtx){
+    return;
   }
 
-  function draw() {
-    ctx.fillStyle = "#1B1F3A";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#FFC845";
-    ctx.fillRect(food.x * CELL, food.y * CELL, CELL - 2, CELL - 2);
-    snake.forEach((s, i) => {
-      ctx.fillStyle = i === 0 ? "#4F7CFF" : "#9B5CFF";
-      ctx.fillRect(s.x * CELL, s.y * CELL, CELL - 2, CELL - 2);
+  try{
+
+    audioCtx =
+      new (
+        window.AudioContext ||
+        window.webkitAudioContext
+      )();
+
+  }catch(e){
+
+    audioCtx = null;
+
+  }
+
+}
+
+
+function beep(
+  frequency,
+  duration,
+  type = "sine",
+  volume = .045
+){
+
+  if(!audioCtx){
+    return;
+  }
+
+  try{
+
+    if(
+      audioCtx.state === "suspended"
+    ){
+      audioCtx.resume();
+    }
+
+    const osc =
+      audioCtx.createOscillator();
+
+    const gain =
+      audioCtx.createGain();
+
+    osc.type = type;
+
+    osc.frequency.value =
+      frequency;
+
+    gain.gain.setValueAtTime(
+      volume,
+      audioCtx.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audioCtx.currentTime + duration
+    );
+
+    osc.connect(gain);
+
+    gain.connect(
+      audioCtx.destination
+    );
+
+    osc.start();
+
+    osc.stop(
+      audioCtx.currentTime + duration
+    );
+
+  }catch(e){}
+
+}
+
+
+function soundFood(){
+
+  beep(
+    620,
+    .07,
+    "sine",
+    .055
+  );
+
+  setTimeout(
+    () => beep(
+      920,
+      .08,
+      "sine",
+      .045
+    ),
+    45
+  );
+
+}
+
+
+function soundTurn(){
+
+  beep(
+    180,
+    .035,
+    "triangle",
+    .018
+  );
+
+}
+
+
+function soundSpeedUp(){
+
+  beep(
+    400,
+    .07,
+    "square",
+    .025
+  );
+
+  setTimeout(
+    () => beep(
+      650,
+      .1,
+      "square",
+      .035
+    ),
+    65
+  );
+
+}
+
+
+function soundGameOver(){
+
+  beep(
+    260,
+    .15,
+    "sawtooth",
+    .035
+  );
+
+  setTimeout(
+    () => beep(
+      170,
+      .22,
+      "sawtooth",
+      .03
+    ),
+    100
+  );
+
+}
+
+
+function soundStart(){
+
+  beep(
+    500,
+    .06,
+    "triangle",
+    .025
+  );
+
+  setTimeout(
+    () => beep(
+      700,
+      .08,
+      "triangle",
+      .025
+    ),
+    70
+  );
+
+}
+
+
+/* =========================================================
+   ذرات
+========================================================= */
+
+let particles = [];
+
+
+function createFoodParticles(){
+
+  const cx =
+    food.x * CELL +
+    CELL / 2;
+
+  const cy =
+    food.y * CELL +
+    CELL / 2;
+
+  for(
+    let i = 0;
+    i < 18;
+    i++
+  ){
+
+    const angle =
+      Math.random() *
+      Math.PI *
+      2;
+
+    const velocity =
+      1.2 +
+      Math.random() * 2.8;
+
+    particles.push({
+
+      x:cx,
+
+      y:cy,
+
+      vx:
+        Math.cos(angle) *
+        velocity,
+
+      vy:
+        Math.sin(angle) *
+        velocity,
+
+      life:1,
+
+      size:
+        2 +
+        Math.random() * 3
+
     });
+
   }
 
-  function tick() {
-    if (done) return;
-    dir = nextDir;
-    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+}
 
-    if (head.x < 0 || head.y < 0 || head.x >= GRID || head.y >= GRID || snake.some((s) => s.x === head.x && s.y === head.y)) {
-      gameOver();
+
+function updateParticles(){
+
+  for(
+    let i = particles.length - 1;
+    i >= 0;
+    i--
+  ){
+
+    const p =
+      particles[i];
+
+    p.x += p.vx;
+
+    p.y += p.vy;
+
+    p.vx *= .96;
+
+    p.vy *= .96;
+
+    p.life -= .045;
+
+    if(p.life <= 0){
+
+      particles.splice(
+        i,
+        1
+      );
+
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   غذای جدید
+========================================================= */
+
+function randomFood(){
+
+  let f;
+
+  do{
+
+    f = {
+
+      x:
+        Math.floor(
+          Math.random() * GRID
+        ),
+
+      y:
+        Math.floor(
+          Math.random() * GRID
+        )
+
+    };
+
+  }while(
+    snake.some(
+      s =>
+        s.x === f.x &&
+        s.y === f.y
+    )
+  );
+
+  return f;
+}
+
+
+/* =========================================================
+   رسم پس‌زمینه
+========================================================= */
+
+function drawBackground(){
+
+  const gradient =
+    ctx.createLinearGradient(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+  gradient.addColorStop(
+    0,
+    "#071c12"
+  );
+
+  gradient.addColorStop(
+    1,
+    "#03100a"
+  );
+
+  ctx.fillStyle =
+    gradient;
+
+  ctx.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  /*
+     خطوط بسیار ظریف زمین
+  */
+
+  ctx.strokeStyle =
+    "rgba(100,255,160,.035)";
+
+  ctx.lineWidth = 1;
+
+  for(
+    let i = 0;
+    i <= GRID;
+    i++
+  ){
+
+    const p =
+      i * CELL;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      p,
+      0
+    );
+
+    ctx.lineTo(
+      p,
+      canvas.height
+    );
+
+    ctx.stroke();
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      0,
+      p
+    );
+
+    ctx.lineTo(
+      canvas.width,
+      p
+    );
+
+    ctx.stroke();
+
+  }
+
+}
+
+
+/* =========================================================
+   رسم غذا
+========================================================= */
+
+function drawFood(time){
+
+  const cx =
+    food.x * CELL +
+    CELL / 2;
+
+  const cy =
+    food.y * CELL +
+    CELL / 2;
+
+
+  /*
+     تپش غذا
+  */
+
+  const pulse =
+    1 +
+    Math.sin(
+      time * .008
+    ) * .12;
+
+
+  /*
+     هاله
+  */
+
+  const glow =
+    ctx.createRadialGradient(
+      cx,
+      cy,
+      1,
+      cx,
+      cy,
+      CELL * 1.4
+    );
+
+  glow.addColorStop(
+    0,
+    "rgba(255,210,70,.55)"
+  );
+
+  glow.addColorStop(
+    .45,
+    "rgba(255,170,40,.18)"
+  );
+
+  glow.addColorStop(
+    1,
+    "rgba(255,170,40,0)"
+  );
+
+  ctx.fillStyle =
+    glow;
+
+  ctx.fillRect(
+    cx - CELL * 1.5,
+    cy - CELL * 1.5,
+    CELL * 3,
+    CELL * 3
+  );
+
+
+  /*
+     خود غذا
+  */
+
+  ctx.save();
+
+  ctx.translate(
+    cx,
+    cy
+  );
+
+  ctx.scale(
+    pulse,
+    pulse
+  );
+
+  const r =
+    CELL * .30;
+
+  const foodGradient =
+    ctx.createRadialGradient(
+      -r * .35,
+      -r * .4,
+      1,
+      0,
+      0,
+      r * 1.5
+    );
+
+  foodGradient.addColorStop(
+    0,
+    "#fff7b0"
+  );
+
+  foodGradient.addColorStop(
+    .3,
+    "#ffd84d"
+  );
+
+  foodGradient.addColorStop(
+    1,
+    "#ff8b22"
+  );
+
+  ctx.fillStyle =
+    foodGradient;
+
+  ctx.beginPath();
+
+  ctx.arc(
+    0,
+    0,
+    r,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+
+  /*
+     برگ کوچک
+  */
+
+  ctx.fillStyle =
+    "#63ff9b";
+
+  ctx.beginPath();
+
+  ctx.ellipse(
+    r * .65,
+    -r * .9,
+    r * .35,
+    r * .18,
+    -.5,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fill();
+
+  ctx.restore();
+
+}
+
+
+/* =========================================================
+   رسم مار
+========================================================= */
+
+function drawSnake(time){
+
+  snake.forEach(
+    (s, i) => {
+
+      const x =
+        s.x * CELL;
+
+      const y =
+        s.y * CELL;
+
+      const padding =
+        i === 0 ? 1.8 : 2.8;
+
+      const size =
+        CELL - padding * 2;
+
+
+      /*
+         هاله سر
+      */
+
+      if(i === 0){
+
+        ctx.shadowColor =
+          "rgba(70,255,145,.55)";
+
+        ctx.shadowBlur = 13;
+
+      }else{
+
+        ctx.shadowBlur = 0;
+
+      }
+
+
+      /*
+         رنگ بدن
+      */
+
+      const green =
+        Math.max(
+          90,
+          205 - i * 5
+        );
+
+      const gradient =
+        ctx.createLinearGradient(
+          x,
+          y,
+          x + CELL,
+          y + CELL
+        );
+
+      gradient.addColorStop(
+        0,
+        i === 0
+          ? "#b8ffd0"
+          : `rgb(80,${green},125)`
+      );
+
+      gradient.addColorStop(
+        .45,
+        i === 0
+          ? "#42ff91"
+          : `rgb(45,${Math.max(110,green - 30)},90)`
+      );
+
+      gradient.addColorStop(
+        1,
+        i === 0
+          ? "#13c96c"
+          : "#087c45"
+      );
+
+      ctx.fillStyle =
+        gradient;
+
+
+      /*
+         بدن گردتر
+      */
+
+      roundRect(
+        ctx,
+        x + padding,
+        y + padding,
+        size,
+        size,
+        i === 0 ? 7 : 5
+      );
+
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+
+      /*
+         هایلایت بدن
+      */
+
+      if(i > 0){
+
+        ctx.fillStyle =
+          "rgba(255,255,255,.12)";
+
+        roundRect(
+          ctx,
+          x + padding + 2,
+          y + padding + 2,
+          size * .55,
+          2,
+          2
+        );
+
+        ctx.fill();
+
+      }
+
+
+      /*
+         چشم‌ها
+      */
+
+      if(i === 0){
+
+        drawEyes(
+          x,
+          y
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   گرد کردن مستطیل
+========================================================= */
+
+function roundRect(
+  context,
+  x,
+  y,
+  width,
+  height,
+  radius
+){
+
+  context.beginPath();
+
+  context.roundRect(
+    x,
+    y,
+    width,
+    height,
+    radius
+  );
+
+}
+
+
+/* =========================================================
+   چشم‌های مار
+========================================================= */
+
+function drawEyes(
+  x,
+  y
+){
+
+  let positions;
+
+  if(dir.x === 1){
+
+    positions = [
+      [x + CELL * .68, y + CELL * .32],
+      [x + CELL * .68, y + CELL * .68]
+    ];
+
+  }else if(dir.x === -1){
+
+    positions = [
+      [x + CELL * .32, y + CELL * .32],
+      [x + CELL * .32, y + CELL * .68]
+    ];
+
+  }else if(dir.y === -1){
+
+    positions = [
+      [x + CELL * .32, y + CELL * .32],
+      [x + CELL * .68, y + CELL * .32]
+    ];
+
+  }else{
+
+    positions = [
+      [x + CELL * .32, y + CELL * .68],
+      [x + CELL * .68, y + CELL * .68]
+    ];
+
+  }
+
+
+  positions.forEach(
+    ([ex,ey]) => {
+
+      ctx.fillStyle =
+        "#ffffff";
+
+      ctx.beginPath();
+
+      ctx.arc(
+        ex,
+        ey,
+        2.8,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+
+      ctx.fillStyle =
+        "#07100b";
+
+      ctx.beginPath();
+
+      ctx.arc(
+        ex + dir.x * .7,
+        ey + dir.y * .7,
+        1.35,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   ذرات
+========================================================= */
+
+function drawParticles(){
+
+  particles.forEach(
+    p => {
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          p.life
+        );
+
+      ctx.fillStyle =
+        "#72ffae";
+
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        p.size * p.life,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+    }
+  );
+
+  ctx.globalAlpha = 1;
+
+}
+
+
+/* =========================================================
+   رندر
+========================================================= */
+
+function render(
+  time = performance.now()
+){
+
+  drawBackground();
+
+  drawFood(time);
+
+  drawSnake(time);
+
+  updateParticles();
+
+  drawParticles();
+
+
+  animationFrame =
+    requestAnimationFrame(
+      render
+    );
+
+}
+
+
+/* =========================================================
+   تغییر سرعت
+========================================================= */
+
+function increaseSpeed(){
+
+  if(done){
+    return;
+  }
+
+  if(speed <= MIN_SPEED){
+    return;
+  }
+
+  speed =
+    Math.max(
+      MIN_SPEED,
+      speed - SPEED_STEP
+    );
+
+  speedLevel++;
+
+  speedText.textContent =
+    (START_SPEED / speed)
+      .toFixed(1) + "×";
+
+  clearInterval(
+    gameLoop
+  );
+
+  gameLoop =
+    setInterval(
+      tick,
+      speed
+    );
+
+
+  /*
+     افکت سرعت
+  */
+
+  speedFlash.classList.remove(
+    "active"
+  );
+
+  void speedFlash.offsetWidth;
+
+  speedFlash.classList.add(
+    "active"
+  );
+
+
+  gameMessage.textContent =
+    "⚡ سرعت بیشتر شد!";
+
+  soundSpeedUp();
+
+  setTimeout(
+    () => {
+
+      if(!done){
+
+        gameMessage.textContent =
+          "حواست باشه! 🐍";
+
+      }
+
+    },
+    1300
+  );
+
+}
+
+
+/* =========================================================
+   حرکت بازی
+========================================================= */
+
+function tick(){
+
+  if(done){
+    return;
+  }
+
+
+  dir = {
+    x:nextDir.x,
+    y:nextDir.y
+  };
+
+
+  const head = {
+
+    x:
+      snake[0].x +
+      dir.x,
+
+    y:
+      snake[0].y +
+      dir.y
+
+  };
+
+
+  /*
+     برخورد با دیوار
+  */
+
+  if(
+    head.x < 0 ||
+    head.y < 0 ||
+    head.x >= GRID ||
+    head.y >= GRID
+  ){
+
+    gameOver();
+
+    return;
+
+  }
+
+
+  /*
+     برخورد با خودش
+  */
+
+  if(
+    snake.some(
+      s =>
+        s.x === head.x &&
+        s.y === head.y
+    )
+  ){
+
+    gameOver();
+
+    return;
+
+  }
+
+
+  snake.unshift(
+    head
+  );
+
+
+  /*
+     خوردن غذا
+  */
+
+  if(
+    head.x === food.x &&
+    head.y === food.y
+  ){
+
+    score += FOOD_SCORE;
+
+    scoreText.textContent =
+      score;
+
+
+    /*
+       رکورد
+    */
+
+    if(score > highScore){
+
+      highScore =
+        score;
+
+      highScoreText.textContent =
+        highScore;
+
+      localStorage.setItem(
+        HIGH_SCORE_KEY,
+        String(highScore)
+      );
+
+    }
+
+
+    createFoodParticles();
+
+    soundFood();
+
+    food =
+      randomFood();
+
+
+    /*
+       افکت رشد
+    */
+
+    gameMessage.textContent =
+      "+10 امتیاز! 🍎";
+
+
+    setTimeout(
+      () => {
+
+        if(!done){
+
+          gameMessage.textContent =
+            "ادامه بده! 🐍";
+
+        }
+
+      },
+      650
+    );
+
+  }else{
+
+    snake.pop();
+
+  }
+
+}
+
+
+/* =========================================================
+   تغییر جهت
+========================================================= */
+
+function setDir(
+  x,
+  y
+){
+
+  /*
+     جلوگیری از برگشت مستقیم
+  */
+
+  if(
+    dir.x === -x &&
+    dir.y === -y
+  ){
+
+    return;
+
+  }
+
+
+  /*
+     اگر همان جهت باشد
+  */
+
+  if(
+    nextDir.x === x &&
+    nextDir.y === y
+  ){
+
+    return;
+
+  }
+
+
+  nextDir = {
+    x,
+    y
+  };
+
+  soundTurn();
+
+}
+
+
+/* =========================================================
+   دکمه‌ها
+========================================================= */
+
+function bindButton(
+  selector,
+  x,
+  y
+){
+
+  const button =
+    document.querySelector(
+      selector
+    );
+
+  button.addEventListener(
+    "pointerdown",
+    e => {
+
+      e.preventDefault();
+
+      initAudio();
+
+      setDir(
+        x,
+        y
+      );
+
+    },
+    {
+      passive:false
+    }
+  );
+
+}
+
+
+bindButton(
+  ".dp-up",
+  0,
+  -1
+);
+
+bindButton(
+  ".dp-down",
+  0,
+  1
+);
+
+bindButton(
+  ".dp-left",
+  -1,
+  0
+);
+
+bindButton(
+  ".dp-right",
+  1,
+  0
+);
+
+
+/* =========================================================
+   کیبورد
+========================================================= */
+
+document.addEventListener(
+  "keydown",
+  e => {
+
+    initAudio();
+
+    if(
+      e.key === "ArrowUp"
+    ){
+
+      setDir(
+        0,
+        -1
+      );
+
+    }
+
+    if(
+      e.key === "ArrowDown"
+    ){
+
+      setDir(
+        0,
+        1
+      );
+
+    }
+
+    if(
+      e.key === "ArrowLeft"
+    ){
+
+      setDir(
+        -1,
+        0
+      );
+
+    }
+
+    if(
+      e.key === "ArrowRight"
+    ){
+
+      setDir(
+        1,
+        0
+      );
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   Swipe موبایل
+========================================================= */
+
+let touchStartX = 0;
+
+let touchStartY = 0;
+
+
+canvas.addEventListener(
+  "touchstart",
+  e => {
+
+    initAudio();
+
+    const t =
+      e.touches[0];
+
+    touchStartX =
+      t.clientX;
+
+    touchStartY =
+      t.clientY;
+
+  },
+  {
+    passive:true
+  }
+);
+
+
+canvas.addEventListener(
+  "touchend",
+  e => {
+
+    const t =
+      e.changedTouches[0];
+
+    const dx =
+      t.clientX -
+      touchStartX;
+
+    const dy =
+      t.clientY -
+      touchStartY;
+
+    const absX =
+      Math.abs(dx);
+
+    const absY =
+      Math.abs(dy);
+
+
+    if(
+      Math.max(
+        absX,
+        absY
+      ) < 25
+    ){
+
       return;
+
     }
 
-    snake.unshift(head);
-    if (head.x === food.x && head.y === food.y) {
-      food = randomFood();
-      document.getElementById("lengthText").textContent = snake.length;
-    } else {
-      snake.pop();
+
+    if(absX > absY){
+
+      if(dx > 0){
+
+        setDir(
+          1,
+          0
+        );
+
+      }else{
+
+        setDir(
+          -1,
+          0
+        );
+
+      }
+
+    }else{
+
+      if(dy > 0){
+
+        setDir(
+          0,
+          1
+        );
+
+      }else{
+
+        setDir(
+          0,
+          -1
+        );
+
+      }
+
     }
-    draw();
+
+  },
+  {
+    passive:true
+  }
+);
+
+
+/* =========================================================
+   Game Over
+========================================================= */
+
+async function gameOver(){
+
+  if(done){
+    return;
   }
 
-  function setDir(x, y) {
-    if (dir.x === -x && dir.y === -y) return; // نمی‌تونه برگرده عقب
-    nextDir = { x, y };
+  done = true;
+
+
+  clearInterval(
+    gameLoop
+  );
+
+  clearInterval(
+    speedTimer
+  );
+
+  cancelAnimationFrame(
+    animationFrame
+  );
+
+
+  soundGameOver();
+
+
+  /*
+     لرزش تصویری
+  */
+
+  snakeWrap.classList.add(
+    "shake"
+  );
+
+
+  /*
+     چند ذره برای برخورد
+  */
+
+  for(
+    let i = 0;
+    i < 25;
+    i++
+  ){
+
+    const head =
+      snake[0];
+
+    particles.push({
+
+      x:
+        head.x * CELL +
+        CELL / 2,
+
+      y:
+        head.y * CELL +
+        CELL / 2,
+
+      vx:
+        (Math.random() - .5) * 5,
+
+      vy:
+        (Math.random() - .5) * 5,
+
+      life:1,
+
+      size:
+        2 +
+        Math.random() * 3
+
+    });
+
   }
 
-  document.querySelector(".dp-up").addEventListener("click", () => setDir(0, -1));
-  document.querySelector(".dp-down").addEventListener("click", () => setDir(0, 1));
-  document.querySelector(".dp-left").addEventListener("click", () => setDir(-1, 0));
-  document.querySelector(".dp-right").addEventListener("click", () => setDir(1, 0));
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowUp") setDir(0, -1);
-    if (e.key === "ArrowDown") setDir(0, 1);
-    if (e.key === "ArrowLeft") setDir(-1, 0);
-    if (e.key === "ArrowRight") setDir(1, 0);
-  });
+  gameMessage.textContent =
+    "💥 بازی تمام شد!";
 
-  let gameLoop;
 
-  async function gameOver() {
-    done = true;
-    clearInterval(gameLoop);
-    const score = snake.length;
-    if (isSolo) { await finishSolo(score); return; }
-    document.getElementById("playArea").style.display = "none";
-    document.getElementById("waitArea").style.display = "block";
-    await submitResult("snake", myUid, myName, score);
+  /*
+     صبر کوتاه برای نمایش افکت
+  */
+
+  await new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        450
+      )
+  );
+
+
+  if(isSolo){
+
+    await finishSolo(
+      score
+    );
+
+    return;
+
   }
 
-  async function finishSolo(score) {
-    document.getElementById("playArea").style.display = "none";
-    const won = soloWon("snake", score);
-    await recordRoundResult(myName, "snake", { won });
-    const scoreArea = document.getElementById("scoreArea");
-    scoreArea.style.display = "block";
-    document.getElementById("scoreAreaTitle").style.display = "none";
-    document.getElementById("scoreBoard").style.display = "none";
-    document.getElementById("nextStatus").style.display = "none";
-    const soloResult = document.getElementById("soloResult");
-    soloResult.style.display = "block";
-    soloResult.innerHTML = `
-      <div class="big-emoji">${won ? "🎉" : "😅"}</div>
-      <h2>${won ? "آفرین، بردی!" : "این‌بار نشد"}</h2>
-      <div class="score-big">طول: ${score}</div>
-      <button onclick="location.reload()" class="btn-full">دوباره بازی کن</button>
-      <a href="../index.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">بازگشت به خانه</a>
-    `;
+
+  document.getElementById(
+    "playArea"
+  ).style.display =
+    "none";
+
+  document.getElementById(
+    "waitArea"
+  ).style.display =
+    "block";
+
+
+  await submitResult(
+    "snake",
+    myUid,
+    myName,
+    score
+  );
+
+}
+
+
+/* =========================================================
+   نتیجه حالت تک‌نفره
+========================================================= */
+
+async function finishSolo(
+  finalScore
+){
+
+  document.getElementById(
+    "playArea"
+  ).style.display =
+    "none";
+
+
+  const won =
+    soloWon(
+      "snake",
+      finalScore
+    );
+
+
+  await recordRoundResult(
+    myName,
+    "snake",
+    {
+      won
+    }
+  );
+
+
+  const scoreArea =
+    document.getElementById(
+      "scoreArea"
+    );
+
+  scoreArea.style.display =
+    "block";
+
+
+  document.getElementById(
+    "scoreAreaTitle"
+  ).style.display =
+    "none";
+
+
+  document.getElementById(
+    "scoreBoard"
+  ).style.display =
+    "none";
+
+
+  document.getElementById(
+    "nextStatus"
+  ).style.display =
+    "none";
+
+
+  const soloResult =
+    document.getElementById(
+      "soloResult"
+    );
+
+
+  soloResult.style.display =
+    "block";
+
+
+  soloResult.innerHTML = `
+
+    <div class="big-emoji">
+      ${won ? "🎉" : "😅"}
+    </div>
+
+    <h2>
+      ${
+        won
+          ? "آفرین، بردی!"
+          : "این‌بار نشد"
+      }
+    </h2>
+
+    <div class="score-big">
+      امتیاز: ${finalScore}
+    </div>
+
+    <button
+      onclick="location.reload()"
+      class="btn-full"
+    >
+      دوباره بازی کن 🐍
+    </button>
+
+    <a
+      href="../index.html"
+      class="btn-full btn-ghost"
+      style="
+        display:block;
+        text-decoration:none;
+        text-align:center;
+        margin-top:10px;
+      "
+    >
+      بازگشت به خانه
+    </a>
+
+  `;
+
+}
+
+
+/* =========================================================
+   راه‌اندازی
+========================================================= */
+
+async function init(){
+
+  const user =
+    await waitForUser();
+
+
+  myName =
+    getSavedName();
+
+
+  if(
+    !user ||
+    !myName
+  ){
+
+    window.location.href =
+      "../index.html";
+
+    return;
+
   }
 
-  async function init() {
-    const user = await waitForUser();
-    myName = getSavedName();
-    if (!user || !myName) { window.location.href = "../index.html"; return; }
-    myUid = currentUid();
 
-    draw();
-    gameLoop = setInterval(tick, 180);
+  myUid =
+    currentUid();
 
-    if (isSolo) return;
 
-    if (!code) { window.location.href = "../index.html"; return; }
-    mountChat(myName, code);
-    onValue(R("players"), (snap) => { players = snap.val() || {}; });
+  /*
+     اولین لمس/کلیک صدا را فعال می‌کند
+  */
 
-    let handled = false;
-    onValue(R("results"), async (snap) => {
-      const results = snap.val() || {};
-      const totalPlayers = Object.keys(players).length;
-      const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
-      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
+  document.addEventListener(
+    "pointerdown",
+    initAudio,
+    {
+      once:true
+    }
+  );
+
+
+  /*
+     رسم اولیه
+  */
+
+  render();
+
+
+  /*
+     شروع بازی
+  */
+
+  soundStart();
+
+
+  gameLoop =
+    setInterval(
+      tick,
+      speed
+    );
+
+
+  /*
+     افزایش تدریجی سرعت
+  */
+
+  speedTimer =
+    setInterval(
+      increaseSpeed,
+      SPEED_INTERVAL
+    );
+
+
+  /*
+     اگر تک‌نفره است،
+     دیگر نیازی به سیستم اتاق نیست.
+  */
+
+  if(isSolo){
+    return;
+  }
+
+
+  if(!code){
+
+    window.location.href =
+      "../index.html";
+
+    return;
+
+  }
+
+
+  /*
+     چت اتاق
+  */
+
+  mountChat(
+    myName,
+    code
+  );
+
+
+  /*
+     بازیکنان اتاق
+  */
+
+  onValue(
+    R("players"),
+    snap => {
+
+      players =
+        snap.val() || {};
+
+    }
+  );
+
+
+  /*
+     نتایج بازیکنان
+  */
+
+  onValue(
+    R("results"),
+    async snap => {
+
+      const results =
+        snap.val() || {};
+
+
+      const totalPlayers =
+        Object.keys(players).length;
+
+
+      const totalResults =
+        Object.keys(results).length;
+
+
+      document.getElementById(
+        "waitStatus"
+      ).textContent =
+        `${totalResults} از ${totalPlayers} نفر تموم کردن`;
+
+
+      if(
+        handled ||
+        totalPlayers === 0 ||
+        totalResults < totalPlayers
+      ){
+
+        return;
+
+      }
+
+
       handled = true;
 
-      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
-      const won = results[myUid]?.score === maxScore;
-      await recordRoundResult(myName, "snake", { won });
 
-      document.getElementById("waitArea").style.display = "none";
-      document.getElementById("scoreArea").style.display = "block";
-      const board = document.getElementById("scoreBoard");
+      /*
+         بیشترین امتیاز = برنده
+      */
+
+      const maxScore =
+        Math.max(
+          ...Object.values(results)
+            .map(
+              r =>
+                Number(r.score) || 0
+            )
+        );
+
+
+      const won =
+        Number(
+          results[myUid]?.score || 0
+        ) === maxScore;
+
+
+      /*
+         ثبت برد/باخت در پروفایل دومیتو
+      */
+
+      await recordRoundResult(
+        myName,
+        "snake",
+        {
+          won
+        }
+      );
+
+
+      document.getElementById(
+        "waitArea"
+      ).style.display =
+        "none";
+
+
+      document.getElementById(
+        "scoreArea"
+      ).style.display =
+        "block";
+
+
+      const board =
+        document.getElementById(
+          "scoreBoard"
+        );
+
+
       board.innerHTML = "";
-      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
-        const row = document.createElement("div");
-        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
-        board.appendChild(row);
-      });
-      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
-    });
-  }
-  init();
+
+
+      /*
+         مرتب‌سازی از بیشترین
+         امتیاز به کمترین
+      */
+
+      Object.entries(results)
+        .sort(
+          (a,b) =>
+            Number(b[1].score || 0) -
+            Number(a[1].score || 0)
+        )
+        .forEach(
+          ([uid,r]) => {
+
+            const row =
+              document.createElement(
+                "div"
+              );
+
+
+            const playerScore =
+              Number(
+                r.score || 0
+              );
+
+
+            row.className =
+              "score-row" +
+              (
+                playerScore === maxScore
+                  ? " winner"
+                  : ""
+              );
+
+
+            const safeName =
+              String(
+                r.name || "بازیکن"
+              )
+              .replace(
+                /[&<>"']/g,
+                ch => ({
+                  "&":"&amp;",
+                  "<":"&lt;",
+                  ">":"&gt;",
+                  '"':"&quot;",
+                  "'":"&#039;"
+                }[ch])
+              );
+
+
+            row.innerHTML = `
+
+              <span>
+                ${
+                  playerScore === maxScore
+                    ? "🏆 "
+                    : ""
+                }
+
+                ${safeName}
+              </span>
+
+              <span class="points">
+                ${playerScore}
+              </span>
+
+            `;
+
+
+            board.appendChild(
+              row
+            );
+
+          }
+        );
+
+
+      /*
+         برگشت به لابی
+      */
+
+      setTimeout(
+        async () => {
+
+          await resetSessionForNextRound();
+
+          window.location.href =
+            "../lobby.html";
+
+        },
+        5000
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   شروع
+========================================================= */
+
+init();
+
 </script>
+
 </body>
 </html>
