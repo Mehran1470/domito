@@ -30,6 +30,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+
 export const db = getDatabase(app);
 
 export {
@@ -305,7 +306,6 @@ export async function setPresence(
     return;
   }
 
-  // اتصال قبلی
   await cleanupPresenceConnection();
 
   // ==========================================================
@@ -331,7 +331,6 @@ export async function setPresence(
         return;
       }
 
-      // جلوگیری از ساخت چند connection
       if (started) {
         return;
       }
@@ -356,9 +355,7 @@ export async function setPresence(
           name;
 
         // ----------------------------------------------------
-        // اگر اینترنت قطع شد:
-        // connection حذف شود
-        // presence آفلاین شود
+        // اگر اینترنت قطع شد
         // ----------------------------------------------------
 
         await onDisconnect(
@@ -470,7 +467,6 @@ export async function registerUser(
     cred.user.uid
   );
 
-  // فقط هنگام ثبت‌نام واقعی
   await updateLastLogin(
     username
   );
@@ -518,7 +514,6 @@ export async function loginUser(
     cred.user.uid
   );
 
-  // فقط هنگام ورود واقعی
   await updateLastLogin(
     username
   );
@@ -674,13 +669,6 @@ export function waitForUser() {
                         e
                       );
                     }
-
-                    // ❗ عمداً اینجا updateLastLogin
-                    // نداریم.
-                    //
-                    // باز شدن profile.html یا
-                    // index.html نباید تاریخ آخرین
-                    // ورود واقعی را تغییر دهد.
 
                     try {
 
@@ -2329,12 +2317,6 @@ export async function removeFriend(
 // ============================================================
 
 export function listenFriends(
-
-// ============================================================
-// لیست دوستان
-// ============================================================
-
-export function listenFriends(
   myName,
   callback
 ) {
@@ -2740,4 +2722,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-          }
+    }
