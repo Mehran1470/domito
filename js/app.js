@@ -1117,7 +1117,7 @@ export const GAMES = [
   {
     id: "reaction",
     name: "اجر شکن",
-    desc: "اجر مرحلهرو بشکن و برنده شو",
+    desc: "اجر مرحله رو بشکن و برنده شو",
     icon: "🧱",
     soloThreshold: 500
   },
