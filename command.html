@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>دستور دومیتو</title>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+
+      min-height: 100vh;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 20px;
+
+      color: white;
+
+      background:
+        radial-gradient(
+          circle at top right,
+          rgba(80, 130, 255, .20),
+          transparent 35%
+        ),
+        radial-gradient(
+          circle at bottom left,
+          rgba(150, 70, 255, .18),
+          transparent 35%
+        ),
+        #070b14;
+    }
+
+    .command-page {
+
+      width: min(430px, 100%);
+
+      padding: 25px;
+
+      border-radius: 28px;
+
+      background:
+        rgba(20, 25, 38, .82);
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      box-shadow:
+        0 25px 80px
+        rgba(0,0,0,.50);
+
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+
+      animation:
+        commandAppear .25s ease;
+    }
+
+    @keyframes commandAppear {
+
+      from {
+        opacity: 0;
+        transform: scale(.94) translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+
+    }
+
+    .command-icon {
+
+      width: 70px;
+      height: 70px;
+
+      margin: 0 auto 18px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 22px;
+
+      font-size: 34px;
+
+      background:
+        rgba(255,255,255,.08);
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      box-shadow:
+        0 10px 30px
+        rgba(0,0,0,.25);
+    }
+
+    h1 {
+
+      margin: 0;
+
+      text-align: center;
+
+      font-size: 23px;
+      font-weight: 900;
+    }
+
+    .subtitle {
+
+      margin-top: 8px;
+
+      text-align: center;
+
+      color:
+        rgba(255,255,255,.58);
+
+      font-size: 13px;
+
+      line-height: 1.8;
+    }
+
+    .input-wrap {
+
+      margin-top: 24px;
+    }
+
+    #commandInput {
+
+      width: 100%;
+
+      padding: 16px;
+
+      border-radius: 16px;
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      outline: none;
+
+      background:
+        rgba(255,255,255,.07);
+
+      color: white;
+
+      font-size: 17px;
+
+      direction: ltr;
+      text-align: left;
+
+      transition:
+        .2s ease;
+    }
+
+    #commandInput::placeholder {
+
+      color:
+        rgba(255,255,255,.30);
+    }
+
+    #commandInput:focus {
+
+      border-color:
+        rgba(100,160,255,.75);
+
+      background:
+        rgba(255,255,255,.10);
+
+      box-shadow:
+        0 0 0 4px
+        rgba(80,140,255,.12);
+    }
+
+    .buttons {
+
+      display: flex;
+
+      gap: 10px;
+
+      margin-top: 12px;
+    }
+
+    button {
+
+      flex: 1;
+
+      border: 0;
+
+      border-radius: 15px;
+
+      padding: 14px;
+
+      font-size: 15px;
+
+      font-weight: 800;
+
+      cursor: pointer;
+
+      transition:
+        transform .15s ease,
+        opacity .15s ease;
+    }
+
+    button:active {
+
+      transform: scale(.97);
+    }
+
+    #runButton {
+
+      color: white;
+
+      background:
+        linear-gradient(
+          135deg,
+          #4d8dff,
+          #725cff
+        );
+
+      box-shadow:
+        0 10px 25px
+        rgba(70,110,255,.25);
+    }
+
+    #backButton {
+
+      color:
+        rgba(255,255,255,.85);
+
+      background:
+        rgba(255,255,255,.08);
+    }
+
+    #message {
+
+      min-height: 30px;
+
+      margin-top: 15px;
+
+      text-align: center;
+
+      font-size: 14px;
+
+      line-height: 1.8;
+
+      color:
+        rgba(255,255,255,.82);
+    }
+
+    .hint {
+
+      margin-top: 12px;
+
+      text-align: center;
+
+      font-size: 12px;
+
+      color:
+        rgba(255,255,255,.38);
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <main class="command-page">
+
+    <div class="command-icon">
+      🛠️
+    </div>
+
+    <h1>
+      دستور را وارد کنید
+    </h1>
+
+    <div class="subtitle">
+      دستور موردنظر را وارد کنید و تأیید را بزنید
+    </div>
+
+    <div class="input-wrap">
+
+      <input
+        id="commandInput"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder="/11"
+      >
+
+    </div>
+
+    <div class="buttons">
+
+      <button
+        id="backButton"
+        type="button"
+      >
+        بازگشت
+      </button>
+
+      <button
+        id="runButton"
+        type="button"
+      >
+        تأیید
+      </button>
+
+    </div>
+
+    <div id="message"></div>
+
+    <div class="hint">
+      همه دستورات باید با / شروع شوند
+    </div>
+
+  </main>
+
+
+  <script type="module">
+
+    import {
+
+      logoutUser,
+      getSavedName,
+      profileRef,
+      remove,
+      removeFriend,
+      sendFriendRequest,
+      createRoom,
+      joinRoomByCode,
+      leaveLobby
+
+    } from "./js/app.js";
+
+
+    // ========================================================
+    // عناصر
+    // ========================================================
+
+    const input =
+      document.getElementById(
+        "commandInput"
+      );
+
+    const runButton =
+      document.getElementById(
+        "runButton"
+      );
+
+    const backButton =
+      document.getElementById(
+        "backButton"
+      );
+
+    const message =
+      document.getElementById(
+        "message"
+      );
+
+
+    // ========================================================
+    // پیام
+    // ========================================================
+
+    function showMessage(text) {
+
+      message.textContent = text;
+
+    }
+
+
+    // ========================================================
+    // اجرای دستور
+    // ========================================================
+
+    async function runCommand() {
+
+      const command =
+        String(
+          input.value || ""
+        ).trim();
+
+      if (!command) {
+
+        showMessage(
+          "❌ یک دستور وارد کن."
+        );
+
+        input.focus();
+
+        return;
+      }
+
+
+      // ------------------------------------------------------
+      // همه دستورات باید /
+      // ------------------------------------------------------
+
+      if (
+        !command.startsWith("/")
+      ) {
+
+        showMessage(
+          "❌ دستور باید با / شروع شود."
+        );
+
+        return;
+      }
+
+
+      const myName =
+        getSavedName();
+
+
+      try {
+
+        // ====================================================
+        // /0
+        // خروج از حساب
+        // ====================================================
+
+        if (
+          command === "/0"
+        ) {
+
+          showMessage(
+            "⚠️ مطمئنی می‌خوای از حسابت خارج بشی؟"
+          );
+
+          input.value = "";
+
+          setTimeout(() => {
+
+            input.placeholder =
+              "/آره";
+
+            input.focus();
+
+          }, 100);
+
+          // حالت تأیید خروج
+          input.dataset.confirmLogout =
+            "true";
+
+          return;
+        }
+
+
+        // ====================================================
+        // تأیید خروج
+        // /آره
+        // ====================================================
+
+        if (
+          input.dataset.confirmLogout ===
+          "true"
+        ) {
+
+          if (
+            command === "/آره"
+          ) {
+
+            showMessage(
+              "⏳ در حال خروج از حساب..."
+            );
+
+            input.disabled = true;
+            runButton.disabled = true;
+
+            await logoutUser();
+
+            showMessage(
+              "✅ با موفقیت از حساب خارج شدی."
+            );
+
+            setTimeout(() => {
+
+              window.location.href =
+                "index.html";
+
+            }, 700);
+
+            return;
+
+          }
+
+
+          // هر چیز دیگری به‌جز /آره
+
+          showMessage(
+            "❌ خروج لغو شد. برای تأیید باید /آره را وارد کنی."
+          );
+
+          input.dataset.confirmLogout =
+            "";
+
+          input.placeholder =
+            "/11";
+
+          input.value = "";
+
+          return;
+        }
+
+
+        // ====================================================
+        // /01=نام
+        // حذف دوست
+        // ====================================================
+
+        if (
+          command.startsWith("/01=")
+        ) {
+
+          const friendName =
+            command
+              .slice(4)
+              .trim();
+
+          if (!friendName) {
+
+            showMessage(
+              "❌ نام دوست را وارد کن."
+            );
+
+            return;
+          }
+
+          const result =
+            await removeFriend(
+              myName,
+              friendName
+            );
+
+          if (!result.ok) {
+
+            if (
+              result.reason ===
+              "not-friend"
+            ) {
+
+              showMessage(
+                "❌ این شخص دوستت نیست."
+              );
+
+            } else {
+
+              showMessage(
+                "❌ حذف دوست انجام نشد."
+              );
+
+            }
+
+            return;
+          }
+
+          showMessage(
+            `✅ ${friendName} از دوستانت حذف شد.`
+          );
+
+          input.value = "";
+
+          return;
+        }
+
+
+        // ====================================================
+        // /02=نام
+        // درخواست دوستی
+        // ====================================================
+
+        if (
+          command.startsWith("/02=")
+        ) {
+
+          const targetName =
+            command
+              .slice(4)
+              .trim();
+
+          if (!targetName) {
+
+            showMessage(
+              "❌ نام کاربر را وارد کن."
+            );
+
+            return;
+          }
+
+          const result =
+            await sendFriendRequest(
+              myName,
+              targetName
+            );
+
+          if (!result.ok) {
+
+            const messages = {
+
+              invalid:
+                "❌ نام کاربر نامعتبر است.",
+
+              "not-found":
+                "❌ این کاربر پیدا نشد.",
+
+              "already-friends":
+                "❌ این شخص از قبل دوستت است.",
+
+              "request-pending":
+                "⚠️ درخواست دوستی قبلاً ارسال شده است."
+
+            };
+
+            showMessage(
+              messages[result.reason] ||
+              "❌ ارسال درخواست انجام نشد."
+            );
+
+            return;
+          }
+
+          showMessage(
+            `✅ درخواست دوستی برای ${targetName} ارسال شد.`
+          );
+
+          input.value = "";
+
+          return;
+        }
+
+
+        // ====================================================
+        // /03=نام
+        // ارسال دوباره درخواست
+        // ====================================================
+
+        if (
+          command.startsWith("/03=")
+        ) {
+
+          const targetName =
+            command
+              .slice(4)
+              .trim();
+
+          if (!targetName) {
+
+            showMessage(
+              "❌ نام کاربر را وارد کن."
+            );
+
+            return;
+          }
+
+
+          // حذف درخواست قبلی
+
+          await remove(
+            profileRef(
+              targetName,
+              `friendRequests/${myName}`
+            )
+          );
+
+
+          // استفاده دوباره از تابع اصلی
+
+          const result =
+            await sendFriendRequest(
+              myName,
+              targetName
+            );
+
+
+          if (!result.ok) {
+
+            showMessage(
+              "❌ ارسال دوباره درخواست انجام نشد."
+            );
+
+            return;
+          }
+
+
+          showMessage(
+            `✅ درخواست دوستی دوباره برای ${targetName} ارسال شد.`
+          );
+
+          input.value = "";
+
+          return;
+        }
+
+
+        // ====================================================
+        // /11
+        // ساخت اتاق
+        // ====================================================
+
+        if (
+          command === "/11"
+        ) {
+
+          showMessage(
+            "⏳ در حال ساخت اتاق..."
+          );
+
+          const code =
+            await createRoom();
+
+          showMessage(
+            `✅ اتاق ${code} ساخته شد.`
+          );
+
+          setTimeout(() => {
+
+            window.location.href =
+              "lobby.html";
+
+          }, 700);
+
+          return;
+        }
+
+
+        // ====================================================
+        // /12=کد
+        // ورود به اتاق
+        // ====================================================
+
+        if (
+          command.startsWith("/12=")
+        ) {
+
+          const code =
+            command
+              .slice(4)
+              .trim()
+              .toUpperCase();
+
+          if (!code) {
+
+            showMessage(
+              "❌ کد اتاق را وارد کن."
+            );
+
+            return;
+          }
+
+
+          showMessage(
+            "⏳ در حال ورود به اتاق..."
+          );
+
+
+          const result =
+            await joinRoomByCode(
+              code
+            );
+
+
+          if (!result.ok) {
+
+            const messages = {
+
+              "invalid-code":
+                "❌ کد اتاق نامعتبر است.",
+
+              "not-found":
+                "❌ چنین اتاقی پیدا نشد.",
+
+              kicked:
+                "🚫 از این اتاق اخراج شده‌ای."
+
+            };
+
+            showMessage(
+              messages[result.reason] ||
+              "❌ ورود به اتاق انجام نشد."
+            );
+
+            return;
+          }
+
+
+          showMessage(
+            `✅ وارد اتاق ${result.code} شدی.`
+          );
+
+
+          setTimeout(() => {
+
+            window.location.href =
+              "lobby.html";
+
+          }, 700);
+
+          return;
+        }
+
+
+        // ====================================================
+        // /14
+        // خروج از اتاق
+        // ====================================================
+
+        if (
+          command === "/14"
+        ) {
+
+          await leaveLobby();
+
+          showMessage(
+            "✅ از اتاق خارج شدی."
+          );
+
+          input.value = "";
+
+          return;
+        }
+
+
+        // ====================================================
+        // دستور ناشناخته
+        // ====================================================
+
+        showMessage(
+          "❌ این دستور وجود ندارد."
+        );
+
+      } catch (error) {
+
+        console.error(
+          "Domito Command Error:",
+          error
+        );
+
+        showMessage(
+          "❌ اجرای دستور با خطا مواجه شد."
+        );
+
+      }
+
+    }
+
+
+    // ========================================================
+    // دکمه تأیید
+    // ========================================================
+
+    runButton.addEventListener(
+      "click",
+      runCommand
+    );
+
+
+    // ========================================================
+    // Enter
+    // ========================================================
+
+    input.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key === "Enter"
+        ) {
+
+          event.preventDefault();
+
+          runCommand();
+
+        }
+
+      }
+    );
+
+
+    // ========================================================
+    // بازگشت
+    // ========================================================
+
+    backButton.addEventListener(
+      "click",
+      () => {
+
+        window.history.back();
+
+      }
+    );
+
+
+    // ========================================================
+    // فوکوس خودکار
+    // ========================================================
+
+    window.addEventListener(
+      "load",
+      () => {
+
+        input.focus();
+
+      }
+    );
+
+  </script>
+
+</body>
+
+</html>
