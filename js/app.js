@@ -2260,6 +2260,77 @@ export async function rejectFriendRequest(
 }
 
 // ============================================================
+// حذف دوست
+// ============================================================
+
+export async function removeFriend(
+  myName,
+  friendName
+) {
+
+  myName = String(
+    myName || ""
+  ).trim();
+
+  friendName = String(
+    friendName || ""
+  ).trim();
+
+  if (
+    !myName ||
+    !friendName ||
+    myName === friendName
+  ) {
+    return {
+      ok: false,
+      reason: "invalid"
+    };
+  }
+
+  const myProfileSnap =
+    await get(
+      profileRef(myName)
+    );
+
+  const myProfile =
+    myProfileSnap.val() || {};
+
+  if (
+    !myProfile.friends ||
+    !myProfile.friends[friendName]
+  ) {
+    return {
+      ok: false,
+      reason: "not-friend"
+    };
+  }
+
+  await remove(
+    profileRef(
+      myName,
+      `friends/${friendName}`
+    )
+  );
+
+  await remove(
+    profileRef(
+      friendName,
+      `friends/${myName}`
+    )
+  );
+
+  return {
+    ok: true
+  };
+}
+
+// ============================================================
+// لیست دوستان
+// ============================================================
+
+export function listenFriends(
+
+// ============================================================
 // لیست دوستان
 // ============================================================
 
