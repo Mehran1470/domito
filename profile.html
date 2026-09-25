@@ -51,6 +51,102 @@
   border: 1px solid rgba(255,200,69,.25);
 }
 
+
+/* ================================================= */
+/* LOGOUT MODAL */
+/* ================================================= */
+
+.logout-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.logout-modal.show {
+  display: flex;
+}
+
+.logout-box {
+  width: min(360px, 100%);
+
+  padding: 22px;
+
+  border-radius: 22px;
+
+  background: rgba(20,20,25,.96);
+
+  border: 1px solid rgba(255,255,255,.10);
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.45);
+
+  text-align: center;
+
+  animation: logoutPop .18s ease-out;
+}
+
+@keyframes logoutPop {
+
+  from {
+    opacity: 0;
+    transform: scale(.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+}
+
+.logout-message {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 20px;
+}
+
+.logout-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.logout-actions button {
+  flex: 1;
+}
+
+
+/* ================================================= */
+/* GOODBYE */
+/* ================================================= */
+
+.goodbye-message {
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.8;
+}
+
+.logout-countdown {
+  margin-top: 8px;
+  font-size: 13px;
+  opacity: .7;
+}
+
+.logout-number {
+  font-size: 22px;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
 </style>
 
 </head>
@@ -350,6 +446,77 @@
 </div>
 
 
+<!-- ================================================= -->
+<!-- LOGOUT MODAL -->
+<!-- ================================================= -->
+
+<div
+  id="logoutModal"
+  class="logout-modal"
+>
+
+  <div
+    id="logoutBox"
+    class="logout-box"
+  >
+
+    <div
+      id="logoutQuestion"
+    >
+
+      <div class="logout-message">
+        مهران، واقعاً می‌خوای از دومیتو خارج بشی؟ 👀
+      </div>
+
+      <div class="logout-actions">
+
+        <button
+          id="stayBtn"
+          class="btn-ghost"
+        >
+          بمونم 🎮
+        </button>
+
+        <button
+          id="confirmLogoutBtn"
+          class="btn-full"
+        >
+          خروج 🚪
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      id="goodbyeBox"
+      style="display:none;"
+    >
+
+      <div
+        class="goodbye-message"
+        id="goodbyeMessage"
+      ></div>
+
+      <div class="logout-countdown">
+        خروج در
+      </div>
+
+      <div
+        class="logout-number"
+        id="logoutCountdown"
+      >
+        ۵
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
 <script type="module">
 
 import {
@@ -501,26 +668,160 @@ waitForUser().then(
       document
         .getElementById(
           "logoutBtn"
-        )
-        .style.display =
+        ).style.display =
           "block";
 
 
-      document
-        .getElementById(
+      // =================================================
+      // LOGOUT MODAL
+      // =================================================
+
+      const logoutBtn =
+        document.getElementById(
           "logoutBtn"
-        )
-        .addEventListener(
-          "click",
-          async () => {
+        );
 
-            await logoutUser();
+      const logoutModal =
+        document.getElementById(
+          "logoutModal"
+        );
 
-            window.location.href =
-              "index.html";
+      const stayBtn =
+        document.getElementById(
+          "stayBtn"
+        );
+
+      const confirmLogoutBtn =
+        document.getElementById(
+          "confirmLogoutBtn"
+        );
+
+      const goodbyeBox =
+        document.getElementById(
+          "goodbyeBox"
+        );
+
+      const logoutQuestion =
+        document.getElementById(
+          "logoutQuestion"
+        );
+
+      const goodbyeMessage =
+        document.getElementById(
+          "goodbyeMessage"
+        );
+
+      const logoutCountdown =
+        document.getElementById(
+          "logoutCountdown"
+        );
+
+
+      // باز کردن تأییدیه
+
+      logoutBtn.addEventListener(
+        "click",
+        () => {
+
+          logoutModal.classList.add(
+            "show"
+          );
+
+        }
+      );
+
+
+      // ماندن
+
+      stayBtn.addEventListener(
+        "click",
+        () => {
+
+          logoutModal.classList.remove(
+            "show"
+          );
+
+        }
+      );
+
+
+      // خروج
+
+      confirmLogoutBtn.addEventListener(
+        "click",
+        async () => {
+
+          logoutQuestion.style.display =
+            "none";
+
+          goodbyeBox.style.display =
+            "block";
+
+
+          goodbyeMessage.textContent =
+            `خداحافظ ${myName} 👋`;
+
+
+          let seconds = 5;
+
+          logoutCountdown.textContent =
+            seconds;
+
+
+          const timer =
+            setInterval(
+              () => {
+
+                seconds--;
+
+                if (seconds <= 0) {
+
+                  clearInterval(timer);
+
+                  logoutUser().then(
+                    () => {
+
+                      window.location.href =
+                        "index.html";
+
+                    }
+                  );
+
+                  return;
+
+                }
+
+
+                logoutCountdown.textContent =
+                  seconds;
+
+              },
+              1000
+            );
+
+        }
+      );
+
+
+      // بستن مودال با کلیک روی فضای بیرون
+
+      logoutModal.addEventListener(
+        "click",
+        (event) => {
+
+          if (
+            event.target ===
+            logoutModal
+          ) {
+
+            logoutModal.classList.remove(
+              "show"
+            );
 
           }
-        );
+
+        }
+      );
 
     }
 
@@ -552,10 +853,6 @@ waitForUser().then(
           "friendState"
         );
 
-
-      // -----------------------------------------------
-      // بررسی دوست بودن
-      // -----------------------------------------------
 
       async function refreshFriendState() {
 
@@ -629,10 +926,6 @@ waitForUser().then(
 
       await refreshFriendState();
 
-
-      // -----------------------------------------------
-      // SEND REQUEST
-      // -----------------------------------------------
 
       button.addEventListener(
         "click",
@@ -777,10 +1070,6 @@ waitForUser().then(
           };
 
 
-        // ---------------------------------------------
-        // STATS
-        // ---------------------------------------------
-
         document
           .getElementById(
             "winsNum"
@@ -812,10 +1101,6 @@ waitForUser().then(
           .textContent =
             `${p.gamesPlayed || 0} دور بازی کرده`;
 
-
-        // ---------------------------------------------
-        // LAST LOGIN
-        // ---------------------------------------------
 
         const lastLoginText =
           document.getElementById(
@@ -850,10 +1135,6 @@ waitForUser().then(
         }
 
 
-        // ---------------------------------------------
-        // COINS
-        // ---------------------------------------------
-
         if (isOwnProfile) {
 
           document
@@ -874,10 +1155,6 @@ waitForUser().then(
 
         }
 
-
-        // ---------------------------------------------
-        // AVATAR
-        // ---------------------------------------------
 
         const avatarBox =
           document.getElementById(
@@ -905,10 +1182,6 @@ waitForUser().then(
 
         }
 
-
-        // ---------------------------------------------
-        // GAME BOARD
-        // ---------------------------------------------
 
         const board =
           document.getElementById(
@@ -972,10 +1245,6 @@ waitForUser().then(
           }
         );
 
-
-        // ---------------------------------------------
-        // SHOP
-        // ---------------------------------------------
 
         if (isOwnProfile) {
 
