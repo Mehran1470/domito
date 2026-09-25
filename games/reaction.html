@@ -1,857 +1,344 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
-
 <head>
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  >
-
-  <title>آجرشکن | دومیتو</title>
-
-  <style>
-
-    :root {
-      --bg: #020617;
-      --bg2: #0f172a;
-      --accent: #38bdf8;
-      --accent2: #22d3ee;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --green: #4ade80;
-      --red: #f87171;
-      --gold: #fbbf24;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-
-      -webkit-tap-highlight-color: transparent;
-
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    html,
-    body {
-      width: 100%;
-      min-height: 100%;
-    }
-
-    body {
-
-      font-family:
-        "Segoe UI",
-        Tahoma,
-        system-ui,
-        sans-serif;
-
-      background:
-        radial-gradient(
-          ellipse at top,
-          #1e293b 0%,
-          #0f172a 40%,
-          #020617 100%
-        );
-
-      color: var(--text);
-
-      min-height: 100dvh;
-
-      display: flex;
-
-      flex-direction: column;
-
-      align-items: center;
-
-      padding:
-        10px
-        10px
-        25px;
-
-      overflow-x: hidden;
-    }
-
-    h1 {
-
-      font-size:
-        clamp(1.25rem, 5vw, 1.6rem);
-
-      color:
-        var(--accent);
-
-      margin-bottom: 6px;
-
-      text-shadow:
-        0 0 18px
-        rgba(56, 189, 248, .45);
-    }
-
-    .subtitle {
-
-      color:
-        var(--muted);
-
-      font-size: .78rem;
-
-      margin-bottom: 8px;
-
-      text-align: center;
-    }
-
-    /* =========================
-       HUD
-    ========================= */
-
-    .info {
-
-      width:
-        min(94vw, 400px);
-
-      display:
-        grid;
-
-      grid-template-columns:
-        repeat(4, 1fr);
-
-      gap: 6px;
-
-      margin-bottom: 8px;
-    }
-
-    .info span {
-
-      background:
-        rgba(15, 23, 42, .82);
-
-      border:
-        1px solid
-        rgba(56, 189, 248, .22);
-
-      padding:
-        7px 4px;
-
-      border-radius:
-        11px;
-
-      text-align:
-        center;
-
-      font-size:
-        .72rem;
-
-      backdrop-filter:
-        blur(10px);
-
-      box-shadow:
-        0 5px 20px
-        rgba(0,0,0,.12);
-    }
-
-    .info strong {
-
-      display: block;
-
-      margin-top: 2px;
-
-      color:
-        var(--accent);
-
-      font-size:
-        .95rem;
-    }
-
-    /* =========================
-       Game
-    ========================= */
-
-    .game-wrap {
-
-      position:
-        relative;
-
-      width:
-        min(94vw, 400px);
-
-      aspect-ratio:
-        4 / 5;
-    }
-
-    #canvas {
-
-      width: 100%;
-      height: 100%;
-
-      display: block;
-
-      background:
-        radial-gradient(
-          circle at 50% 30%,
-          rgba(56,189,248,.06),
-          transparent 45%
-        ),
-        #020617;
-
-      border:
-        2px solid
-        rgba(56,189,248,.7);
-
-      border-radius:
-        16px;
-
-      box-shadow:
-        0 0 30px
-        rgba(56,189,248,.18),
-
-        inset 0 0 30px
-        rgba(56,189,248,.04);
-
-      touch-action:
-        none;
-    }
-
-    /* =========================
-       Overlay
-    ========================= */
-
-    .overlay {
-
-      position:
-        absolute;
-
-      inset: 0;
-
-      background:
-        rgba(2, 6, 23, .91);
-
-      border-radius:
-        16px;
-
-      display:
-        none;
-
-      flex-direction:
-        column;
-
-      align-items:
-        center;
-
-      justify-content:
-        center;
-
-      gap: 11px;
-
-      z-index: 10;
-
-      text-align:
-        center;
-
-      padding:
-        20px;
-
-      backdrop-filter:
-        blur(7px);
-    }
-
-    .overlay.show {
-      display: flex;
-    }
-
-    .overlay-icon {
-
-      font-size:
-        3rem;
-
-      filter:
-        drop-shadow(
-          0 0 15px
-          rgba(56,189,248,.3)
-        );
-    }
-
-    .overlay h2 {
-
-      font-size:
-        1.35rem;
-    }
-
-    .overlay h2.win {
-      color:
-        var(--green);
-    }
-
-    .overlay h2.lose {
-      color:
-        var(--red);
-    }
-
-    .overlay h2.ready {
-      color:
-        var(--accent);
-    }
-
-    .overlay h2.level {
-      color:
-        var(--gold);
-    }
-
-    .overlay p {
-
-      color:
-        var(--muted);
-
-      font-size:
-        .9rem;
-
-      line-height:
-        1.7;
-    }
-
-    .overlay p strong {
-
-      color:
-        var(--text);
-
-      font-size:
-        1.2rem;
-    }
-
-    /* =========================
-       Buttons
-    ========================= */
-
-    .btn {
-
-      appearance: none;
-
-      border: none;
-
-      background:
-        linear-gradient(
-          135deg,
-          var(--accent),
-          var(--accent2)
-        );
-
-      color:
-        #083344;
-
-      font-size:
-        1rem;
-
-      font-weight:
-        800;
-
-      padding:
-        11px 28px;
-
-      border-radius:
-        13px;
-
-      cursor:
-        pointer;
-
-      box-shadow:
-        0 5px 20px
-        rgba(34,211,238,.28);
-
-      transition:
-        transform .12s ease,
-        filter .12s ease;
-    }
-
-    .btn:active {
-
-      transform:
-        scale(.95);
-
-      filter:
-        brightness(.9);
-    }
-
-    .btn.secondary {
-
-      background:
-        rgba(255,255,255,.08);
-
-      color:
-        var(--text);
-
-      border:
-        1px solid
-        rgba(255,255,255,.12);
-
-      box-shadow:
-        none;
-    }
-
-    .button-row {
-
-      display:
-        flex;
-
-      gap: 7px;
-
-      flex-wrap:
-        wrap;
-
-      justify-content:
-        center;
-    }
-
-    /* =========================
-       Progress
-    ========================= */
-
-    .progress-wrap {
-
-      width:
-        min(94vw, 400px);
-
-      margin-top:
-        8px;
-    }
-
-    .progress-top {
-
-      display:
-        flex;
-
-      justify-content:
-        space-between;
-
-      color:
-        var(--muted);
-
-      font-size:
-        .72rem;
-
-      margin-bottom:
-        4px;
-    }
-
-    .progress {
-
-      height:
-        5px;
-
-      border-radius:
-        10px;
-
-      background:
-        rgba(255,255,255,.07);
-
-      overflow:
-        hidden;
-    }
-
-    .progress-bar {
-
-      height:
-        100%;
-
-      width:
-        0%;
-
-      border-radius:
-        inherit;
-
-      background:
-        linear-gradient(
-          90deg,
-          var(--accent),
-          var(--accent2)
-        );
-
-      transition:
-        width .2s ease;
-    }
-
-    /* =========================
-       Message
-    ========================= */
-
-    .message {
-
-      width:
-        min(94vw, 400px);
-
-      text-align:
-        center;
-
-      min-height:
-        20px;
-
-      margin-top:
-        7px;
-
-      color:
-        var(--muted);
-
-      font-size:
-        .75rem;
-    }
-
-    /* =========================
-       Result
-    ========================= */
-
-    .result-box {
-
-      width:
-        min(94vw, 400px);
-
-      margin-top:
-        12px;
-
-      padding:
-        15px;
-
-      border-radius:
-        17px;
-
-      background:
-        rgba(15,23,42,.82);
-
-      border:
-        1px solid
-        rgba(56,189,248,.16);
-
-      box-shadow:
-        0 10px 35px
-        rgba(0,0,0,.18);
-
-      text-align:
-        center;
-    }
-
-    .result-box h3 {
-
-      margin-bottom:
-        8px;
-
-      color:
-        var(--accent);
-    }
-
-    .my-final-score {
-
-      font-size:
-        2rem;
-
-      font-weight:
-        900;
-
-      color:
-        var(--accent);
-    }
-
-    .result-status {
-
-      margin-top:
-        5px;
-
-      color:
-        var(--muted);
-
-      font-size:
-        .8rem;
-    }
-
-    .score-board {
-
-      display:
-        grid;
-
-      gap:
-        6px;
-
-      margin-top:
-        10px;
-    }
-
-    .score-row {
-
-      display:
-        flex;
-
-      align-items:
-        center;
-
-      justify-content:
-        space-between;
-
-      padding:
-        9px 11px;
-
-      border-radius:
-        11px;
-
-      background:
-        rgba(255,255,255,.045);
-
-      border:
-        1px solid
-        transparent;
-
-      font-size:
-        .82rem;
-    }
-
-    .score-row.me {
-
-      border-color:
-        rgba(56,189,248,.35);
-    }
-
-    .score-row.winner {
-
-      border-color:
-        rgba(251,191,36,.5);
-
-      background:
-        rgba(251,191,36,.08);
-    }
-
-    .rank {
-
-      min-width:
-        27px;
-
-      font-weight:
-        900;
-    }
-
-    .player-name {
-
-      flex:
-        1;
-
-      text-align:
-        right;
-
-      margin-right:
-        6px;
-
-      overflow:
-        hidden;
-
-      text-overflow:
-        ellipsis;
-
-      white-space:
-        nowrap;
-    }
-
-    .player-score {
-
-      font-weight:
-        900;
-
-      color:
-        var(--accent);
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .hint {
-
-      margin-top:
-        9px;
-
-      font-size:
-        .72rem;
-
-      color:
-        var(--muted);
-
-      text-align:
-        center;
-
-      opacity:
-        .8;
-    }
-
-    @media (max-height: 680px) {
-
-      body {
-        padding-top: 5px;
-      }
-
-      h1 {
-        margin-bottom: 2px;
-      }
-
-      .subtitle {
-        display: none;
-      }
-
-      .info {
-        margin-bottom: 4px;
-      }
-
-      .progress-wrap {
-        margin-top: 4px;
-      }
-
-    }
-
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>آجرشکن | دومیتو</title>
+
+<style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+  width:100%;
+  min-height:100%;
+  background:#07111f;
+  color:#fff;
+  font-family:Tahoma,Arial,sans-serif;
+  overflow:hidden;
+  touch-action:none;
+}
+
+body{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+#gameWrap{
+  width:100%;
+  max-width:460px;
+  height:100vh;
+  max-height:900px;
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding:10px;
+}
+
+.topbar{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:7px;
+  margin-bottom:8px;
+  z-index:5;
+}
+
+.stat{
+  flex:1;
+  min-width:0;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;
+  padding:7px 5px;
+  text-align:center;
+  backdrop-filter:blur(10px);
+}
+
+.stat b{
+  display:block;
+  font-size:17px;
+}
+
+.stat span{
+  display:block;
+  margin-top:2px;
+  font-size:10px;
+  opacity:.65;
+}
+
+#canvasBox{
+  position:relative;
+  width:min(400px, calc(100vw - 20px));
+  aspect-ratio:400 / 500;
+  max-height:calc(100vh - 145px);
+  border-radius:22px;
+  overflow:hidden;
+  background:#091626;
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:
+    0 20px 60px rgba(0,0,0,.45),
+    inset 0 0 40px rgba(0,0,0,.2);
+}
+
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
+}
+
+#overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:22px;
+  background:rgba(2,8,18,.62);
+  backdrop-filter:blur(9px);
+  z-index:10;
+}
+
+.panel{
+  width:100%;
+  max-width:310px;
+  padding:25px 20px;
+  border-radius:25px;
+  text-align:center;
+  background:rgba(20,32,52,.88);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+
+.panel h1{
+  margin:0 0 8px;
+  font-size:27px;
+}
+
+.panel p{
+  margin:7px 0;
+  opacity:.75;
+  font-size:14px;
+  line-height:1.8;
+}
+
+button{
+  width:100%;
+  border:0;
+  border-radius:15px;
+  padding:13px 15px;
+  margin-top:12px;
+  color:#fff;
+  background:linear-gradient(135deg,#267cff,#744cff);
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  box-shadow:0 8px 25px rgba(45,110,255,.25);
+}
+
+button:active{
+  transform:scale(.97);
+}
+
+.secondary{
+  background:rgba(255,255,255,.09);
+  box-shadow:none;
+}
+
+#levelInfo{
+  position:absolute;
+  top:10px;
+  left:10px;
+  right:10px;
+  text-align:center;
+  pointer-events:none;
+  z-index:4;
+}
+
+#levelInfo span{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(255,255,255,.1);
+  font-size:12px;
+  backdrop-filter:blur(8px);
+}
+
+#progressWrap{
+  width:min(400px, calc(100vw - 20px));
+  height:7px;
+  margin-top:8px;
+  overflow:hidden;
+  border-radius:99px;
+  background:rgba(255,255,255,.08);
+}
+
+#progress{
+  width:0%;
+  height:100%;
+  border-radius:99px;
+  background:linear-gradient(90deg,#4f8cff,#b86cff);
+  transition:width .2s ease;
+}
+
+#roomResults{
+  position:absolute;
+  inset:0;
+  z-index:30;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(12px);
+}
+
+.resultsBox{
+  width:100%;
+  max-width:350px;
+  max-height:80vh;
+  overflow:auto;
+  padding:22px;
+  border-radius:24px;
+  background:rgba(16,28,48,.95);
+  border:1px solid rgba(255,255,255,.14);
+}
+
+.resultsBox h2{
+  margin:0 0 15px;
+  text-align:center;
+}
+
+.resultRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:11px 12px;
+  margin:7px 0;
+  border-radius:13px;
+  background:rgba(255,255,255,.07);
+}
+
+.resultRow.me{
+  border:1px solid rgba(90,145,255,.5);
+}
+
+.resultName{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:190px;
+}
+
+.resultScore{
+  font-weight:bold;
+}
+
+.hidden{
+  display:none !important;
+}
+
+@media(max-height:650px){
+  #gameWrap{
+    padding:5px;
+  }
+
+  .topbar{
+    margin-bottom:4px;
+  }
+
+  .stat{
+    padding:4px;
+  }
+
+  .stat b{
+    font-size:14px;
+  }
+
+  .stat span{
+    font-size:8px;
+  }
+
+  #progressWrap{
+    margin-top:4px;
+  }
+}
+</style>
 </head>
 
 <body>
 
-  <h1>🧱 آجرشکن</h1>
+<div id="gameWrap">
 
-  <p class="subtitle">
-    آجرها را نابود کن و بیشترین امتیاز را برای اتاقت بگیر!
-  </p>
+  <div class="topbar">
 
-  <div class="info">
+    <div class="stat">
+      <b id="score">0</b>
+      <span>امتیاز</span>
+    </div>
 
-    <span>
-      امتیاز
-      <strong id="score">0</strong>
-    </span>
+    <div class="stat">
+      <b id="lives">❤️❤️❤️</b>
+      <span>جان</span>
+    </div>
 
-    <span>
-      مرحله
-      <strong id="level">1</strong>
-    </span>
-
-    <span>
-      جان
-      <strong id="lives">3</strong>
-    </span>
-
-    <span>
-      بهترین
-      <strong id="highScore">0</strong>
-    </span>
+    <div class="stat">
+      <b id="highScore">0</b>
+      <span>رکورد</span>
+    </div>
 
   </div>
 
-  <div class="game-wrap">
+  <div id="canvasBox">
 
-    <canvas
-      id="canvas"
-      width="400"
-      height="500"
-    ></canvas>
+    <canvas id="game" width="400" height="500"></canvas>
 
-    <!-- START -->
-
-    <div
-      class="overlay show"
-      id="startScreen"
-    >
-
-      <div class="overlay-icon">
-        🧱
-      </div>
-
-      <h2 class="ready">
-        آماده‌ای؟
-      </h2>
-
-      <p>
-        ۵ مرحله پیش رو داری
-        <br>
-        هر مرحله سخت‌تر می‌شود!
-      </p>
-
-      <button
-        class="btn"
-        id="startBtn"
-      >
-        شروع بازی 🚀
-      </button>
-
+    <div id="levelInfo">
+      <span id="levelText">مرحله ۱</span>
     </div>
 
-    <!-- LEVEL -->
+    <div id="overlay">
 
-    <div
-      class="overlay"
-      id="levelScreen"
-    >
+      <div class="panel">
 
-      <div class="overlay-icon">
-        🔥
-      </div>
+        <h1 id="overlayTitle">🧱 آجرشکن</h1>
 
-      <h2
-        class="level"
-        id="levelTitle"
-      >
-        مرحله ۲
-      </h2>
+        <p id="overlayText">
+          پنج مرحله آجرها را نابود کن و رکورد بزن!
+        </p>
 
-      <p id="levelDesc">
-        یه کم سریع‌تر
-      </p>
+        <button id="mainBtn">شروع بازی</button>
 
-      <button
-        class="btn"
-        id="nextLevelBtn"
-      >
-        ادامه
-      </button>
-
-    </div>
-
-    <!-- END -->
-
-    <div
-      class="overlay"
-      id="endScreen"
-    >
-
-      <div
-        class="overlay-icon"
-        id="endIcon"
-      >
-        🏆
-      </div>
-
-      <h2
-        id="endTitle"
-        class="lose"
-      >
-        باختی!
-      </h2>
-
-      <p>
-        امتیاز نهایی:
-        <strong id="finalScore">
-          0
-        </strong>
-      </p>
-
-      <p id="endExtra">
-        نتیجه در دومیتو ثبت می‌شود...
-      </p>
-
-      <div class="button-row">
-
-        <button
-          class="btn"
-          id="restartBtn"
-        >
-          دوباره 🔄
+        <button id="restartBtn"
+                class="secondary hidden">
+          شروع دوباره
         </button>
 
-        <button
-          class="btn secondary"
-          id="homeBtn"
-        >
-          خانه 🏠
+      </div>
+
+    </div>
+
+    <div id="roomResults">
+
+      <div class="resultsBox">
+
+        <h2>🏆 نتیجه بازی</h2>
+
+        <div id="resultsList"></div>
+
+        <button id="resultClose">
+          ادامه
         </button>
 
       </div>
@@ -860,102 +347,13 @@
 
   </div>
 
-  <div class="progress-wrap">
-
-    <div class="progress-top">
-
-      <span>
-        تخریب مرحله
-      </span>
-
-      <span id="brickText">
-        0%
-      </span>
-
-    </div>
-
-    <div class="progress">
-
-      <div
-        class="progress-bar"
-        id="progressBar"
-      ></div>
-
-    </div>
-
+  <div id="progressWrap">
+    <div id="progress"></div>
   </div>
 
-  <p
-    class="message"
-    id="message"
-  >
-    آماده‌ای؟ 😎
-  </p>
-
-  <!-- WAIT -->
-
-  <div
-    class="result-box hidden"
-    id="waitBox"
-  >
-
-    <h3>
-      ⏳ منتظر بازیکنان
-    </h3>
-
-    <div
-      class="my-final-score"
-      id="myFinalScore"
-    >
-      0
-    </div>
-
-    <div
-      class="result-status"
-      id="waitStatus"
-    >
-      نتیجه ثبت شد...
-    </div>
-
-  </div>
-
-  <!-- SCOREBOARD -->
-
-  <div
-    class="result-box hidden"
-    id="scoreBox"
-  >
-
-    <h3>
-      🏆 نتیجه دور
-    </h3>
-
-    <div
-      class="result-status"
-      id="winnerText"
-    ></div>
-
-    <div
-      class="score-board"
-      id="scoreBoard"
-    ></div>
-
-  </div>
-
-  <p class="hint">
-    📱 انگشتت را روی صفحه بکش
-    •
-    🖥️ ماوس
-    •
-    ⌨️ ← →
-  </p>
-
+</div>
 
 <script type="module">
-
-/* =========================================================
-   DOMITO IMPORTS
-========================================================= */
 
 import {
   waitForUser,
@@ -970,542 +368,260 @@ import {
 
 
 /* =========================================================
-   GAME ID
-   خیلی مهم:
-   Reaction را حذف نکرده‌ایم؛
-   آجرشکن جای آن نشسته است.
+   تنظیمات
 ========================================================= */
 
 const GAME_ID = "reaction";
 
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-/* =========================================================
-   DOM
-========================================================= */
+const W = canvas.width;
+const H = canvas.height;
 
-const canvas =
-  document.getElementById("canvas");
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const highScoreEl = document.getElementById("highScore");
 
-const ctx =
-  canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const overlayTitle = document.getElementById("overlayTitle");
+const overlayText = document.getElementById("overlayText");
 
-const scoreEl =
-  document.getElementById("score");
+const mainBtn = document.getElementById("mainBtn");
+const restartBtn = document.getElementById("restartBtn");
 
-const levelEl =
-  document.getElementById("level");
+const levelText = document.getElementById("levelText");
+const progress = document.getElementById("progress");
 
-const livesEl =
-  document.getElementById("lives");
-
-const highScoreEl =
-  document.getElementById("highScore");
-
-const finalScoreEl =
-  document.getElementById("finalScore");
-
-const startScreen =
-  document.getElementById("startScreen");
-
-const levelScreen =
-  document.getElementById("levelScreen");
-
-const endScreen =
-  document.getElementById("endScreen");
-
-const endTitle =
-  document.getElementById("endTitle");
-
-const endIcon =
-  document.getElementById("endIcon");
-
-const endExtra =
-  document.getElementById("endExtra");
-
-const levelTitle =
-  document.getElementById("levelTitle");
-
-const levelDesc =
-  document.getElementById("levelDesc");
-
-const startBtn =
-  document.getElementById("startBtn");
-
-const nextLevelBtn =
-  document.getElementById("nextLevelBtn");
-
-const restartBtn =
-  document.getElementById("restartBtn");
-
-const homeBtn =
-  document.getElementById("homeBtn");
-
-const messageEl =
-  document.getElementById("message");
-
-const progressBar =
-  document.getElementById("progressBar");
-
-const brickText =
-  document.getElementById("brickText");
-
-const waitBox =
-  document.getElementById("waitBox");
-
-const waitStatus =
-  document.getElementById("waitStatus");
-
-const myFinalScore =
-  document.getElementById("myFinalScore");
-
-const scoreBox =
-  document.getElementById("scoreBox");
-
-const scoreBoard =
-  document.getElementById("scoreBoard");
-
-const winnerText =
-  document.getElementById("winnerText");
+const roomResults = document.getElementById("roomResults");
+const resultsList = document.getElementById("resultsList");
+const resultClose = document.getElementById("resultClose");
 
 
 /* =========================================================
-   CANVAS
+   حالت بازی
 ========================================================= */
 
-const W = 400;
-const H = 500;
+const params = new URLSearchParams(location.search);
 
+const isSolo = params.has("solo");
 
-/* =========================================================
-   DOMITO STATE
-========================================================= */
-
-const isSolo =
-  new URLSearchParams(
-    location.search
-  ).has("solo");
-
-const roomCode =
-  getSavedRoom();
+const roomCode = getSavedRoom();
 
 let myUid = null;
-let myName = "";
+let myName = "بازیکن";
 
-let players = {};
-
-let resultSubmitted = false;
+let running = false;
 let roundFinished = false;
+let resultSubmitted = false;
+let scoreboardShown = false;
+
+let currentLevel = 0;
+let score = 0;
+let lives = 3;
+
+let baseSpeed = 3.8;
+
+let animId = null;
+let framePending = false;
+let lastFrameTime = 0;
 
 
 /* =========================================================
-   AUDIO
-========================================================= */
-
-const AudioCtx =
-  window.AudioContext ||
-  window.webkitAudioContext;
-
-let audioCtx = null;
-
-
-function initAudio() {
-
-  try {
-
-    if (!audioCtx) {
-      audioCtx =
-        new AudioCtx();
-    }
-
-    if (
-      audioCtx.state ===
-      "suspended"
-    ) {
-      audioCtx.resume();
-    }
-
-  } catch (e) {}
-
-}
-
-
-function playTone(
-  freq,
-  duration,
-  type = "square",
-  vol = .06
-) {
-
-  if (!audioCtx) return;
-
-  try {
-
-    const osc =
-      audioCtx.createOscillator();
-
-    const gain =
-      audioCtx.createGain();
-
-    osc.type =
-      type;
-
-    osc.frequency.value =
-      freq;
-
-    gain.gain.setValueAtTime(
-      vol,
-      audioCtx.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      .001,
-      audioCtx.currentTime +
-      duration
-    );
-
-    osc.connect(gain);
-
-    gain.connect(
-      audioCtx.destination
-    );
-
-    osc.start();
-
-    osc.stop(
-      audioCtx.currentTime +
-      duration
-    );
-
-  } catch (e) {}
-
-}
-
-
-function sfxBrick() {
-
-  playTone(
-    520 +
-    Math.random() * 90,
-    .055,
-    "square",
-    .055
-  );
-
-}
-
-
-function sfxPaddle() {
-
-  playTone(
-    280,
-    .07,
-    "triangle",
-    .07
-  );
-
-}
-
-
-function sfxWall() {
-
-  playTone(
-    180,
-    .045,
-    "sine",
-    .035
-  );
-
-}
-
-
-function sfxLife() {
-
-  playTone(
-    150,
-    .2,
-    "sawtooth",
-    .08
-  );
-
-}
-
-
-function sfxLevel() {
-
-  playTone(
-    392,
-    .1,
-    "triangle",
-    .07
-  );
-
-  setTimeout(
-    () =>
-      playTone(
-        523,
-        .13,
-        "triangle",
-        .07
-      ),
-    100
-  );
-
-}
-
-
-function sfxWin() {
-
-  playTone(
-    440,
-    .1
-  );
-
-  setTimeout(
-    () =>
-      playTone(
-        554,
-        .1
-      ),
-    100
-  );
-
-  setTimeout(
-    () =>
-      playTone(
-        659,
-        .2
-      ),
-    200
-  );
-
-}
-
-
-function sfxGameOver() {
-
-  playTone(
-    200,
-    .25,
-    "sawtooth",
-    .07
-  );
-
-  setTimeout(
-    () =>
-      playTone(
-        120,
-        .35,
-        "sawtooth",
-        .07
-      ),
-    220
-  );
-
-}
-
-
-/* =========================================================
-   LEVELS
+   سطوح
 ========================================================= */
 
 const levels = [
 
   {
-    rows: 4,
-    cols: 8,
-    speed: 3.8,
-    name: "مرحله ۱",
-    desc: "شروع آروم 😎"
+    rows:4,
+    cols:8,
+    speed:3.8,
+    name:"مرحله ۱",
+    desc:"شروع آروم 😎"
   },
 
   {
-    rows: 5,
-    cols: 8,
-    speed: 4.15,
-    name: "مرحله ۲",
-    desc: "یه کم سریع‌تر 🔥"
+    rows:5,
+    cols:8,
+    speed:4.15,
+    name:"مرحله ۲",
+    desc:"یه کم سریع‌تر 🔥"
   },
 
   {
-    rows: 5,
-    cols: 9,
-    speed: 4.55,
-    name: "مرحله ۳",
-    desc: "آجرهای بیشتر!"
+    rows:5,
+    cols:9,
+    speed:4.55,
+    name:"مرحله ۳",
+    desc:"آجرهای بیشتر!"
   },
 
   {
-    rows: 6,
-    cols: 9,
-    speed: 4.9,
-    name: "مرحله ۴",
-    desc: "چالش واقعی 😈"
+    rows:6,
+    cols:9,
+    speed:4.9,
+    name:"مرحله ۴",
+    desc:"چالش واقعی 😈"
   },
 
   {
-    rows: 6,
-    cols: 10,
-    speed: 5.35,
-    name: "مرحله ۵",
-    desc: "آخرین مرحله! 🏆"
+    rows:6,
+    cols:10,
+    speed:5.35,
+    name:"مرحله ۵",
+    desc:"آخرین مرحله! 🏆"
   }
 
 ];
 
 
 /* =========================================================
-   GAME STATE
+   توپ
 ========================================================= */
 
-let currentLevel = 0;
+const ball = {
 
-let paddle = {
+  x:W / 2,
+  y:H - 80,
 
-  w: 82,
+  r:7,
 
-  h: 12,
-
-  x: 159,
-
-  y: 470,
-
-  speed: 7
+  dx:3.8,
+  dy:-3.8
 
 };
 
-let ball = {
 
-  x: 200,
+/* =========================================================
+   پدل
+========================================================= */
 
-  y: 400,
+const paddle = {
 
-  r: 8,
+  width:82,
+  height:11,
 
-  dx: 0,
+  x:(W - 82) / 2,
+  y:H - 30,
 
-  dy: 0
+  speed:7
 
 };
+
+
+/* =========================================================
+   آجرها
+========================================================= */
 
 let bricks = [];
 
-let particles = [];
 
+/* =========================================================
+   افکت‌ها
+========================================================= */
+
+let particles = [];
 let trail = [];
 
-let score = 0;
 
-let lives = 3;
+/* =========================================================
+   کلیدها
+========================================================= */
 
-let running = false;
+const keys = {
 
-let animId = null;
+  left:false,
+  right:false
 
-let baseSpeed = 3.8;
+};
 
 
 /* =========================================================
-   HIGH SCORE
+   صدا
 ========================================================= */
 
-let highScore =
-  Number(
-    localStorage.getItem(
-      "breakoutHigh"
-    ) || 0
-  );
+let audioCtx = null;
 
-highScoreEl.textContent =
-  String(highScore);
+function sound(freq = 500, duration = .04){
+
+  try{
+
+    if(!audioCtx){
+      audioCtx = new (
+        window.AudioContext ||
+        window.webkitAudioContext
+      )();
+    }
+
+    if(audioCtx.state === "suspended"){
+      audioCtx.resume();
+    }
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.frequency.value = freq;
+    osc.type = "sine";
+
+    gain.gain.value = .035;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audioCtx.currentTime + duration
+    );
+
+    osc.stop(
+      audioCtx.currentTime + duration
+    );
+
+  }catch{}
+
+}
 
 
 /* =========================================================
-   COLORS
+   ساخت آجرها
 ========================================================= */
 
-const colors = [
-
-  "#f43f5e",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#3b82f6",
-  "#a855f7"
-
-];
-
-
-/* =========================================================
-   CREATE BRICKS
-========================================================= */
-
-function createBricks() {
-
-  const lv =
-    levels[currentLevel];
+function createBricks(){
 
   bricks = [];
 
-  const brickW =
-    Math.floor(
-      (W - 30) /
-      lv.cols
-    ) - 5;
+  const level = levels[currentLevel];
 
-  const brickH = 15;
+  const rows = level.rows;
+  const cols = level.cols;
 
-  const totalW =
-    lv.cols *
-      (brickW + 5) -
-    5;
+  const gap = 5;
+  const side = 18;
 
-  const offsetLeft =
-    (W - totalW) / 2;
+  const brickWidth =
+    (W - side * 2 - gap * (cols - 1)) / cols;
 
-  const offsetTop = 45;
+  const brickHeight = 18;
 
+  for(let r = 0; r < rows; r++){
 
-  for (
-    let r = 0;
-    r < lv.rows;
-    r++
-  ) {
-
-    for (
-      let c = 0;
-      c < lv.cols;
-      c++
-    ) {
+    for(let c = 0; c < cols; c++){
 
       bricks.push({
 
-        x:
-          offsetLeft +
-          c *
-          (brickW + 5),
+        x:side + c * (brickWidth + gap),
 
-        y:
-          offsetTop +
-          r *
-          (brickH + 5),
+        y:55 + r * (brickHeight + gap),
 
-        w:
-          brickW,
+        w:brickWidth,
+        h:brickHeight,
 
-        h:
-          brickH,
+        alive:true,
 
-        alive:
-          true,
-
-        color:
-          colors[
-            r %
-            colors.length
-          ],
-
-        hit:
-          false
+        hue:(r * 55 + c * 13 + currentLevel * 35) % 360
 
       });
 
@@ -1513,71 +629,63 @@ function createBricks() {
 
   }
 
-  updateProgress();
-
 }
 
 
 /* =========================================================
-   RESET BALL
+   ریست توپ
 ========================================================= */
 
-function resetBall() {
+function resetBall(){
 
-  ball.x =
-    W / 2;
+  ball.x = W / 2;
 
-  ball.y =
-    H - 90;
+  ball.y = H - 75;
 
+  /*
+   * زاویه امن:
+   * توپ هیچ‌وقت تقریباً افقی حرکت نمی‌کند.
+   * این یکی از مواردی است که جلوی گیرکردن/ناپدیدشدن
+   * توپ را می‌گیرد.
+   */
 
   const angle =
-    (
-      Math.random() *
-      .6 +
-      .2
-    ) *
-    Math.PI;
+    (Math.random() * 0.42 + 0.29) * Math.PI;
 
+  const direction =
+    Math.random() < .5 ? -1 : 1;
 
   ball.dx =
-    Math.cos(angle) *
-    baseSpeed *
-    (
-      Math.random() >
-      .5
-        ? 1
-        : -1
-    );
+    Math.cos(angle) * baseSpeed * direction;
 
   ball.dy =
-    -Math.abs(
-      Math.sin(angle) *
-      baseSpeed
-    );
-
-
-  paddle.x =
-    (W - paddle.w) /
-    2;
+    -Math.abs(Math.sin(angle) * baseSpeed);
 
 }
 
 
 /* =========================================================
-   START LEVEL
+   شروع مرحله
 ========================================================= */
 
-function startLevel() {
+function startLevel(){
+
+  const level = levels[currentLevel];
+
+  baseSpeed = level.speed;
+
+  levelText.textContent =
+    `${level.name} — ${level.desc}`;
 
   createBricks();
 
-  resetBall();
+  particles = [];
+  trail = [];
 
-  levelEl.textContent =
-    String(
-      currentLevel + 1
-    );
+  paddle.x =
+    (W - paddle.width) / 2;
+
+  resetBall();
 
   updateProgress();
 
@@ -1585,52 +693,30 @@ function startLevel() {
 
 
 /* =========================================================
-   PARTICLES
+   ذرات
 ========================================================= */
 
-function makeParticles(
-  x,
-  y,
-  color,
-  amount = 7
-) {
+function makeParticles(x,y,count=7){
 
-  for (
-    let i = 0;
-    i < amount;
-    i++
-  ) {
+  for(let i=0;i<count;i++){
+
+    const angle =
+      Math.random() * Math.PI * 2;
+
+    const speed =
+      40 + Math.random() * 100;
 
     particles.push({
 
       x,
       y,
 
-      dx:
-        (
-          Math.random() -
-          .5
-        ) *
-        130,
+      dx:Math.cos(angle) * speed,
+      dy:Math.sin(angle) * speed,
 
-      dy:
-        (
-          Math.random() -
-          .5
-        ) *
-        130,
+      life:1,
 
-      life:
-        .35 +
-        Math.random() *
-        .3,
-
-      size:
-        1.5 +
-        Math.random() *
-        3,
-
-      color
+      size:2 + Math.random() * 3
 
     });
 
@@ -1639,43 +725,26 @@ function makeParticles(
 }
 
 
-function updateParticles() {
+/* =========================================================
+   آپدیت ذرات
+========================================================= */
 
-  for (
-    let i =
-      particles.length - 1;
+function updateParticles(dtSec){
 
-    i >= 0;
+  for(let i=particles.length-1;i>=0;i--){
 
-    i--
-  ) {
+    const p = particles[i];
 
-    const p =
-      particles[i];
+    p.x += p.dx * dtSec;
+    p.y += p.dy * dtSec;
 
-    p.x +=
-      p.dx *
-      .016;
+    p.dy += 120 * dtSec;
 
-    p.y +=
-      p.dy *
-      .016;
+    p.life -= dtSec * 2.4;
 
-    p.dy +=
-      100 *
-      .016;
+    if(p.life <= 0){
 
-    p.life -=
-      .016;
-
-    if (
-      p.life <= 0
-    ) {
-
-      particles.splice(
-        i,
-        1
-      );
+      particles.splice(i,1);
 
     }
 
@@ -1685,282 +754,276 @@ function updateParticles() {
 
 
 /* =========================================================
-   PROGRESS
+   پیشرفت مرحله
 ========================================================= */
 
-function updateProgress() {
+function updateProgress(){
 
-  const total =
-    bricks.length;
+  const total = bricks.length;
 
   const destroyed =
-    bricks.filter(
-      b =>
-        !b.alive
-    ).length;
+    bricks.filter(b => !b.alive).length;
 
   const percent =
-    total
-      ? Math.round(
-          destroyed /
-          total *
-          100
-        )
+    total > 0
+      ? destroyed / total * 100
       : 0;
 
-  progressBar.style.width =
-    `${percent}%`;
-
-  brickText.textContent =
+  progress.style.width =
     `${percent}%`;
 
 }
 
 
 /* =========================================================
-   DRAW
+   پس‌زمینه
 ========================================================= */
 
-function roundRect(
-  x,
-  y,
-  w,
-  h,
-  r
-) {
-
-  ctx.beginPath();
-
-  ctx.moveTo(
-    x + r,
-    y
-  );
-
-  ctx.arcTo(
-    x + w,
-    y,
-    x + w,
-    y + h,
-    r
-  );
-
-  ctx.arcTo(
-    x + w,
-    y + h,
-    x,
-    y + h,
-    r
-  );
-
-  ctx.arcTo(
-    x,
-    y + h,
-    x,
-    y,
-    r
-  );
-
-  ctx.arcTo(
-    x,
-    y,
-    x + w,
-    y,
-    r
-  );
-
-  ctx.closePath();
-
-}
-
-
-function drawBackground() {
+function drawBackground(){
 
   const gradient =
     ctx.createLinearGradient(
-      0,
-      0,
-      0,
-      H
+      0,0,
+      0,H
     );
 
   gradient.addColorStop(
     0,
-    "#081323"
+    "#08182d"
   );
 
   gradient.addColorStop(
     1,
-    "#020617"
+    "#040a14"
   );
 
-  ctx.fillStyle =
-    gradient;
+  ctx.fillStyle = gradient;
 
   ctx.fillRect(
-    0,
-    0,
-    W,
-    H
+    0,0,
+    W,H
   );
 
 
-  /* ستاره‌ها */
+  /* خطوط تزئینی */
 
-  ctx.globalAlpha =
-    .25;
+  ctx.save();
 
-  for (
-    let i = 0;
-    i < 40;
-    i++
-  ) {
+  ctx.globalAlpha = .05;
 
-    const x =
-      (i * 83) %
-      W;
+  ctx.strokeStyle = "#fff";
 
-    const y =
-      (i * 47) %
-      400;
+  for(let x=0;x<W;x+=25){
 
-    ctx.fillStyle =
-      "#ffffff";
+    ctx.beginPath();
 
-    ctx.fillRect(
-      x,
-      y,
-      1,
-      1
-    );
+    ctx.moveTo(x,0);
+    ctx.lineTo(x,H);
+
+    ctx.stroke();
 
   }
 
-  ctx.globalAlpha =
-    1;
+  for(let y=0;y<H;y+=25){
+
+    ctx.beginPath();
+
+    ctx.moveTo(0,y);
+    ctx.lineTo(W,y);
+
+    ctx.stroke();
+
+  }
+
+  ctx.restore();
 
 }
 
 
-function drawBricks() {
+/* =========================================================
+   رسم آجرها
+========================================================= */
 
-  bricks.forEach(
-    b => {
+function drawBricks(){
 
-      if (!b.alive)
-        return;
+  for(const b of bricks){
 
-      ctx.fillStyle =
-        b.color;
+    if(!b.alive) continue;
 
-      ctx.shadowColor =
-        b.color;
+    ctx.save();
 
-      ctx.shadowBlur =
-        7;
-
-      roundRect(
+    const gradient =
+      ctx.createLinearGradient(
         b.x,
         b.y,
-        b.w,
-        b.h,
-        4
+        b.x,
+        b.y + b.h
       );
 
-      ctx.fill();
+    gradient.addColorStop(
+      0,
+      `hsla(${b.hue},90%,68%,1)`
+    );
 
-    }
-  );
+    gradient.addColorStop(
+      1,
+      `hsla(${b.hue},75%,42%,1)`
+    );
 
-  ctx.shadowBlur =
-    0;
+    ctx.fillStyle = gradient;
+
+    ctx.beginPath();
+
+    const radius = 5;
+
+    ctx.roundRect(
+      b.x,
+      b.y,
+      b.w,
+      b.h,
+      radius
+    );
+
+    ctx.fill();
+
+    ctx.strokeStyle =
+      "rgba(255,255,255,.16)";
+
+    ctx.stroke();
+
+    ctx.restore();
+
+  }
 
 }
 
 
-function drawPaddle() {
+/* =========================================================
+   رسم پدل
+========================================================= */
+
+function drawPaddle(){
+
+  ctx.save();
 
   const gradient =
     ctx.createLinearGradient(
       paddle.x,
       paddle.y,
-      paddle.x +
-        paddle.w,
-      paddle.y
+      paddle.x,
+      paddle.y + paddle.height
     );
 
   gradient.addColorStop(
     0,
-    "#22d3ee"
+    "#ffffff"
+  );
+
+  gradient.addColorStop(
+    .3,
+    "#8bb7ff"
   );
 
   gradient.addColorStop(
     1,
-    "#38bdf8"
+    "#4a72ff"
   );
 
-  ctx.fillStyle =
-    gradient;
+  ctx.fillStyle = gradient;
 
   ctx.shadowColor =
-    "#22d3ee";
+    "rgba(70,130,255,.8)";
 
-  ctx.shadowBlur =
-    13;
+  ctx.shadowBlur = 14;
 
-  roundRect(
+  ctx.beginPath();
+
+  ctx.roundRect(
     paddle.x,
     paddle.y,
-    paddle.w,
-    paddle.h,
-    6
+    paddle.width,
+    paddle.height,
+    7
   );
 
   ctx.fill();
 
-  ctx.shadowBlur =
-    0;
+  ctx.restore();
 
 }
 
 
-function drawBall() {
+/* =========================================================
+   رسم توپ
+========================================================= */
 
-  /* رد توپ */
+function drawBall(){
 
-  for (
-    let i = 0;
-    i < trail.length;
-    i++
-  ) {
+  /*
+   * trail
+   */
 
-    const t =
-      trail[i];
+  for(let i=0;i<trail.length;i++){
+
+    const t = trail[i];
+
+    ctx.save();
 
     ctx.globalAlpha =
-      t.life * .25;
+      Math.max(0,t.life) * .35;
+
+    ctx.fillStyle = "#ffffff";
 
     ctx.beginPath();
 
     ctx.arc(
       t.x,
       t.y,
-      ball.r *
-        t.life *
-        1.8,
+      ball.r * (.35 + t.life * .45),
       0,
       Math.PI * 2
     );
 
-    ctx.fillStyle =
-      "#ffffff";
-
     ctx.fill();
+
+    ctx.restore();
 
   }
 
-  ctx.globalAlpha =
-    1;
 
+  ctx.save();
+
+  ctx.shadowColor =
+    "#7db3ff";
+
+  ctx.shadowBlur = 18;
+
+  const gradient =
+    ctx.createRadialGradient(
+      ball.x - 2,
+      ball.y - 2,
+      1,
+      ball.x,
+      ball.y,
+      ball.r
+    );
+
+  gradient.addColorStop(
+    0,
+    "#ffffff"
+  );
+
+  gradient.addColorStop(
+    .4,
+    "#c9e0ff"
+  );
+
+  gradient.addColorStop(
+    1,
+    "#5790ff"
+  );
+
+  ctx.fillStyle = gradient;
 
   ctx.beginPath();
 
@@ -1972,318 +1035,395 @@ function drawBall() {
     Math.PI * 2
   );
 
-  ctx.fillStyle =
-    "#f8fafc";
-
-  ctx.shadowColor =
-    "#ffffff";
-
-  ctx.shadowBlur =
-    12;
-
   ctx.fill();
 
-  ctx.shadowBlur =
-    0;
-
-}
-
-
-function drawParticles() {
-
-  particles.forEach(
-    p => {
-
-      ctx.globalAlpha =
-        Math.max(
-          0,
-          p.life
-        );
-
-      ctx.fillStyle =
-        p.color;
-
-      ctx.beginPath();
-
-      ctx.arc(
-        p.x,
-        p.y,
-        p.size,
-        0,
-        Math.PI * 2
-      );
-
-      ctx.fill();
-
-    }
-  );
-
-  ctx.globalAlpha =
-    1;
-
-}
-
-
-function draw() {
-
-  drawBackground();
-
-  drawBricks();
-
-  drawPaddle();
-
-  drawBall();
-
-  drawParticles();
+  ctx.restore();
 
 }
 
 
 /* =========================================================
-   UPDATE
+   رسم ذرات
 ========================================================= */
 
-function update() {
+function drawParticles(){
 
-  if (!running)
-    return;
+  for(const p of particles){
+
+    ctx.save();
+
+    ctx.globalAlpha =
+      Math.max(0,p.life);
+
+    ctx.fillStyle = "#ffffff";
+
+    ctx.beginPath();
+
+    ctx.arc(
+      p.x,
+      p.y,
+      p.size,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+    ctx.restore();
+
+  }
+
+}
 
 
-  ball.x +=
-    ball.dx;
+/* =========================================================
+   رسم کامل
+========================================================= */
 
-  ball.y +=
-    ball.dy;
+function draw(){
+
+  drawBackground();
+
+  drawBricks();
+
+  drawParticles();
+
+  drawPaddle();
+
+  drawBall();
+
+}
 
 
-  /* trail */
+/* =========================================================
+   زمان‌بندی فریم
+========================================================= */
+
+function scheduleUpdate(){
+
+  if(!running) return;
+
+  if(framePending) return;
+
+  framePending = true;
+
+  animId =
+    requestAnimationFrame(update);
+
+}
+
+
+/* =========================================================
+   توقف حلقه
+========================================================= */
+
+function stopLoop(){
+
+  if(animId !== null){
+
+    cancelAnimationFrame(animId);
+
+  }
+
+  animId = null;
+
+  framePending = false;
+
+  lastFrameTime = 0;
+
+}
+
+
+/* =========================================================
+   آپدیت اصلی بازی
+========================================================= */
+
+function update(timestamp){
+
+  framePending = false;
+  animId = null;
+
+  if(!running) return;
+
+
+  /*
+   * جلوگیری از پرش توپ هنگام:
+   * - افت FPS
+   * - بازگشت از پس‌زمینه
+   * - تغییر صفحه
+   * - لگ موبایل
+   */
+
+  if(!lastFrameTime){
+
+    lastFrameTime = timestamp;
+
+  }
+
+  let delta =
+    timestamp - lastFrameTime;
+
+  lastFrameTime = timestamp;
+
+  delta =
+    Math.min(
+      Math.max(delta,0),
+      32
+    );
+
+  const dt =
+    delta / 16.6667;
+
+  const dtSec =
+    delta / 1000;
+
+
+  /* =========================
+     کنترل کیبورد
+  ========================= */
+
+  if(keys.left){
+
+    paddle.x -=
+      paddle.speed * dt;
+
+  }
+
+  if(keys.right){
+
+    paddle.x +=
+      paddle.speed * dt;
+
+  }
+
+
+  paddle.x =
+    Math.max(
+      0,
+      Math.min(
+        W - paddle.width,
+        paddle.x
+      )
+    );
+
+
+  /* =========================
+     حرکت توپ
+  ========================= */
+
+  ball.x += ball.dx * dt;
+
+  ball.y += ball.dy * dt;
+
+
+  /* =========================
+     دیواره چپ
+  ========================= */
+
+  if(ball.x - ball.r <= 0){
+
+    ball.x = ball.r;
+
+    ball.dx =
+      Math.abs(ball.dx);
+
+    sound(480);
+
+  }
+
+
+  /* =========================
+     دیواره راست
+  ========================= */
+
+  if(ball.x + ball.r >= W){
+
+    ball.x =
+      W - ball.r;
+
+    ball.dx =
+      -Math.abs(ball.dx);
+
+    sound(480);
+
+  }
+
+
+  /* =========================
+     دیواره بالا
+  ========================= */
+
+  if(ball.y - ball.r <= 0){
+
+    ball.y = ball.r;
+
+    ball.dy =
+      Math.abs(ball.dy);
+
+    sound(560);
+
+  }
+
+
+  /* =========================
+     trail
+  ========================= */
 
   trail.push({
 
-    x:
-      ball.x,
-
-    y:
-      ball.y,
-
-    life:
-      .35
+    x:ball.x,
+    y:ball.y,
+    life:1
 
   });
 
-  if (
-    trail.length >
-    10
-  ) {
+  if(trail.length > 14){
 
     trail.shift();
 
   }
 
-  trail.forEach(
-    t =>
-      t.life -=
-      .035
-  );
+  for(const t of trail){
 
-
-  /* دیوارها */
-
-  if (
-    ball.x -
-      ball.r <
-    0
-  ) {
-
-    ball.x =
-      ball.r;
-
-    ball.dx =
-      Math.abs(
-        ball.dx
-      );
-
-    sfxWall();
+    t.life -= .075 * dt;
 
   }
 
 
-  if (
-    ball.x +
-      ball.r >
-    W
-  ) {
+  /* =========================
+     برخورد توپ با پدل
+  ========================= */
 
-    ball.x =
-      W -
-      ball.r;
-
-    ball.dx =
-      -Math.abs(
-        ball.dx
-      );
-
-    sfxWall();
-
-  }
-
-
-  /* سقف */
-
-  if (
-    ball.y -
-      ball.r <
-    0
-  ) {
-
-    ball.y =
-      ball.r;
-
-    ball.dy =
-      Math.abs(
-        ball.dy
-      );
-
-    sfxWall();
-
-  }
-
-
-  /* پدل */
-
-  if (
+  if(
 
     ball.dy > 0 &&
 
-    ball.y +
-      ball.r >=
-    paddle.y &&
+    ball.y + ball.r >= paddle.y &&
 
-    ball.y -
-      ball.r <=
-    paddle.y +
-      paddle.h &&
+    ball.y - ball.r <=
+      paddle.y + paddle.height &&
 
-    ball.x >
-      paddle.x &&
+    ball.x >= paddle.x &&
 
-    ball.x <
-      paddle.x +
-      paddle.w
+    ball.x <=
+      paddle.x + paddle.width
 
-  ) {
-
-    const hit =
-      (
-        ball.x -
-        (
-          paddle.x +
-          paddle.w / 2
-        )
-      ) /
-      (
-        paddle.w / 2
-      );
-
-
-    ball.dx =
-      hit *
-      baseSpeed *
-      1.08;
-
-    ball.dy =
-      -Math.abs(
-        ball.dy
-      );
+  ){
 
     ball.y =
-      paddle.y -
-      ball.r;
+      paddle.y - ball.r - .5;
 
-    sfxPaddle();
+
+    /*
+     * محل برخورد توپ با پدل
+     */
+
+    const center =
+      paddle.x + paddle.width / 2;
+
+    const hit =
+      (ball.x - center) /
+      (paddle.width / 2);
+
+
+    /*
+     * سرعت ثابت و کنترل‌شده.
+     * جلوی افقی‌شدن کامل مسیر توپ را می‌گیرد.
+     */
+
+    let vx =
+      hit * baseSpeed * 1.08;
+
+    const maxVx =
+      baseSpeed * .92;
+
+    vx =
+      Math.max(
+        -maxVx,
+        Math.min(maxVx,vx)
+      );
+
+    const vy =
+      -Math.sqrt(
+        Math.max(
+          .5,
+          baseSpeed * baseSpeed -
+          vx * vx
+        )
+      );
+
+    ball.dx = vx;
+    ball.dy = vy;
+
+    sound(720);
 
   }
 
 
-  /* آجرها */
+  /* =========================
+     برخورد با آجرها
+  ========================= */
 
-  for (
-    let i = 0;
-    i < bricks.length;
-    i++
-  ) {
+  for(const b of bricks){
 
-    const b =
-      bricks[i];
-
-    if (!b.alive)
-      continue;
+    if(!b.alive) continue;
 
 
-    if (
+    const hit =
+      ball.x + ball.r > b.x &&
+      ball.x - ball.r < b.x + b.w &&
+      ball.y + ball.r > b.y &&
+      ball.y - ball.r < b.y + b.h;
 
-      ball.x +
-        ball.r >
-      b.x &&
 
-      ball.x -
-        ball.r <
-      b.x +
-        b.w &&
+    if(hit){
 
-      ball.y +
-        ball.r >
-      b.y &&
+      b.alive = false;
 
-      ball.y -
-        ball.r <
-      b.y +
-        b.h
+      score += 10;
 
-    ) {
+      scoreEl.textContent =
+        score;
 
-      b.alive =
-        false;
+      makeParticles(
+        ball.x,
+        ball.y,
+        9
+      );
+
+      sound(
+        360 +
+        currentLevel * 80
+      );
+
+
+      /*
+       * جهت توپ
+       */
 
       ball.dy =
         -ball.dy;
 
 
-      score +=
-        10 +
-        currentLevel *
-        2;
+      /*
+       * اگر توپ داخل آجر رفت،
+       * آن را بیرون می‌آوریم.
+       */
 
+      if(ball.dy < 0){
 
-      scoreEl.textContent =
-        String(score);
+        ball.y =
+          b.y - ball.r - .5;
 
+      }else{
 
-      makeParticles(
-        ball.x,
-        ball.y,
-        b.color,
-        8
-      );
-
-
-      sfxBrick();
-
-      updateProgress();
-
-
-      if (
-        bricks.every(
-          br =>
-            !br.alive
-        )
-      ) {
-
-        levelComplete();
-
-        return;
+        ball.y =
+          b.y + b.h + ball.r + .5;
 
       }
+
+
+      updateProgress();
 
       break;
 
@@ -2292,310 +1432,262 @@ function update() {
   }
 
 
-  /* افتادن */
+  /* =========================
+     توپ از پایین خارج شد
+  ========================= */
 
-  if (
-    ball.y -
-      ball.r >
-    H
-  ) {
+  if(ball.y - ball.r > H){
 
     lives--;
 
-    livesEl.textContent =
-      String(lives);
+    updateLives();
 
-    sfxLife();
+    sound(180,.1);
 
+    trail = [];
 
-    if (
-      lives <= 0
-    ) {
+    if(lives <= 0){
 
-      gameOver(
-        false
-      );
+      gameOver(false);
 
       return;
 
     }
 
 
-    messageEl.textContent =
-      "یک جان کم شد ❤️";
-
+    /*
+     * توقف کوتاه برای ریست توپ
+     */
 
     resetBall();
 
   }
 
 
-  updateParticles();
+  /* =========================
+     ذرات
+  ========================= */
+
+  updateParticles(dtSec);
+
+
+  /* =========================
+     بررسی پایان مرحله
+  ========================= */
+
+  const remaining =
+    bricks.some(b => b.alive);
+
+  if(!remaining){
+
+    levelComplete();
+
+    return;
+
+  }
+
 
   draw();
 
-  animId =
-    requestAnimationFrame(
-      update
-    );
+  scheduleUpdate();
 
 }
 
 
 /* =========================================================
-   LEVEL COMPLETE
+   جان
 ========================================================= */
 
-function levelComplete() {
+function updateLives(){
 
-  running =
-    false;
+  let hearts = "";
 
-  cancelAnimationFrame(
-    animId
-  );
+  for(let i=0;i<lives;i++){
 
-  sfxWin();
-
-
-  /* جایزه مرحله */
-
-  score +=
-    50 +
-    currentLevel *
-    20;
-
-  scoreEl.textContent =
-    String(score);
-
-
-  if (
-    currentLevel >=
-    levels.length - 1
-  ) {
-
-    gameOver(
-      true
-    );
-
-    return;
+    hearts += "❤️";
 
   }
 
+  if(lives <= 0){
 
-  currentLevel++;
+    hearts = "💔";
 
+  }
 
-  levelTitle.textContent =
-    levels[
-      currentLevel
-    ].name;
-
-  levelDesc.textContent =
-    levels[
-      currentLevel
-    ].desc;
-
-
-  levelScreen.classList.add(
-    "show"
-  );
+  livesEl.textContent = hearts;
 
 }
 
 
 /* =========================================================
-   GAME OVER
+   پایان مرحله
 ========================================================= */
 
-async function gameOver(
-  won
-) {
+function levelComplete(){
 
-  if (
-    roundFinished
-  )
-    return;
+  stopLoop();
 
-  roundFinished =
-    true;
+  running = false;
 
-  running =
-    false;
-
-  cancelAnimationFrame(
-    animId
+  makeParticles(
+    W / 2,
+    H / 2,
+    45
   );
 
+  draw();
 
-  if (
-    score >
-    highScore
-  ) {
+  sound(900,.12);
 
-    highScore =
-      score;
+  setTimeout(()=>{
 
-    localStorage.setItem(
-      "breakoutHigh",
-      String(
-        highScore
-      )
-    );
+    if(roundFinished) return;
 
-    highScoreEl.textContent =
-      String(
-        highScore
-      );
+    currentLevel++;
 
-  }
+    if(currentLevel >= levels.length){
 
+      gameOver(true);
 
-  finalScoreEl.textContent =
-    String(score);
-
-
-  if (won) {
-
-    endIcon.textContent =
-      "🏆";
-
-    endTitle.textContent =
-      "تبریک! همه مراحل تمام شد 🎉";
-
-    endTitle.className =
-      "win";
-
-    endExtra.textContent =
-      "امتیازت برای دومیتو ثبت می‌شود...";
-
-    sfxWin();
-
-  } else {
-
-    endIcon.textContent =
-      "💥";
-
-    endTitle.textContent =
-      "باختی!";
-
-    endTitle.className =
-      "lose";
-
-    endExtra.textContent =
-      "امتیازت برای دومیتو ثبت می‌شود...";
-
-    sfxGameOver();
-
-  }
-
-
-  endScreen.classList.add(
-    "show"
-  );
-
-
-  /* ثبت نتیجه */
-
-  await submitGameResult(
-    won
-  );
-
-}
-
-
-/* =========================================================
-   ثبت نتیجه در دومیتو
-========================================================= */
-
-async function submitGameResult(
-  localWon
-) {
-
-  if (
-    resultSubmitted
-  ) {
-    return;
-  }
-
-  resultSubmitted =
-    true;
-
-
-  /* =========================================
-     SOLO
-  ========================================= */
-
-  if (isSolo) {
-
-    try {
-
-      /*
-       * برای حالت تک‌نفره،
-       * خود سیستم دومیتو تعیین می‌کند
-       * آیا score به threshold رسیده یا نه.
-       */
-
-      const won =
-        (
-          await import(
-            "../js/app.js"
-          )
-        ).soloWon(
-          GAME_ID,
-          score
-        );
-
-
-      await recordRoundResult(
-        myName,
-        GAME_ID,
-        {
-          won
-        }
-      );
-
-
-      endExtra.textContent =
-        won
-          ? "🏆 برد! +۱۵ سکه"
-          : "🎮 بازی شد! +۵ سکه";
-
-
-    } catch (e) {
-
-      console.warn(
-        "Solo result error:",
-        e
-      );
-
-      endExtra.textContent =
-        "نتیجه بازی ذخیره نشد.";
+      return;
 
     }
 
-    return;
+
+    overlay.classList.remove("hidden");
+
+    overlay.style.display = "flex";
+
+    overlayTitle.textContent =
+      `🎉 ${levels[currentLevel - 1].name} تمام شد!`;
+
+    overlayText.textContent =
+      `مرحله بعد: ${levels[currentLevel].name} — ${levels[currentLevel].desc}`;
+
+    mainBtn.textContent =
+      "مرحله بعد ➜";
+
+    restartBtn.classList.add("hidden");
+
+  },500);
+
+}
+
+
+/* =========================================================
+   پایان کامل بازی
+========================================================= */
+
+function gameOver(won){
+
+  if(roundFinished) return;
+
+  roundFinished = true;
+
+  running = false;
+
+  stopLoop();
+
+  const finalScore = score;
+
+
+  if(finalScore > getHighScore()){
+
+    localStorage.setItem(
+      "breakoutHigh",
+      String(finalScore)
+    );
+
+    highScoreEl.textContent =
+      finalScore;
+
   }
 
 
-  /* =========================================
-     MULTIPLAYER
-  ========================================= */
+  overlay.style.display = "flex";
 
-  if (
-    !roomCode ||
-    !myUid
-  ) {
+  overlay.classList.remove("hidden");
 
-    endExtra.textContent =
-      "اتاق دومیتو پیدا نشد.";
-
-    return;
-
-  }
+  overlayTitle.textContent =
+    won
+      ? "🏆 برنده شدی!"
+      : "💥 بازی تمام شد";
 
 
-  try {
+  overlayText.textContent =
+    won
+      ? `هر ۵ مرحله را تمام کردی! امتیاز: ${finalScore}`
+      : `امتیاز نهایی: ${finalScore}`;
+
+
+  mainBtn.textContent =
+    "ثبت نتیجه";
+
+
+  restartBtn.classList.remove("hidden");
+
+  submitGameResult(won);
+
+}
+
+
+/* =========================================================
+   رکورد
+========================================================= */
+
+function getHighScore(){
+
+  return Number(
+    localStorage.getItem(
+      "breakoutHigh"
+    ) || 0
+  );
+
+}
+
+
+/* =========================================================
+   ثبت نتیجه
+========================================================= */
+
+async function submitGameResult(localWon){
+
+  if(resultSubmitted) return;
+
+  resultSubmitted = true;
+
+  try{
+
+    if(isSolo){
+
+      try{
+
+        const { soloWon } =
+          await import("../js/app.js");
+
+        if(typeof soloWon === "function"){
+
+          await soloWon(
+            GAME_ID,
+            score
+          );
+
+        }
+
+      }catch{}
+
+      await recordRoundResult(
+        GAME_ID,
+        myUid,
+        myName,
+        score,
+        localWon
+      );
+
+      return;
+
+    }
+
 
     await submitResult(
       GAME_ID,
@@ -2604,33 +1696,12 @@ async function submitGameResult(
       score
     );
 
-
-    endExtra.textContent =
-      "✅ امتیازت ثبت شد؛ منتظر بقیه باش...";
-
-
-    waitBox.classList.remove(
-      "hidden"
-    );
-
-
-    myFinalScore.textContent =
-      String(score);
-
-
-    waitStatus.textContent =
-      "نتیجه ثبت شد؛ منتظر بقیه بازیکنان هستیم...";
-
-
-  } catch (e) {
+  }catch(err){
 
     console.error(
-      "submitResult error:",
-      e
+      "submitGameResult:",
+      err
     );
-
-    endExtra.textContent =
-      "❌ ثبت نتیجه با خطا مواجه شد.";
 
   }
 
@@ -2641,140 +1712,102 @@ async function submitGameResult(
    ادامه مرحله
 ========================================================= */
 
-function continueLevel() {
+function continueLevel(){
 
-  initAudio();
+  stopLoop();
 
-  sfxLevel();
+  roundFinished = false;
+
+  running = true;
+
+  overlay.style.display = "none";
+
+  overlay.classList.add("hidden");
 
   startLevel();
 
-  running =
-    true;
-
-  levelScreen.classList.remove(
-    "show"
-  );
-
-  messageEl.textContent =
-    `مرحله ${
-      currentLevel + 1
-    } شروع شد! 🔥`;
-
   draw();
 
-  animId =
-    requestAnimationFrame(
-      update
-    );
+  scheduleUpdate();
 
 }
 
 
 /* =========================================================
-   START GAME
+   شروع بازی
 ========================================================= */
 
-function startGame() {
+function startGame(){
 
-  initAudio();
+  stopLoop();
 
-  cancelAnimationFrame(
-    animId
-  );
+  currentLevel = 0;
 
+  score = 0;
 
-  currentLevel =
-    0;
+  lives = 3;
 
-  score =
-    0;
+  baseSpeed = levels[0].speed;
 
-  lives =
-    3;
+  running = true;
 
-  particles =
-    [];
+  roundFinished = false;
 
-  trail =
-    [];
+  resultSubmitted = false;
 
-  roundFinished =
-    false;
+  scoreboardShown = false;
 
-  resultSubmitted =
-    false;
+  particles = [];
 
+  trail = [];
 
-  scoreEl.textContent =
-    "0";
+  scoreEl.textContent = "0";
 
-  livesEl.textContent =
-    "3";
+  highScoreEl.textContent =
+    getHighScore();
 
-  levelEl.textContent =
-    "1";
+  updateLives();
 
+  overlay.style.display = "none";
+
+  overlay.classList.add("hidden");
+
+  roomResults.style.display = "none";
 
   startLevel();
 
-
-  running =
-    true;
-
-
-  startScreen.classList.remove(
-    "show"
-  );
-
-  levelScreen.classList.remove(
-    "show"
-  );
-
-  endScreen.classList.remove(
-    "show"
-  );
-
-  waitBox.classList.add(
-    "hidden"
-  );
-
-  scoreBox.classList.add(
-    "hidden"
-  );
-
-
-  messageEl.textContent =
-    "بزن بریم! 🚀";
-
-
   draw();
 
-
-  animId =
-    requestAnimationFrame(
-      update
-    );
+  scheduleUpdate();
 
 }
 
 
 /* =========================================================
-   PADDLE CONTROL
+   حرکت پدل
 ========================================================= */
 
-function movePaddle(
-  x
-) {
+function movePaddle(x){
+
+  const rect =
+    canvas.getBoundingClientRect();
+
+  const scaleX =
+    W / rect.width;
+
+  const canvasX =
+    (x - rect.left) * scaleX;
+
+  paddle.x =
+    canvasX -
+    paddle.width / 2;
 
   paddle.x =
     Math.max(
       0,
       Math.min(
-        W -
-          paddle.w,
-        x -
-          paddle.w / 2
+        W - paddle.width,
+        paddle.x
       )
     );
 
@@ -2782,86 +1815,96 @@ function movePaddle(
 
 
 /* =========================================================
-   MOUSE
+   موس
 ========================================================= */
 
 canvas.addEventListener(
   "mousemove",
   e => {
 
-    if (!running)
-      return;
+    if(!running) return;
 
-    const rect =
-      canvas.getBoundingClientRect();
-
-    const scaleX =
-      W /
-      rect.width;
-
-    movePaddle(
-      (
-        e.clientX -
-        rect.left
-      ) *
-      scaleX
-    );
+    movePaddle(e.clientX);
 
   }
 );
 
 
 /* =========================================================
-   TOUCH
+   لمس
 ========================================================= */
+
+canvas.addEventListener(
+  "touchstart",
+  e => {
+
+    if(!running) return;
+
+    const touch =
+      e.touches[0];
+
+    if(touch){
+
+      movePaddle(
+        touch.clientX
+      );
+
+    }
+
+  },
+  {passive:false}
+);
+
 
 canvas.addEventListener(
   "touchmove",
   e => {
 
+    if(!running) return;
+
     e.preventDefault();
 
-    if (!running)
-      return;
+    const touch =
+      e.touches[0];
 
+    if(touch){
 
-    const rect =
-      canvas.getBoundingClientRect();
+      movePaddle(
+        touch.clientX
+      );
 
-    const scaleX =
-      W /
-      rect.width;
-
-
-    movePaddle(
-      (
-        e.touches[0].clientX -
-        rect.left
-      ) *
-      scaleX
-    );
+    }
 
   },
-  {
-    passive:
-      false
-  }
+  {passive:false}
 );
 
 
 /* =========================================================
-   KEYBOARD
+   کیبورد
 ========================================================= */
-
-const keys = {};
-
 
 window.addEventListener(
   "keydown",
   e => {
 
-    keys[e.key] =
-      true;
+    if(
+      e.key === "ArrowLeft" ||
+      e.key.toLowerCase() === "a"
+    ){
+
+      keys.left = true;
+
+    }
+
+    if(
+      e.key === "ArrowRight" ||
+      e.key.toLowerCase() === "d"
+    ){
+
+      keys.right = true;
+
+    }
 
   }
 );
@@ -2871,573 +1914,403 @@ window.addEventListener(
   "keyup",
   e => {
 
-    keys[e.key] =
-      false;
+    if(
+      e.key === "ArrowLeft" ||
+      e.key.toLowerCase() === "a"
+    ){
+
+      keys.left = false;
+
+    }
+
+    if(
+      e.key === "ArrowRight" ||
+      e.key.toLowerCase() === "d"
+    ){
+
+      keys.right = false;
+
+    }
 
   }
 );
-
-
-function keyboardLoop() {
-
-  if (running) {
-
-    if (
-      keys["ArrowLeft"] ||
-      keys["a"] ||
-      keys["A"]
-    ) {
-
-      paddle.x =
-        Math.max(
-          0,
-          paddle.x -
-          paddle.speed
-        );
-
-    }
-
-
-    if (
-      keys["ArrowRight"] ||
-      keys["d"] ||
-      keys["D"]
-    ) {
-
-      paddle.x =
-        Math.min(
-          W -
-            paddle.w,
-          paddle.x +
-          paddle.speed
-        );
-
-    }
-
-  }
-
-
-  requestAnimationFrame(
-    keyboardLoop
-  );
-
-}
-
-
-keyboardLoop();
 
 
 /* =========================================================
-   BUTTONS
+   دکمه‌ها
 ========================================================= */
 
-startBtn.addEventListener(
+mainBtn.addEventListener(
   "click",
-  startGame
-);
+  () => {
+
+    sound(650,.06);
+
+    /*
+     * اگر بازی تمام شده،
+     * دکمه اول نتیجه را ثبت کرده و
+     * فقط نمایش را نگه می‌دارد.
+     */
+
+    if(roundFinished){
+
+      if(!resultSubmitted){
+
+        submitGameResult(
+          score >= 100,
+          true
+        );
+
+      }
+
+      return;
+
+    }
 
 
-nextLevelBtn.addEventListener(
-  "click",
-  continueLevel
+    /*
+     * اگر وسط مراحل هستیم،
+     * مرحله بعد را شروع کن.
+     */
+
+    if(currentLevel > 0){
+
+      continueLevel();
+
+    }else{
+
+      startGame();
+
+    }
+
+  }
 );
 
 
 restartBtn.addEventListener(
   "click",
-  startGame
-);
-
-
-homeBtn.addEventListener(
-  "click",
   () => {
 
-    location.href =
-      "../index.html";
+    sound(500,.05);
+
+    startGame();
 
   }
 );
 
 
 /* =========================================================
-   ESCAPE / HOME
+   نمایش اولیه
 ========================================================= */
 
-window.addEventListener(
-  "keydown",
-  e => {
+highScoreEl.textContent =
+  getHighScore();
 
-    if (
-      e.key === "Escape"
-    ) {
+updateLives();
 
-      location.href =
-        "../index.html";
-
-    }
-
-  }
-);
-
-
-/* =========================================================
-   INITIAL DRAW
-========================================================= */
-
-createBricks();
+startLevel();
 
 draw();
 
 
 /* =========================================================
-   DOMITO MULTIPLAYER RESULT LISTENER
+   اتصال به اتاق دومیتو
 ========================================================= */
 
-function startRoomListener() {
+function startRoomListener(){
 
-  if (
-    isSolo ||
-    !roomCode
-  ) {
-    return;
+  if(isSolo) return;
+
+  if(!roomCode) return;
+
+  try{
+
+    const ref =
+      roomRef(roomCode);
+
+    onValue(
+      ref,
+      snap => {
+
+        const data =
+          snap.val();
+
+        if(!data) return;
+
+        const players =
+          data.players || {};
+
+        const results =
+          data.results || {};
+
+
+        const playerIds =
+          Object.keys(players);
+
+        if(playerIds.length === 0)
+          return;
+
+
+        /*
+         * فقط وقتی همه نتیجه داده‌اند
+         */
+
+        let allFinished = true;
+
+        for(const uid of playerIds){
+
+          if(!results[uid]){
+
+            allFinished = false;
+
+            break;
+
+          }
+
+        }
+
+
+        if(
+          allFinished &&
+          Object.keys(results).length >=
+          playerIds.length
+        ){
+
+          showFinalScoreBoard(
+            results
+          );
+
+        }
+
+      }
+    );
+
+  }catch(err){
+
+    console.error(
+      "room listener:",
+      err
+    );
+
   }
-
-
-  onValue(
-    roomRef(
-      roomCode,
-      "players"
-    ),
-    snap => {
-
-      players =
-        snap.val() || {};
-
-    }
-  );
-
-
-  onValue(
-    roomRef(
-      roomCode,
-      "results"
-    ),
-    snap => {
-
-      if (
-        !resultSubmitted
-      ) {
-        return;
-      }
-
-
-      const results =
-        snap.val() || {};
-
-
-      const playerCount =
-        Object.keys(
-          players
-        ).length;
-
-
-      const resultCount =
-        Object.keys(
-          results
-        ).length;
-
-
-      if (
-        playerCount === 0
-      ) {
-        return;
-      }
-
-
-      waitStatus.textContent =
-        `${resultCount} از ${playerCount} بازیکن نتیجه داده‌اند`;
-
-
-      /*
-       * هنوز همه تمام نکرده‌اند
-       */
-
-      if (
-        resultCount <
-        playerCount
-      ) {
-
-        return;
-
-      }
-
-
-      /*
-       * همه تمام کردند
-       */
-
-      showFinalScoreBoard(
-        results
-      );
-
-    }
-  );
 
 }
 
 
 /* =========================================================
-   FINAL SCOREBOARD
+   جدول نتایج
 ========================================================= */
 
-async function showFinalScoreBoard(
-  results
-) {
+async function showFinalScoreBoard(results){
 
-  const list =
-    Object.entries(
-      results
-    )
-    .map(
-      ([uid, data]) => ({
+  /*
+   * بسیار مهم:
+   * listener فایربیس ممکن است چند بار اجرا شود.
+   * بنابراین جدول فقط یک بار ساخته می‌شود.
+   */
+
+  if(scoreboardShown) return;
+
+  scoreboardShown = true;
+
+
+  const rows =
+    Object.entries(results)
+      .map(([uid,data]) => ({
 
         uid,
 
         name:
-          data.name ||
+          data?.name ||
           "بازیکن",
 
         score:
-          Number(
-            data.score ||
-            0
-          )
+          Number(data?.score || 0)
 
-      })
-    )
-    .sort(
-      (a, b) =>
-        b.score -
-        a.score
-    );
-
-
-  if (
-    list.length === 0
-  ) {
-    return;
-  }
-
-
-  const winner =
-    list[0];
-
-
-  const me =
-    list.find(
-      x =>
-        x.uid ===
-        myUid
-    );
-
-
-  const myScore =
-    me
-      ? me.score
-      : score;
-
-
-  const won =
-    !!me &&
-    me.score ===
-    winner.score;
-
-
-  /* =========================================
-     ثبت برد/باخت
-  ========================================= */
-
-  try {
-
-    await recordRoundResult(
-      myName,
-      GAME_ID,
-      {
-        won
-      }
-    );
-
-  } catch (e) {
-
-    console.warn(
-      "recordRoundResult:",
-      e
-    );
-
-  }
-
-
-  /* =========================================
-     نمایش
-  ========================================= */
-
-  waitBox.classList.add(
-    "hidden"
-  );
-
-  scoreBox.classList.remove(
-    "hidden"
-  );
-
-
-  if (won) {
-
-    winnerText.textContent =
-      "🏆 تو برنده این دور شدی! +۱۵ سکه";
-
-  } else {
-
-    winnerText.textContent =
-      `🥇 برنده: ${winner.name}`;
-
-  }
-
-
-  scoreBoard.innerHTML =
-    "";
-
-
-  list.forEach(
-    (player, index) => {
-
-      const row =
-        document.createElement(
-          "div"
-        );
-
-
-      const isMe =
-        player.uid ===
-        myUid;
-
-
-      const isWinner =
-        index === 0;
-
-
-      row.className =
-        "score-row" +
-        (
-          isMe
-            ? " me"
-            : ""
-        ) +
-        (
-          isWinner
-            ? " winner"
-            : ""
-        );
-
-
-      let medal =
-        "";
-
-
-      if (
-        index === 0
-      ) {
-        medal = "🥇";
-
-      } else if (
-        index === 1
-      ) {
-        medal = "🥈";
-
-      } else if (
-        index === 2
-      ) {
-        medal = "🥉";
-
-      }
-
-
-      row.innerHTML = `
-
-        <span class="rank">
-          ${medal || index + 1}
-        </span>
-
-        <span class="player-name">
-          ${escapeHtml(
-            player.name
-          )}
-          ${
-            isMe
-              ? " 👤"
-              : ""
-          }
-        </span>
-
-        <span class="player-score">
-          ${player.score}
-        </span>
-
-      `;
-
-
-      scoreBoard.appendChild(
-        row
+      }))
+      .sort(
+        (a,b) =>
+          b.score - a.score
       );
 
-    }
-  );
+
+  if(rows.length === 0){
+
+    scoreboardShown = false;
+
+    return;
+
+  }
+
+
+  const winnerScore =
+    rows[0].score;
+
+
+  resultsList.innerHTML =
+    rows.map((r,index)=>{
+
+      const isMe =
+        r.uid === myUid;
+
+      const medal =
+        index === 0
+          ? "🥇"
+          : index === 1
+            ? "🥈"
+            : index === 2
+              ? "🥉"
+              : "▫️";
+
+      return `
+        <div class="resultRow ${isMe ? "me" : ""}">
+          <div class="resultName">
+            ${medal}
+            ${escapeHtml(r.name)}
+          </div>
+
+          <div class="resultScore">
+            ${r.score}
+          </div>
+        </div>
+      `;
+
+    }).join("");
+
+
+  roomResults.style.display =
+    "flex";
 
 
   /*
-   * چند ثانیه بعد
-   * لابی دور بعدی را مدیریت می‌کند.
-   *
-   * برای جلوگیری از چند reset هم فقط
-   * یک بار اجرا می‌شود.
+   * ثبت نتیجه دور فقط یک بار
    */
 
-}
+  try{
 
+    const me =
+      rows.find(
+        r => r.uid === myUid
+      );
 
-/* =========================================================
-   HTML ESCAPE
-========================================================= */
+    if(me){
 
-function escapeHtml(
-  value
-) {
+      const won =
+        me.score === winnerScore;
 
-  return String(
-    value
-  )
-  .replace(
-    /&/g,
-    "&amp;"
-  )
-  .replace(
-    /</g,
-    "&lt;"
-  )
-  .replace(
-    />/g,
-    "&gt;"
-  )
-  .replace(
-    /"/g,
-    "&quot;"
-  )
-  .replace(
-    /'/g,
-    "&#039;"
-  );
-
-}
-
-
-/* =========================================================
-   DOMITO INITIALIZATION
-========================================================= */
-
-async function initDomito() {
-
-  try {
-
-    const user =
-      await waitForUser();
-
-
-    /*
-     * اگر وارد دومیتو نشده باشد،
-     * برگردد به صفحه اصلی.
-     */
-
-    if (!user) {
-
-      location.href =
-        "../index.html";
-
-      return;
+      await recordRoundResult(
+        GAME_ID,
+        myUid,
+        myName,
+        me.score,
+        won
+      );
 
     }
 
+  }catch(err){
 
-    myName =
-      getSavedName();
+    console.error(
+      "recordRoundResult:",
+      err
+    );
 
+  }
+
+}
+
+
+/* =========================================================
+   بستن نتایج
+========================================================= */
+
+resultClose.addEventListener(
+  "click",
+  () => {
+
+    roomResults.style.display =
+      "none";
+
+  }
+);
+
+
+/* =========================================================
+   جلوگیری از HTML تزریقی نام
+========================================================= */
+
+function escapeHtml(value){
+
+  return String(value)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+
+}
+
+
+/* =========================================================
+   ورود کاربر دومیتو
+========================================================= */
+
+async function initDomito(){
+
+  try{
+
+    await waitForUser();
+
+  }catch{}
+
+  try{
 
     myUid =
       currentUid();
 
+  }catch{
 
-    if (
-      !myName ||
-      !myUid
-    ) {
-
-      location.href =
-        "../index.html";
-
-      return;
-
-    }
-
-
-    /*
-     * اگر بازی تک‌نفره است،
-     * فقط نتیجه شخصی ثبت می‌شود.
-     */
-
-    if (isSolo) {
-
-      return;
-
-    }
-
-
-    /*
-     * بازی اتاقی نیاز به room دارد.
-     */
-
-    if (!roomCode) {
-
-      messageEl.textContent =
-        "⚠️ اتاق دومیتو پیدا نشد.";
-
-      startBtn.disabled =
-        true;
-
-      return;
-
-    }
-
-
-    messageEl.textContent =
-      `اتاق ${roomCode} آماده است 🎮`;
-
-
-    startRoomListener();
-
-
-  } catch (e) {
-
-    console.error(
-      "Domito initialization error:",
-      e
-    );
-
-    messageEl.textContent =
-      "⚠️ اتصال به دومیتو انجام نشد.";
+    myUid = null;
 
   }
 
+
+  try{
+
+    myName =
+      getSavedName() ||
+      "بازیکن";
+
+  }catch{
+
+    myName = "بازیکن";
+
+  }
+
+
+  /*
+   * اگر UID موجود نبود، یک شناسه موقت
+   * برای حالت بازی ایجاد نمی‌کنیم؛
+   * چون نتیجه دومیتو باید به کاربر واقعی وصل شود.
+   */
+
+  if(!myUid){
+
+    console.warn(
+      "Domito UID not available"
+    );
+
+  }
+
+
+  startRoomListener();
+
 }
 
+
+/* =========================================================
+   اجرا
+========================================================= */
 
 initDomito();
 
