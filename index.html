@@ -2,1856 +2,806 @@
 <html lang="fa" dir="rtl">
 
 <head>
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
 
-<title>دومیتو</title>
+  <title>دومیتو | سالن مینی‌گیم‌های آنلاین</title>
 
-<link
-  rel="stylesheet"
-  href="css/style.css"
->
+  <style>
 
-<link
-  rel="manifest"
-  href="./manifest.json"
->
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-<link
-  rel="icon"
-  type="image/png"
-  href="./logo.png"
->
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      background:
+        radial-gradient(
+          circle at top,
+          #172554 0%,
+          #080b16 45%,
+          #03040a 100%
+        );
+      color: white;
+    }
 
-<meta
-  name="theme-color"
-  content="#0f111a"
->
+    body {
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-<style>
+    button,
+    input {
+      font: inherit;
+    }
 
-/* ================================================= */
-/* پنجره ورود به اتاق */
-/* ================================================= */
+    button {
+      cursor: pointer;
+    }
 
-.join-room-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, .72);
-  backdrop-filter: blur(8px);
-}
+    /* =========================================
+       صفحه
+       ========================================= */
 
-.join-room-box {
-  width: min(420px, 100%);
-  background: var(--card, #171a25);
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 22px;
-  padding: 28px 22px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.45);
-  text-align: center;
-  position: relative;
-  animation: roomBoxIn .18s ease-out;
-}
+    .page {
+      width: 100%;
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-@keyframes roomBoxIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(.97);
-  }
+    .container {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
 
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
+    /* =========================================
+       برند
+       ========================================= */
 
-.join-room-close {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 50%;
-  border: 0;
-  background: rgba(255,255,255,.07);
-  color: inherit;
-  font-size: 18px;
-  cursor: pointer;
-}
+    .brand {
+      text-align: center;
+      padding-top: 35px;
+      margin-bottom: 30px;
+    }
 
-.join-room-icon {
-  font-size: 42px;
-  margin-bottom: 8px;
-}
+    #domitoLogo {
+      width: 100px;
+      height: 100px;
 
-.join-room-box h2 {
-  margin: 0 0 8px;
-}
+      object-fit: contain;
+      display: block;
 
-.join-room-box p {
-  margin: 0 0 18px;
-}
+      margin: 0 auto 10px;
 
-.join-room-box input {
-  text-align: center;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  font-size: 18px;
-  margin-bottom: 12px;
-}
+      border-radius: 24px;
 
-.join-room-back {
-  margin-top: 8px;
-}
+      cursor: pointer;
 
+      user-select: none;
+      -webkit-user-select: none;
 
-/* ================================================= */
-/* لوگوی دومیتو */
-/* ================================================= */
+      -webkit-tap-highlight-color: transparent;
 
-#domitoLogo {
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+      touch-action: manipulation;
 
-</style>
+      transition:
+        transform 0.15s ease,
+        filter 0.2s ease;
+    }
 
+    #domitoLogo:active {
+      transform: scale(0.94);
+    }
+
+    .brand h1 {
+      margin: 0;
+
+      font-size: 34px;
+      font-weight: 900;
+
+      letter-spacing: -1px;
+    }
+
+    .brand p {
+      margin: 8px 0 0;
+
+      color: rgba(255, 255, 255, 0.65);
+
+      font-size: 14px;
+    }
+
+    /* =========================================
+       Glass
+       ========================================= */
+
+    .glass {
+      background:
+        rgba(255, 255, 255, 0.07);
+
+      border:
+        1px solid rgba(255, 255, 255, 0.10);
+
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+
+      border-radius: 24px;
+    }
+
+    /* =========================================
+       بخش احراز هویت
+       ========================================= */
+
+    #authSection {
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto;
+    }
+
+    .auth-card {
+      padding: 24px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .auth-tabs button {
+      flex: 1;
+
+      border: 0;
+      border-radius: 14px;
+
+      padding: 12px;
+
+      color: white;
+
+      background:
+        rgba(255, 255, 255, 0.06);
+    }
+
+    .auth-tabs button.active {
+      background:
+        rgba(99, 102, 241, 0.35);
+    }
+
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .auth-form input {
+      width: 100%;
+
+      padding: 14px 16px;
+
+      border-radius: 14px;
+
+      border:
+        1px solid rgba(255, 255, 255, 0.10);
+
+      outline: none;
+
+      color: white;
+
+      background:
+        rgba(0, 0, 0, 0.18);
+    }
+
+    .auth-form input::placeholder {
+      color:
+        rgba(255, 255, 255, 0.40);
+    }
+
+    .primary-button {
+      width: 100%;
+
+      border: 0;
+      border-radius: 14px;
+
+      padding: 14px;
+
+      color: white;
+
+      font-weight: 800;
+
+      background:
+        linear-gradient(
+          135deg,
+          #6366f1,
+          #8b5cf6
+        );
+    }
+
+    /* =========================================
+       Toast Notification
+       ========================================= */
+
+    #domitoToast {
+
+      position: fixed;
+
+      left: 50%;
+
+      bottom: 28px;
+
+      transform:
+        translate(-50%, 30px)
+        scale(0.96);
+
+      opacity: 0;
+
+      pointer-events: none;
+
+      z-index: 999999;
+
+      min-width: 150px;
+
+      max-width:
+        calc(100vw - 40px);
+
+      padding:
+        12px 20px;
+
+      text-align: center;
+
+      color: white;
+
+      font-size: 14px;
+
+      font-weight: 700;
+
+      /* شیشه‌ای مات */
+
+      background:
+        rgba(255, 255, 255, 0.10);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.20);
+
+      backdrop-filter:
+        blur(18px);
+
+      -webkit-backdrop-filter:
+        blur(18px);
+
+      box-shadow:
+
+        0 10px 35px
+        rgba(0, 0, 0, 0.28),
+
+        inset 0 1px 0
+        rgba(255, 255, 255, 0.12);
+
+      border-radius: 18px;
+
+      white-space: nowrap;
+
+      transition:
+
+        opacity
+        0.30s ease,
+
+        transform
+        0.30s
+        cubic-bezier(.2, .8, .2, 1);
+    }
+
+    #domitoToast.show {
+
+      opacity: 1;
+
+      transform:
+        translate(-50%, 0)
+        scale(1);
+    }
+
+    #domitoToast.hide {
+
+      opacity: 0;
+
+      transform:
+        translate(-50%, 18px)
+        scale(0.96);
+    }
+
+    /* =========================================
+       موبایل
+       ========================================= */
+
+    @media (max-width: 600px) {
+
+      .page {
+        padding: 14px;
+      }
+
+      .brand {
+        padding-top: 25px;
+      }
+
+      .brand h1 {
+        font-size: 30px;
+      }
+
+      #domitoLogo {
+        width: 90px;
+        height: 90px;
+      }
+
+      #domitoToast {
+        bottom: 22px;
+
+        font-size: 13px;
+
+        padding:
+          11px 18px;
+
+        border-radius: 16px;
+      }
+    }
+
+  </style>
 </head>
-
 
 <body>
 
+  <div class="page">
 
-<div class="wrap">
+    <div class="container">
+
+      <!-- =====================================
+           برند دومیتو
+           ===================================== -->
+
+      <div class="brand">
+
+        <img
+          id="domitoLogo"
+          src="./logo.png"
+          alt="دومیتو"
+        >
+
+        <h1>
+          دومیتو
+        </h1>
+
+        <p>
+          سالن مینی‌گیم‌های آنلاین
+        </p>
+
+      </div>
 
 
-  <!-- ================================================= -->
-  <!-- BRAND -->
-  <!-- ================================================= -->
+      <!-- =====================================
+           Toast
+           ===================================== -->
 
-  <div class="brand">
+      <div
+        id="domitoToast"
+        aria-live="polite"
+      ></div>
 
-    <img
-      id="domitoLogo"
-      src="./logo.png"
-      alt="دومیتو"
-      style="
-        width:100px;
-        height:100px;
-        object-fit:contain;
-        display:block;
-        margin:0 auto 10px;
-        border-radius:24px;
-      "
-    >
 
-    <h1>
-      دومیتو
-    </h1>
+      <!-- =====================================
+           Auth
+           ===================================== -->
 
-    <p>
-      سالن مینی‌گیم‌های آنلاین
-    </p>
+      <section
+        id="authSection"
+      >
+
+        <div
+          class="glass auth-card"
+        >
+
+          <div
+            class="auth-tabs"
+          >
+
+            <button
+              id="loginTab"
+              class="active"
+              type="button"
+            >
+              ورود
+            </button>
+
+            <button
+              id="registerTab"
+              type="button"
+            >
+              ثبت‌نام
+            </button>
+
+          </div>
+
+
+          <div
+            id="authForm"
+            class="auth-form"
+          >
+
+            <input
+              id="usernameInput"
+              type="text"
+              autocomplete="username"
+              placeholder="نام کاربری"
+            >
+
+            <input
+              id="passwordInput"
+              type="password"
+              autocomplete="current-password"
+              placeholder="رمز عبور"
+            >
+
+            <button
+              id="authButton"
+              class="primary-button"
+              type="button"
+            >
+              ورود
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================================
+           محتوای اصلی
+           ===================================== -->
+
+      <main
+        id="homeSection"
+        style="display:none;"
+      >
+
+        <div
+          class="glass"
+          style="
+            padding:24px;
+            text-align:center;
+            margin-top:20px;
+          "
+        >
+
+          <h2>
+            🎮 خوش اومدی به دومیتو
+          </h2>
+
+          <p
+            style="
+              color:rgba(255,255,255,.65);
+            "
+          >
+            سالن مینی‌گیم‌های آنلاین
+          </p>
+
+        </div>
+
+      </main>
+
+    </div>
 
   </div>
 
 
-  <!-- ================================================= -->
-  <!-- سیستم مخفی ۷ کلیک -->
-  <!-- این بخش مستقل از app.js است -->
-  <!-- ================================================= -->
+  <!-- =========================================
+       سیستم مخفی ۷ ضربه‌ای
+       مستقل از app.js
+       ========================================= -->
 
   <script>
 
-  (function () {
+    (function () {
 
-    const logo =
-      document.getElementById("domitoLogo");
+      const logo =
+        document.getElementById(
+          "domitoLogo"
+        );
 
-    if (!logo) {
-
-      console.error(
-        "Domito logo not found"
-      );
-
-      return;
-
-    }
-
-
-    let taps = 0;
-
-    let timer = null;
-
-    const TAP_TIMEOUT = 3000;
-
-
-    logo.addEventListener(
-      "click",
-      function () {
-
-        taps++;
-
-
-        clearTimeout(timer);
-
-
-        timer = setTimeout(
-          function () {
-
-            taps = 0;
-
-          },
-          TAP_TIMEOUT
+      const toast =
+        document.getElementById(
+          "domitoToast"
         );
 
 
-        /* کلیک سوم */
+      if (!logo) {
 
-        if (taps === 3) {
+        console.error(
+          "Domito logo not found"
+        );
 
-          alert(
-            "۴ بار دیگر"
-          );
-
-        }
-
-
-        /* کلیک چهارم */
-
-        else if (taps === 4) {
-
-          alert(
-            "۳ بار دیگر"
-          );
-
-        }
-
-
-        /* کلیک پنجم */
-
-        else if (taps === 5) {
-
-          alert(
-            "۲ بار دیگر"
-          );
-
-        }
-
-
-        /* کلیک ششم */
-
-        else if (taps === 6) {
-
-          alert(
-            "۱ بار دیگر"
-          );
-
-        }
-
-
-        /* کلیک هفتم */
-
-        else if (taps === 7) {
-
-          taps = 0;
-
-          clearTimeout(timer);
-
-
-          window.location.href =
-            "./command.html";
-
-        }
-
+        return;
       }
-    );
 
-  })();
+
+      if (!toast) {
+
+        console.error(
+          "Domito toast not found"
+        );
+
+        return;
+      }
+
+
+      let taps = 0;
+
+      let tapTimer = null;
+
+      let toastTimer = null;
+
+
+      const TAP_TIMEOUT =
+        3000;
+
+
+      /* =====================================
+         نمایش Toast
+         ===================================== */
+
+      function showToast(text) {
+
+        clearTimeout(
+          toastTimer
+        );
+
+
+        toast.classList.remove(
+          "hide"
+        );
+
+
+        toast.classList.remove(
+          "show"
+        );
+
+
+        toast.textContent =
+          text;
+
+
+        /*
+         * مجبور می‌کنیم مرورگر
+         * انیمیشن را دوباره اجرا کند.
+         */
+
+        void toast.offsetWidth;
+
+
+        toast.classList.add(
+          "show"
+        );
+
+
+        toastTimer =
+          setTimeout(
+            function () {
+
+              toast.classList.remove(
+                "show"
+              );
+
+              toast.classList.add(
+                "hide"
+              );
+
+            },
+            1800
+          );
+      }
+
+
+      /* =====================================
+         تشخیص ضربه روی لوگو
+         ===================================== */
+
+      logo.addEventListener(
+        "click",
+        function () {
+
+          taps++;
+
+
+          clearTimeout(
+            tapTimer
+          );
+
+
+          /*
+           * اگر بیشتر از ۳ ثانیه
+           * فاصله بیفتد،
+           * شمارنده صفر می‌شود.
+           */
+
+          tapTimer =
+            setTimeout(
+              function () {
+
+                taps = 0;
+
+              },
+              TAP_TIMEOUT
+            );
+
+
+          /* -------------------------------
+             ضربه سوم
+             ------------------------------- */
+
+          if (taps === 3) {
+
+            showToast(
+              "۴ بار دیگر"
+            );
+
+          }
+
+
+          /* -------------------------------
+             ضربه چهارم
+             ------------------------------- */
+
+          else if (taps === 4) {
+
+            showToast(
+              "۳ بار دیگر"
+            );
+
+          }
+
+
+          /* -------------------------------
+             ضربه پنجم
+             ------------------------------- */
+
+          else if (taps === 5) {
+
+            showToast(
+              "۲ بار دیگر"
+            );
+
+          }
+
+
+          /* -------------------------------
+             ضربه ششم
+             ------------------------------- */
+
+          else if (taps === 6) {
+
+            showToast(
+              "۱ بار دیگر"
+            );
+
+          }
+
+
+          /* -------------------------------
+             ضربه هفتم
+             ------------------------------- */
+
+          else if (taps === 7) {
+
+            taps = 0;
+
+            clearTimeout(
+              tapTimer
+            );
+
+
+            showToast(
+              "✨ پنل دستورات"
+            );
+
+
+            setTimeout(
+              function () {
+
+                window.location.href =
+                  "./command.html";
+
+              },
+              500
+            );
+
+          }
+
+        },
+        {
+          passive: true
+        }
+      );
+
+
+    })();
 
   </script>
 
 
-  <!-- ================= AUTH ================= -->
+  <!-- =========================================
+       برنامه اصلی دومیتو
+       ========================================= -->
 
-  <div
-    class="card"
-    id="authCard"
-  >
+  <script type="module">
 
-    <div
-      style="
-        display:flex;
-        gap:8px;
-        margin-bottom:16px;
-      "
-    >
+    import {
 
-      <button
-        id="tabRegister"
-        class="btn-full"
-        style="margin:0;"
-      >
-        ثبت‌نام
-      </button>
+      registerUser,
 
+      loginUser,
 
-      <button
-        id="tabLogin"
-        class="btn-full btn-ghost"
-        style="margin:0;"
-      >
-        ورود
-      </button>
+      waitForUser,
 
-    </div>
+      getSavedName,
 
+      createRoom,
 
-    <input
-      type="text"
-      id="userInput"
-      placeholder="نام‌کاربری (فقط حروف انگلیسی/عدد)"
-      maxlength="20"
-      style="margin-bottom:10px;"
-    />
+      joinRoomByCode,
 
+      getLeaderboard,
 
-    <input
-      type="password"
-      id="passInput"
-      placeholder="رمز عبور (حداقل ۶ کاراکتر)"
-      maxlength="40"
-    />
+      GAMES,
 
+      listenInvites,
 
-    <button
-      id="authBtn"
-      class="btn-full"
-    >
-      ثبت‌نام و ورود
-    </button>
+      dismissInvite,
 
+      listenProfile,
 
-    <p
-      class="status-line"
-      id="authStatus"
-    ></p>
+      listenFriendRequests,
 
-  </div>
+      acceptFriendRequest,
 
+      rejectFriendRequest,
 
-  <!-- ================= HOME ================= -->
+      listenFriends
 
-  <div
-    id="homeContent"
-    style="display:none"
-  >
+    } from "./js/app.js";
 
 
-    <!-- Wallet / Profile -->
+    /*
+     * اینجا کد اصلی index.html
+     * پروژه خودت قرار می‌گیرد.
+     *
+     * سیستم مخفی بالا مستقل است
+     * و به این بخش وابسته نیست.
+     */
 
-    <div class="top-wallet-bar">
 
-      <a
-        href="wallet.html"
-        class="coin-badge"
-      >
-        🪙
-
-        <span id="coinCount">
-          0
-        </span>
-
-        سکه ←
-      </a>
-
-
-      <a
-        href="profile.html"
-        class="btn-ghost"
-        style="
-          text-decoration:none;
-          padding:8px 14px;
-          font-size:12.5px;
-        "
-      >
-        پروفایل من
-      </a>
-
-    </div>
-
-
-    <!-- ================================================= -->
-    <!-- HERO -->
-    <!-- ================================================= -->
-
-    <div class="hero">
-
-      <div class="hero-emojis">
-        🎮🕹️👾
-      </div>
-
-
-      <h1>
-        بازی کن. رقابت کن. لذت ببر.
-      </h1>
-
-
-      <p>
-
-        خوش اومدی
-
-        <span
-          id="helloName"
-          style="
-            color:var(--gold);
-            font-weight:700;
-          "
-        ></span>
-
-      </p>
-
-
-      <div class="hero-btns">
-
-        <button
-          id="createRoomBtn"
-        >
-          ➕ ساخت اتاق جدید
-        </button>
-
-
-        <button
-          id="openJoinRoomBtn"
-          class="btn-ghost"
-        >
-          🔑 ورود با کد اتاق
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <!-- ================================================= -->
-    <!-- ONLINE FRIENDS -->
-    <!-- ================================================= -->
-
-    <div class="card">
-
-      <h2>
-        👥 دوستان آنلاین
-      </h2>
-
-
-      <div
-        id="requestList"
-      ></div>
-
-
-      <div
-        id="onlineFriendsList"
-      ></div>
-
-
-      <p
-        class="muted"
-        id="noFriendsMsg"
-        style="display:none;"
-      >
-        هنوز دوستی اضافه نکردی
-      </p>
-
-
-      <a
-        href="friends.html"
-        class="btn-full btn-ghost"
-        style="
-          display:block;
-          text-decoration:none;
-          text-align:center;
-          margin-top:10px;
-        "
-      >
-        مدیریت دوستان ←
-      </a>
-
-    </div>
-
-
-    <!-- ================================================= -->
-    <!-- INVITES -->
-    <!-- ================================================= -->
-
-    <div
-      class="card"
-      id="invitesCard"
-      style="display:none;"
-    >
-
-      <h2>
-        📩 دعوت‌های اتاق
-      </h2>
-
-
-      <div
-        id="inviteList"
-      ></div>
-
-    </div>
-
-
-    <!-- ================================================= -->
-    <!-- SOLO GAMES -->
-    <!-- ================================================= -->
-
-    <div class="section-title">
-
-      <h2>
-        🎮 بازی تک‌نفره — همین الان بازی کن
-      </h2>
-
-    </div>
-
-
-    <div
-      class="game-scroll"
-      id="gameScroll"
-    ></div>
-
-
-    <!-- ================================================= -->
-    <!-- LEADERBOARD -->
-    <!-- ================================================= -->
-
-    <div class="section-title">
-
-      <h2>
-        🏆 لیدربورد
-      </h2>
-
-    </div>
-
-
-    <div
-      class="leader-card"
-      id="leaderCard"
-    >
-
-      <p
-        class="muted"
-        id="leaderLoading"
-      >
-        در حال بارگذاری...
-      </p>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- ===================================================== -->
-<!-- JOIN ROOM OVERLAY -->
-<!-- ===================================================== -->
-
-<div
-  id="joinRoomOverlay"
-  class="join-room-overlay"
->
-
-
-  <div
-    class="join-room-box"
-  >
-
-
-    <button
-      id="closeJoinRoom"
-      class="join-room-close"
-      aria-label="بستن"
-    >
-      ✕
-    </button>
-
-
-    <div class="join-room-icon">
-      🔑
-    </div>
-
-
-    <h2>
-      ورود به اتاق
-    </h2>
-
-
-    <p class="muted">
-      کد اتاق را وارد کنید
-    </p>
-
-
-    <input
-      type="text"
-      id="roomInput"
-      placeholder="مثلاً: A7K2P"
-      maxlength="8"
-      autocomplete="off"
-    />
-
-
-    <button
-      id="joinRoomBtn"
-      class="btn-full"
-    >
-      ورود به اتاق
-    </button>
-
-
-    <button
-      id="cancelJoinRoom"
-      class="btn-full btn-ghost join-room-back"
-    >
-      بازگشت
-    </button>
-
-
-    <p
-      class="status-line"
-      id="roomStatus"
-    ></p>
-
-  </div>
-
-</div>
-
-
-<!-- ===================================================== -->
-<!-- APP JAVASCRIPT -->
-<!-- ===================================================== -->
-
-<script type="module">
-
-
-import {
-
-  registerUser,
-
-  loginUser,
-
-  waitForUser,
-
-  getSavedName,
-
-  createRoom,
-
-  joinRoomByCode,
-
-  getLeaderboard,
-
-  GAMES,
-
-  listenInvites,
-
-  dismissInvite,
-
-  listenProfile,
-
-  listenFriendRequests,
-
-  acceptFriendRequest,
-
-  rejectFriendRequest,
-
-  listenFriends
-
-} from "./js/app.js";
-
-
-
-/* ================================================= */
-/* ELEMENTS */
-/* ================================================= */
-
-const authCard =
-  document.getElementById(
-    "authCard"
-  );
-
-
-const homeContent =
-  document.getElementById(
-    "homeContent"
-  );
-
-
-const userInput =
-  document.getElementById(
-    "userInput"
-  );
-
-
-const passInput =
-  document.getElementById(
-    "passInput"
-  );
-
-
-const authBtn =
-  document.getElementById(
-    "authBtn"
-  );
-
-
-const authStatus =
-  document.getElementById(
-    "authStatus"
-  );
-
-
-const tabRegister =
-  document.getElementById(
-    "tabRegister"
-  );
-
-
-const tabLogin =
-  document.getElementById(
-    "tabLogin"
-  );
-
-
-let mode =
-  "register";
-
-
-
-/* ================================================= */
-/* AUTH TABS */
-/* ================================================= */
-
-tabRegister.addEventListener(
-  "click",
-  () => {
-
-    mode =
-      "register";
-
-    tabRegister.classList.remove(
-      "btn-ghost"
-    );
-
-    tabLogin.classList.add(
-      "btn-ghost"
-    );
-
-    authBtn.textContent =
-      "ثبت‌نام و ورود";
-
-  }
-);
-
-
-tabLogin.addEventListener(
-  "click",
-  () => {
-
-    mode =
-      "login";
-
-    tabLogin.classList.remove(
-      "btn-ghost"
-    );
-
-    tabRegister.classList.add(
-      "btn-ghost"
-    );
-
-    authBtn.textContent =
-      "ورود";
-
-  }
-);
-
-
-
-/* ================================================= */
-/* AUTH */
-/* ================================================= */
-
-authBtn.addEventListener(
-  "click",
-  async () => {
-
-    const username =
-      userInput.value.trim();
-
-    const password =
-      passInput.value;
-
-
-    if (
-      !/^[a-zA-Z0-9_]{3,20}$/.test(
-        username
-      )
-    ) {
-
-      authStatus.textContent =
-        "نام‌کاربری باید ۳ تا ۲۰ حرف انگلیسی/عدد باشه";
-
-      return;
-
-    }
-
-
-    if (
-      password.length < 6
-    ) {
-
-      authStatus.textContent =
-        "رمز باید حداقل ۶ کاراکتر باشه";
-
-      return;
-
-    }
-
-
-    authBtn.disabled =
-      true;
-
-
-    authStatus.textContent =
-      "در حال اتصال...";
-
-
-    try {
-
-      if (
-        mode === "register"
-      ) {
-
-        await registerUser(
-          username,
-          password
-        );
-
-      } else {
-
-        await loginUser(
-          username,
-          password
-        );
-
-      }
-
-
-      showHome();
-
-
-    } catch (e) {
-
-      console.error(e);
-
-
-      if (
-        e.code ===
-        "auth/email-already-in-use"
-      ) {
-
-        authStatus.textContent =
-          "این نام‌کاربری قبلاً گرفته شده. برو تب ورود.";
-
-      }
-
-
-      else if (
-        e.code ===
-          "auth/invalid-credential" ||
-
-        e.code ===
-          "auth/wrong-password"
-      ) {
-
-        authStatus.textContent =
-          "رمز اشتباهه یا حسابی با این اسم نیست.";
-
-      }
-
-
-      else {
-
-        authStatus.textContent =
-          "خطا: " + e.code;
-
-      }
-
-
-      authBtn.disabled =
-        false;
-
-    }
-
-  }
-);
-
-
-
-/* ================================================= */
-/* GAME CARDS */
-/* ================================================= */
-
-function renderGameCards() {
-
-  const scroll =
-    document.getElementById(
-      "gameScroll"
+    console.log(
+      "Domito loaded."
     );
 
 
-  scroll.innerHTML =
-    "";
-
-
-  GAMES.forEach(
-    (g) => {
-
-      const card =
-        document.createElement(
-          "div"
-        );
-
-
-      card.className =
-        "game-card";
-
-
-      card.innerHTML = `
-
-        <div
-          class="game-thumb"
-          style="
-            background:
-            linear-gradient(
-              160deg,
-              rgba(79,124,255,.3),
-              rgba(155,92,255,.2)
-            );
-          "
-        >
-
-          ${g.icon}
-
-          <span class="solo-badge">
-            تک‌نفره
-          </span>
-
-        </div>
-
-
-        <div class="game-body">
-
-          <div class="name">
-            ${g.name}
-          </div>
-
-          <div class="meta">
-            ${g.desc}
-          </div>
-
-        </div>
-
-      `;
-
-
-      card.addEventListener(
-        "click",
-        () => {
-
-          window.location.href =
-            `games/${g.id}.html?solo=1`;
-
-        }
-      );
-
-
-      scroll.appendChild(
-        card
-      );
-
-    }
-  );
-
-}
-
-
-
-/* ================================================= */
-/* HOME */
-/* ================================================= */
-
-async function showHome() {
-
-  authCard.style.display =
-    "none";
-
-
-  homeContent.style.display =
-    "block";
-
-
-  const myName =
-    getSavedName();
-
-
-  document.getElementById(
-    "helloName"
-  ).textContent =
-    myName;
-
-
-  renderGameCards();
-
-  renderLeaderboard();
-
-
-
-  /* WALLET */
-
-  listenProfile(
-    myName,
-    (p) => {
-
-      document.getElementById(
-        "coinCount"
-      ).textContent =
-        (p && p.coins) || 0;
-
-    }
-  );
-
-
-
-  /* ================================================= */
-  /* FRIEND REQUESTS */
-  /* ================================================= */
-
-  listenFriendRequests(
-    myName,
-    (requesters) => {
-
-      const list =
-        document.getElementById(
-          "requestList"
-        );
-
-
-      list.innerHTML =
-        "";
-
-
-      requesters.forEach(
-        (fromName) => {
-
-          const row =
-            document.createElement(
-              "div"
-            );
-
-
-          row.className =
-            "request-row";
-
-
-          row.innerHTML = `
-
-            <span class="txt">
-
-              ${fromName}
-              درخواست دوستی داد
-
-            </span>
-
-          `;
-
-
-          const actions =
-            document.createElement(
-              "div"
-            );
-
-
-          actions.className =
-            "actions";
-
-
-          const acceptBtn =
-            document.createElement(
-              "button"
-            );
-
-
-          acceptBtn.textContent =
-            "قبول";
-
-
-          acceptBtn.addEventListener(
-            "click",
-            async () => {
-
-              await acceptFriendRequest(
-                myName,
-                fromName
-              );
-
-            }
-          );
-
-
-          const rejectBtn =
-            document.createElement(
-              "button"
-            );
-
-
-          rejectBtn.textContent =
-            "رد";
-
-
-          rejectBtn.className =
-            "btn-ghost";
-
-
-          rejectBtn.addEventListener(
-            "click",
-            async () => {
-
-              await rejectFriendRequest(
-                myName,
-                fromName
-              );
-
-            }
-          );
-
-
-          actions.appendChild(
-            acceptBtn
-          );
-
-
-          actions.appendChild(
-            rejectBtn
-          );
-
-
-          row.appendChild(
-            actions
-          );
-
-
-          list.appendChild(
-            row
-          );
-
-        }
-      );
-
-    }
-  );
-
-
-
-  /* ================================================= */
-  /* ONLINE FRIENDS */
-  /* ================================================= */
-
-  listenFriends(
-    myName,
-    (friends) => {
-
-      const listEl =
-        document.getElementById(
-          "onlineFriendsList"
-        );
-
-
-      const noMsg =
-        document.getElementById(
-          "noFriendsMsg"
-        );
-
-
-      const online =
-        friends.filter(
-          (f) =>
-            f.online === true
-        );
-
-
-      if (
-        friends.length === 0
-      ) {
-
-        noMsg.style.display =
-          "block";
-
-
-        noMsg.textContent =
-          "هنوز دوستی اضافه نکردی";
-
-
-        listEl.innerHTML =
-          "";
-
-
-        return;
-
-      }
-
-
-      if (
-        online.length === 0
-      ) {
-
-        noMsg.style.display =
-          "block";
-
-
-        noMsg.textContent =
-          "😴 الان هیچ‌کدوم از دوستات آنلاین نیستن";
-
-
-        listEl.innerHTML =
-          "";
-
-
-        return;
-
-      }
-
-
-      noMsg.style.display =
-        "none";
-
-
-      listEl.innerHTML =
-        "";
-
-
-      online.forEach(
-        (f) => {
-
-          const row =
-            document.createElement(
-              "div"
-            );
-
-
-          row.className =
-            "friend-row";
-
-
-          row.innerHTML = `
-
-            <a
-              href="profile.html?user=${encodeURIComponent(f.name)}"
-              class="friend-name-link"
-            >
-              ${f.name}
-            </a>
-
-
-            <span
-              class="fdot"
-              title="آنلاین"
-            ></span>
-
-          `;
-
-
-          listEl.appendChild(
-            row
-          );
-
-        }
-      );
-
-    }
-  );
-
-
-
-  /* ================================================= */
-  /* ROOM INVITES */
-  /* ================================================= */
-
-  listenInvites(
-    myName,
-    (list) => {
-
-      const card =
-        document.getElementById(
-          "invitesCard"
-        );
-
-
-      const listEl =
-        document.getElementById(
-          "inviteList"
-        );
-
-
-      if (
-        list.length === 0
-      ) {
-
-        card.style.display =
-          "none";
-
-        return;
-
-      }
-
-
-      card.style.display =
-        "block";
-
-
-      listEl.innerHTML =
-        "";
-
-
-      list.forEach(
-        (inv) => {
-
-          const row =
-            document.createElement(
-              "div"
-            );
-
-
-          row.className =
-            "invite-row";
-
-
-          row.innerHTML = `
-
-            <span class="txt">
-
-              🔔
-              ${inv.from}
-              تو رو به اتاقش دعوت کرد
-
-              <br>
-
-              <small>
-
-                کد اتاق:
-
-                <b>
-                  ${inv.roomCode}
-                </b>
-
-              </small>
-
-            </span>
-
-          `;
-
-
-          const actions =
-            document.createElement(
-              "div"
-            );
-
-
-          actions.className =
-            "actions";
-
-
-          const acceptBtn =
-            document.createElement(
-              "button"
-            );
-
-
-          acceptBtn.textContent =
-            "ورود";
-
-
-          acceptBtn.addEventListener(
-            "click",
-            async () => {
-
-              try {
-
-                const res =
-                  await joinRoomByCode(
-                    inv.roomCode
-                  );
-
-
-                if (
-                  res.ok
-                ) {
-
-                  await dismissInvite(
-                    myName,
-                    inv.id
-                  );
-
-
-                  window.location.href =
-                    "lobby.html";
-
-                } else {
-
-                  alert(
-                    "این اتاق دیگر وجود ندارد."
-                  );
-
-                }
-
-              } catch (e) {
-
-                console.error(e);
-
-
-                alert(
-                  "ورود به اتاق انجام نشد."
-                );
-
-              }
-
-            }
-          );
-
-
-          const declineBtn =
-            document.createElement(
-              "button"
-            );
-
-
-          declineBtn.textContent =
-            "رد کردن";
-
-
-          declineBtn.className =
-            "btn-ghost";
-
-
-          declineBtn.addEventListener(
-            "click",
-            async () => {
-
-              await dismissInvite(
-                myName,
-                inv.id
-              );
-
-            }
-          );
-
-
-          actions.appendChild(
-            acceptBtn
-          );
-
-
-          actions.appendChild(
-            declineBtn
-          );
-
-
-          row.appendChild(
-            actions
-          );
-
-
-          listEl.appendChild(
-            row
-          );
-
-        }
-      );
-
-    }
-  );
-
-}
-
-
-
-/* ================================================= */
-/* LEADERBOARD */
-/* ================================================= */
-
-async function renderLeaderboard() {
-
-  const leaderCard =
-    document.getElementById(
-      "leaderCard"
-    );
-
-
-  try {
-
-    const list =
-      await getLeaderboard(5);
-
-
-    if (
-      list.length === 0
-    ) {
-
-      leaderCard.innerHTML =
-        '<p class="muted">هنوز کسی برد ثبت نکرده</p>';
-
-      return;
-
-    }
-
-
-    const medals =
-      [
-        "🥇",
-        "🥈",
-        "🥉"
-      ];
-
-
-    leaderCard.innerHTML =
-      list.map(
-        (p, i) => `
-
-          <div
-            class="leader-row"
-          >
-
-            <span class="rank">
-              ${medals[i] || i + 1}
-            </span>
-
-
-            <a
-              href="profile.html?user=${encodeURIComponent(p.name)}"
-              class="who friend-name-link"
-            >
-              ${p.name}
-            </a>
-
-
-            <span class="score">
-              ${p.wins} برد
-            </span>
-
-          </div>
-
-        `
-      ).join("");
-
-
-  } catch (e) {
-
-    console.error(e);
-
-    leaderCard.innerHTML =
-      '<p class="muted">خطا در بارگذاری لیدربورد</p>';
-
-  }
-
-}
-
-
-
-/* ================================================= */
-/* CREATE ROOM */
-/* ================================================= */
-
-document
-  .getElementById(
-    "createRoomBtn"
-  )
-  .addEventListener(
-    "click",
-    async () => {
-
-      try {
-
-        await createRoom();
-
-
-        window.location.href =
-          "lobby.html";
-
-
-      } catch (e) {
-
-        console.error(e);
-
-
-        alert(
-          "ساخت اتاق انجام نشد."
-        );
-
-      }
-
-    }
-  );
-
-
-
-/* ================================================= */
-/* JOIN ROOM OVERLAY */
-/* ================================================= */
-
-const joinRoomOverlay =
-  document.getElementById(
-    "joinRoomOverlay"
-  );
-
-
-const roomInput =
-  document.getElementById(
-    "roomInput"
-  );
-
-
-const roomStatus =
-  document.getElementById(
-    "roomStatus"
-  );
-
-
-function openJoinRoom() {
-
-  joinRoomOverlay.style.display =
-    "flex";
-
-
-  roomInput.value =
-    "";
-
-
-  roomStatus.textContent =
-    "";
-
-
-  setTimeout(
-    () => roomInput.focus(),
-    100
-  );
-
-}
-
-
-function closeJoinRoom() {
-
-  joinRoomOverlay.style.display =
-    "none";
-
-
-  roomInput.value =
-    "";
-
-
-  roomStatus.textContent =
-    "";
-
-}
-
-
-document
-  .getElementById(
-    "openJoinRoomBtn"
-  )
-  .addEventListener(
-    "click",
-    openJoinRoom
-  );
-
-
-document
-  .getElementById(
-    "closeJoinRoom"
-  )
-  .addEventListener(
-    "click",
-    closeJoinRoom
-  );
-
-
-document
-  .getElementById(
-    "cancelJoinRoom"
-  )
-  .addEventListener(
-    "click",
-    closeJoinRoom
-  );
-
-
-joinRoomOverlay.addEventListener(
-  "click",
-  (event) => {
-
-    if (
-      event.target ===
-      joinRoomOverlay
-    ) {
-
-      closeJoinRoom();
-
-    }
-
-  }
-);
-
-
-
-/* ================================================= */
-/* JOIN ROOM */
-/* ================================================= */
-
-document
-  .getElementById(
-    "joinRoomBtn"
-  )
-  .addEventListener(
-    "click",
-    async () => {
-
-      const val =
-        roomInput.value.trim();
-
-
-      if (!val) {
-
-        roomStatus.textContent =
-          "کد اتاق رو بنویس";
-
-        return;
-
-      }
-
-
-      const button =
-        document.getElementById(
-          "joinRoomBtn"
-        );
-
-
-      button.disabled =
-        true;
-
-
-      roomStatus.textContent =
-        "در حال بررسی...";
-
-
-      try {
-
-        const res =
-          await joinRoomByCode(
-            val
-          );
-
-
-        if (
-          res.ok
-        ) {
-
-          window.location.href =
-            "lobby.html";
-
-        } else {
-
-          roomStatus.textContent =
-            "همچین اتاقی پیدا نشد";
-
-
-          button.disabled =
-            false;
-
-        }
-
-      } catch (e) {
-
-        console.error(e);
-
-
-        roomStatus.textContent =
-          "ورود به اتاق انجام نشد";
-
-
-        button.disabled =
-          false;
-
-      }
-
-    }
-  );
-
-
-
-/* ================================================= */
-/* ENTER */
-/* ================================================= */
-
-roomInput.addEventListener(
-  "keydown",
-  (event) => {
-
-    if (
-      event.key === "Enter"
-    ) {
-
-      document
-        .getElementById(
-          "joinRoomBtn"
-        )
-        .click();
-
-    }
-
-  }
-);
-
-
-
-/* ================================================= */
-/* START */
-/* ================================================= */
-
-waitForUser()
-  .then(
-    (user) => {
-
-      if (user) {
-
-        showHome();
-
-      }
-
-    }
-  );
-
-</script>
-
+  </script>
 
 </body>
+
 </html>
