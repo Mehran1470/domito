@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>دومیتو</title>
 <link rel="stylesheet" href="css/style.css">
-  <link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" href="./logo.png">
 <meta name="theme-color" content="#0f111a">
 
@@ -93,20 +93,21 @@
 <div class="wrap">
 
   <div class="brand">
-  <img
-    src="./logo.png"
-    alt="دومیتو"
-    style="
-      width:100px;
-      height:100px;
-      object-fit:contain;
-      display:block;
-      margin:0 auto 10px;
-      border-radius:24px;
-    "
-  >
-  <h1>دومیتو</h1>
-  <p>سالن مینی‌گیم‌های آنلاین</p>
+    <img
+      src="./logo.png"
+      alt="دومیتو"
+      style="
+        width:100px;
+        height:100px;
+        object-fit:contain;
+        display:block;
+        margin:0 auto 10px;
+        border-radius:24px;
+      "
+    >
+
+    <h1>دومیتو</h1>
+    <p>سالن مینی‌گیم‌های آنلاین</p>
   </div>
 
   <!-- ================= AUTH ================= -->
@@ -199,7 +200,7 @@
 
 
     <!-- ================================================= -->
-    <!-- HERO — اول از دوستان قرار گرفت -->
+    <!-- HERO -->
     <!-- ================================================= -->
 
     <div class="hero">
@@ -243,7 +244,6 @@
 
     <!-- ================================================= -->
     <!-- ONLINE FRIENDS -->
-    <!-- فقط دوستان آنلاین -->
     <!-- ================================================= -->
 
     <div class="card">
@@ -343,18 +343,6 @@
 
     </div>
 
-
-    <!-- ================================================= -->
-    <!-- LOGOUT -->
-    <!-- ================================================= -->
-
-    <button
-      id="logoutBtn"
-      class="btn-full btn-ghost"
-    >
-      خروج از حساب
-    </button>
-
   </div>
 
 </div>
@@ -432,7 +420,6 @@ import {
   getSavedName,
   createRoom,
   joinRoomByCode,
-  logoutUser,
   getLeaderboard,
   GAMES,
   listenInvites,
@@ -839,7 +826,7 @@ async function showHome() {
 
 
   /* ================================================= */
-  /* ONLINE FRIENDS — ONLY ONLINE */
+  /* ONLINE FRIENDS */
   /* ================================================= */
 
   listenFriends(
@@ -857,18 +844,12 @@ async function showHome() {
         );
 
 
-      /*
-       * فقط دوستان آنلاین
-       */
       const online =
         friends.filter(
           (f) => f.online === true
         );
 
 
-      /*
-       * اگر اصلاً دوستی ندارد
-       */
       if (friends.length === 0) {
 
         noMsg.style.display =
@@ -885,9 +866,6 @@ async function showHome() {
       }
 
 
-      /*
-       * دوست دارد ولی هیچ‌کدام آنلاین نیستند
-       */
       if (online.length === 0) {
 
         noMsg.style.display =
@@ -1423,24 +1401,6 @@ roomInput.addEventListener(
 
   }
 );
-
-
-/* ================================================= */
-/* LOGOUT */
-/* ================================================= */
-
-document
-  .getElementById("logoutBtn")
-  .addEventListener(
-    "click",
-    async () => {
-
-      await logoutUser();
-
-      window.location.reload();
-
-    }
-  );
 
 
 /* ================================================= */
