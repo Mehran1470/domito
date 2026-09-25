@@ -1116,9 +1116,9 @@ export const GAMES = [
 
   {
     id: "reaction",
-    name: "سرعت واکنش",
-    desc: "وقتی رنگ سبز شد سریع‌تر از بقیه بزن",
-    icon: "⚡",
+    name: "اجر شکن",
+    desc: "اجر مرحلهرو بشکن و برنده شو",
+    icon: "🧱",
     soloThreshold: 500
   },
 
