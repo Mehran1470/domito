@@ -2,7 +2,6 @@
 <html lang="fa" dir="rtl">
 
 <head>
-
 <meta charset="UTF-8">
 
 <meta
@@ -33,7 +32,6 @@
   content="#0f111a"
 >
 
-
 <style>
 
 /* ================================================= */
@@ -41,170 +39,92 @@
 /* ================================================= */
 
 .join-room-overlay {
-
   position: fixed;
-
   inset: 0;
-
   z-index: 9999;
-
   display: none;
-
   align-items: center;
-
   justify-content: center;
-
   padding: 20px;
-
   background: rgba(0, 0, 0, .72);
-
   backdrop-filter: blur(8px);
-
 }
-
 
 .join-room-box {
-
   width: min(420px, 100%);
-
   background: var(--card, #171a25);
-
   border: 1px solid rgba(255,255,255,.10);
-
   border-radius: 22px;
-
   padding: 28px 22px;
-
-  box-shadow:
-    0 20px 60px rgba(0,0,0,.45);
-
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
   text-align: center;
-
   position: relative;
-
-  animation:
-    roomBoxIn .18s ease-out;
-
+  animation: roomBoxIn .18s ease-out;
 }
 
-
 @keyframes roomBoxIn {
-
   from {
-
     opacity: 0;
-
-    transform:
-      translateY(12px)
-      scale(.97);
-
+    transform: translateY(12px) scale(.97);
   }
 
   to {
-
     opacity: 1;
-
-    transform:
-      translateY(0)
-      scale(1);
-
+    transform: translateY(0) scale(1);
   }
-
 }
-
 
 .join-room-close {
-
   position: absolute;
-
   top: 12px;
-
   left: 12px;
-
   width: 36px;
-
   height: 36px;
-
   padding: 0;
-
   border-radius: 50%;
-
   border: 0;
-
-  background:
-    rgba(255,255,255,.07);
-
+  background: rgba(255,255,255,.07);
   color: inherit;
-
   font-size: 18px;
-
   cursor: pointer;
-
 }
-
 
 .join-room-icon {
-
   font-size: 42px;
-
   margin-bottom: 8px;
-
 }
-
 
 .join-room-box h2 {
-
   margin: 0 0 8px;
-
 }
-
 
 .join-room-box p {
-
   margin: 0 0 18px;
-
 }
-
 
 .join-room-box input {
-
   text-align: center;
-
   letter-spacing: 4px;
-
   text-transform: uppercase;
-
   font-size: 18px;
-
   margin-bottom: 12px;
-
 }
 
-
 .join-room-back {
-
   margin-top: 8px;
-
 }
 
 
 /* ================================================= */
-/* لوگوی مخفی */
+/* لوگوی دومیتو */
 /* ================================================= */
 
 #domitoLogo {
-
   cursor: pointer;
-
   user-select: none;
-
   -webkit-user-select: none;
-
-  -webkit-tap-highlight-color:
-    transparent;
-
+  -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-
 }
 
 </style>
@@ -247,6 +167,122 @@
     </p>
 
   </div>
+
+
+  <!-- ================================================= -->
+  <!-- سیستم مخفی ۷ کلیک -->
+  <!-- این بخش مستقل از app.js است -->
+  <!-- ================================================= -->
+
+  <script>
+
+  (function () {
+
+    const logo =
+      document.getElementById("domitoLogo");
+
+    if (!logo) {
+
+      console.error(
+        "Domito logo not found"
+      );
+
+      return;
+
+    }
+
+
+    let taps = 0;
+
+    let timer = null;
+
+    const TAP_TIMEOUT = 3000;
+
+
+    logo.addEventListener(
+      "click",
+      function () {
+
+        taps++;
+
+
+        clearTimeout(timer);
+
+
+        timer = setTimeout(
+          function () {
+
+            taps = 0;
+
+          },
+          TAP_TIMEOUT
+        );
+
+
+        /* کلیک سوم */
+
+        if (taps === 3) {
+
+          alert(
+            "۴ بار دیگر"
+          );
+
+        }
+
+
+        /* کلیک چهارم */
+
+        else if (taps === 4) {
+
+          alert(
+            "۳ بار دیگر"
+          );
+
+        }
+
+
+        /* کلیک پنجم */
+
+        else if (taps === 5) {
+
+          alert(
+            "۲ بار دیگر"
+          );
+
+        }
+
+
+        /* کلیک ششم */
+
+        else if (taps === 6) {
+
+          alert(
+            "۱ بار دیگر"
+          );
+
+        }
+
+
+        /* کلیک هفتم */
+
+        else if (taps === 7) {
+
+          taps = 0;
+
+          clearTimeout(timer);
+
+
+          window.location.href =
+            "./command.html";
+
+        }
+
+      }
+    );
+
+  })();
+
+  </script>
 
 
   <!-- ================= AUTH ================= -->
@@ -604,7 +640,7 @@
 
 
 <!-- ===================================================== -->
-<!-- JAVASCRIPT -->
+<!-- APP JAVASCRIPT -->
 <!-- ===================================================== -->
 
 <script type="module">
@@ -795,6 +831,7 @@ authBtn.addEventListener(
 
     authBtn.disabled =
       true;
+
 
     authStatus.textContent =
       "در حال اتصال...";
@@ -991,9 +1028,7 @@ async function showHome() {
 
 
 
-  /* ================================================= */
   /* WALLET */
-  /* ================================================= */
 
   listenProfile(
     myName,
@@ -1476,9 +1511,7 @@ async function renderLeaderboard() {
   try {
 
     const list =
-      await getLeaderboard(
-        5
-      );
+      await getLeaderboard(5);
 
 
     if (
@@ -1533,6 +1566,8 @@ async function renderLeaderboard() {
 
 
   } catch (e) {
+
+    console.error(e);
 
     leaderCard.innerHTML =
       '<p class="muted">خطا در بارگذاری لیدربورد</p>';
@@ -1602,7 +1637,6 @@ const roomStatus =
   );
 
 
-
 function openJoinRoom() {
 
   joinRoomOverlay.style.display =
@@ -1618,13 +1652,11 @@ function openJoinRoom() {
 
 
   setTimeout(
-    () =>
-      roomInput.focus(),
+    () => roomInput.focus(),
     100
   );
 
 }
-
 
 
 function closeJoinRoom() {
@@ -1641,7 +1673,6 @@ function closeJoinRoom() {
     "";
 
 }
-
 
 
 document
@@ -1672,7 +1703,6 @@ document
     "click",
     closeJoinRoom
   );
-
 
 
 joinRoomOverlay.addEventListener(
@@ -1804,143 +1834,6 @@ roomInput.addEventListener(
 
 
 /* ================================================= */
-/* HIDDEN COMMAND PANEL */
-/* ================================================= */
-
-const domitoLogo =
-  document.getElementById(
-    "domitoLogo"
-  );
-
-
-let logoTapCount =
-  0;
-
-
-let logoTapTimer =
-  null;
-
-
-const TAP_TIMEOUT =
-  2500;
-
-
-if (domitoLogo) {
-
-  domitoLogo.addEventListener(
-    "click",
-    () => {
-
-      logoTapCount++;
-
-
-      clearTimeout(
-        logoTapTimer
-      );
-
-
-      logoTapTimer =
-        setTimeout(
-          () => {
-
-            logoTapCount =
-              0;
-
-          },
-          TAP_TIMEOUT
-        );
-
-
-      /*
-       * کلیک سوم
-       */
-
-      if (
-        logoTapCount === 3
-      ) {
-
-        alert(
-          "۴ بار دیگر"
-        );
-
-      }
-
-
-      /*
-       * کلیک چهارم
-       */
-
-      else if (
-        logoTapCount === 4
-      ) {
-
-        alert(
-          "۳ بار دیگر"
-        );
-
-      }
-
-
-      /*
-       * کلیک پنجم
-       */
-
-      else if (
-        logoTapCount === 5
-      ) {
-
-        alert(
-          "۲ بار دیگر"
-        );
-
-      }
-
-
-      /*
-       * کلیک ششم
-       */
-
-      else if (
-        logoTapCount === 6
-      ) {
-
-        alert(
-          "۱ بار دیگر"
-        );
-
-      }
-
-
-      /*
-       * کلیک هفتم
-       */
-
-      else if (
-        logoTapCount === 7
-      ) {
-
-        logoTapCount =
-          0;
-
-
-        clearTimeout(
-          logoTapTimer
-        );
-
-
-        window.location.href =
-          "command.html";
-
-      }
-
-    }
-  );
-
-}
-
-
-
-/* ================================================= */
 /* START */
 /* ================================================= */
 
@@ -1961,5 +1854,4 @@ waitForUser()
 
 
 </body>
-
 </html>
