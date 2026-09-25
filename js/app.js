@@ -146,7 +146,7 @@ async function updateLastLogin(username) {
   ).trim();
 
   if (!username) {
-    return;
+    return false;
   }
 
   try {
@@ -160,16 +160,20 @@ async function updateLastLogin(username) {
     );
 
     console.log(
-      "LAST LOGIN UPDATED:",
+      "✅ LAST LOGIN UPDATED:",
       username,
       now
     );
 
+    return true;
+
   } catch (e) {
-    console.warn(
-      "Last login update error:",
+    console.error(
+      "❌ LAST LOGIN ERROR:",
       e
     );
+
+    return false;
   }
 }
 
@@ -180,6 +184,10 @@ async function updateLastLogin(username) {
 let presenceConnectionRef = null;
 let presenceConnectionName = "";
 let presenceConnectedUnsubscribe = null;
+
+// ------------------------------------------------------------
+// مسیر Presence
+// ------------------------------------------------------------
 
 function presenceRootRef(name) {
   return ref(
@@ -195,25 +203,41 @@ function presenceConnectionsRef(name) {
   );
 }
 
+// ------------------------------------------------------------
+// پاک کردن اتصال قبلی
+// ------------------------------------------------------------
+
 async function cleanupPresenceConnection() {
-  if (!presenceConnectionRef) {
-    return;
+
+  if (presenceConnectedUnsubscribe) {
+    try {
+      presenceConnectedUnsubscribe();
+    } catch {}
+
+    presenceConnectedUnsubscribe = null;
   }
 
-  try {
-    await remove(
-      presenceConnectionRef
-    );
-  } catch (e) {
-    console.warn(
-      "Presence connection cleanup error:",
-      e
-    );
-  }
+  if (presenceConnectionRef) {
 
-  presenceConnectionRef = null;
-  presenceConnectionName = "";
+    try {
+      await remove(
+        presenceConnectionRef
+      );
+    } catch (e) {
+      console.warn(
+        "Presence connection cleanup error:",
+        e
+      );
+    }
+
+    presenceConnectionRef = null;
+    presenceConnectionName = "";
+  }
 }
+
+// ------------------------------------------------------------
+// ثبت Presence
+// ------------------------------------------------------------
 
 export async function setPresence(
   name,
@@ -224,6 +248,9 @@ export async function setPresence(
   ).trim();
 
   if (!name) {
+    console.warn(
+      "⚠️ Presence: username خالی است"
+    );
     return;
   }
 
@@ -231,102 +258,181 @@ export async function setPresence(
     presenceRootRef(name);
 
   // ==========================================================
-  // خروج دستی
+  // OFFLINE
   // ==========================================================
 
   if (!online) {
-    if (
-      presenceConnectedUnsubscribe &&
-      typeof presenceConnectedUnsubscribe === "function"
-    ) {
-      try {
-        presenceConnectedUnsubscribe();
-      } catch {}
-
-      presenceConnectedUnsubscribe = null;
-    }
 
     await cleanupPresenceConnection();
 
-    await update(
-      pRef,
-      {
-        online: false,
-        lastSeen: serverTimestamp()
-      }
-    );
+    try {
+      await update(
+        pRef,
+        {
+          online: false,
+          lastSeen: serverTimestamp()
+        }
+      );
+
+      console.log(
+        "🔴 OFFLINE:",
+        name
+      );
+
+    } catch (e) {
+      console.error(
+        "❌ OFFLINE ERROR:",
+        e
+      );
+    }
 
     return;
   }
 
   // ==========================================================
-  // اگر همین اتصال قبلاً ثبت شده، دوباره نساز
+  // اگر همین کاربر همین اتصال را دارد
   // ==========================================================
 
   if (
     presenceConnectionRef &&
     presenceConnectionName === name
   ) {
+    console.log(
+      "🟢 Presence already active:",
+      name
+    );
+
     return;
   }
 
+  // اتصال قبلی
   await cleanupPresenceConnection();
 
   // ==========================================================
-  // ساخت اتصال جدید
+  // Firebase Connection Status
   // ==========================================================
 
-  const connection =
-    push(
-      presenceConnectionsRef(name)
+  const connectedRef =
+    ref(
+      db,
+      ".info/connected"
     );
 
-  presenceConnectionRef = connection;
-  presenceConnectionName = name;
+  let started = false;
 
-  // ==========================================================
-  // قطع اتصال:
-  // اتصال حذف شود
-  // کاربر آفلاین شود
-  // آخرین حضور ثبت شود
-  // ==========================================================
+  const startConnection =
+    async (connected) => {
 
-  await onDisconnect(
-    connection
-  ).remove();
+      if (!connected) {
+        console.log(
+          "🟡 Firebase هنوز متصل نیست:",
+          name
+        );
+        return;
+      }
 
-  await onDisconnect(
-    pRef
-  ).update({
-    online: false,
-    lastSeen: serverTimestamp()
-  });
+      // جلوگیری از ساخت چند connection
+      if (started) {
+        return;
+      }
 
-  // ==========================================================
-  // ثبت اتصال فعلی
-  // ==========================================================
+      started = true;
 
-  await set(
-    connection,
-    {
-      online: true,
-      connectedAt:
-        serverTimestamp()
-    }
-  );
+      try {
 
-  // ==========================================================
-  // ثبت حضور فعلی
-  // ==========================================================
+        // ----------------------------------------------------
+        // ساخت connection
+        // ----------------------------------------------------
 
-  await update(
-    pRef,
-    {
-      online: true,
-      lastSeen:
-        serverTimestamp()
-    }
-  );
+        const connection =
+          push(
+            presenceConnectionsRef(name)
+          );
+
+        presenceConnectionRef =
+          connection;
+
+        presenceConnectionName =
+          name;
+
+        // ----------------------------------------------------
+        // اگر اینترنت قطع شد:
+        // connection حذف شود
+        // presence آفلاین شود
+        // ----------------------------------------------------
+
+        await onDisconnect(
+          connection
+        ).remove();
+
+        await onDisconnect(
+          pRef
+        ).update({
+          online: false,
+          lastSeen:
+            serverTimestamp()
+        });
+
+        // ----------------------------------------------------
+        // ثبت connection
+        // ----------------------------------------------------
+
+        await set(
+          connection,
+          {
+            online: true,
+            connectedAt:
+              serverTimestamp()
+          }
+        );
+
+        // ----------------------------------------------------
+        // ثبت online
+        // ----------------------------------------------------
+
+        await update(
+          pRef,
+          {
+            online: true,
+            lastSeen:
+              serverTimestamp()
+          }
+        );
+
+        console.log(
+          "🟢 ONLINE:",
+          name
+        );
+
+      } catch (e) {
+
+        console.error(
+          "❌ PRESENCE CONNECTION ERROR:",
+          e
+        );
+
+        started = false;
+      }
+    };
+
+  // ----------------------------------------------------------
+  // گوش دادن به وضعیت اتصال Firebase
+  // ----------------------------------------------------------
+
+  presenceConnectedUnsubscribe =
+    onValue(
+      connectedRef,
+      async snap => {
+
+        const connected =
+          snap.val() === true;
+
+        await startConnection(
+          connected
+        );
+
+      }
+    );
 }
 
 // ============================================================
@@ -364,6 +470,7 @@ export async function registerUser(
     cred.user.uid
   );
 
+  // فقط هنگام ثبت‌نام واقعی
   await updateLastLogin(
     username
   );
@@ -411,6 +518,7 @@ export async function loginUser(
     cred.user.uid
   );
 
+  // فقط هنگام ورود واقعی
   await updateLastLogin(
     username
   );
@@ -431,12 +539,16 @@ export async function logoutUser() {
   const name = getSavedName();
 
   if (name) {
+
     try {
+
       await setPresence(
         name,
         false
       );
+
     } catch (e) {
+
       console.warn(
         "Presence logout error:",
         e
@@ -460,14 +572,17 @@ export async function logoutUser() {
 // ============================================================
 
 export function waitForUser() {
+
   return new Promise(
     (resolve) => {
+
       let finished = false;
 
       const unsubscribe =
         onAuthStateChanged(
           auth,
-          async (user) => {
+          async user => {
+
             if (finished) {
               return;
             }
@@ -478,16 +593,26 @@ export function waitForUser() {
               unsubscribe();
             } catch {}
 
+            // ------------------------------------------------
+            // لاگین نیست
+            // ------------------------------------------------
+
             if (!user) {
               resolve(null);
               return;
             }
 
+            // ------------------------------------------------
+            // پیدا کردن نام
+            // ------------------------------------------------
+
             let username =
               getSavedName();
 
             if (!username) {
+
               try {
+
                 const nameSnap =
                   await get(
                     ref(
@@ -499,15 +624,19 @@ export function waitForUser() {
                 if (
                   nameSnap.exists()
                 ) {
-                  username = String(
-                    nameSnap.val() || ""
-                  ).trim();
+
+                  username =
+                    String(
+                      nameSnap.val() || ""
+                    ).trim();
 
                   if (username) {
                     saveName(username);
                   }
                 }
+
               } catch (e) {
+
                 console.warn(
                   "Auto login username lookup error:",
                   e
@@ -515,46 +644,74 @@ export function waitForUser() {
               }
             }
 
-            // ==================================================
-            // کاربر را معطل Last Login / Presence نکن
-            // ==================================================
+            // ------------------------------------------------
+            // صفحه را معطل نکن
+            // ------------------------------------------------
 
             resolve(user);
 
-            // ==================================================
-            // عملیات جانبی در پس‌زمینه
-            // ==================================================
+            // ------------------------------------------------
+            // عملیات پس‌زمینه
+            // ------------------------------------------------
 
             if (username) {
+
               Promise.resolve()
                 .then(
                   async () => {
-                    await ensureOwnerLinks(
-                      username,
-                      user.uid
-                    );
 
-                    await updateLastLogin(
-                      username
-                    );
+                    try {
 
-                    await setPresence(
-                      username,
-                      true
-                    );
+                      await ensureOwnerLinks(
+                        username,
+                        user.uid
+                      );
+
+                    } catch (e) {
+
+                      console.warn(
+                        "Owner links sync error:",
+                        e
+                      );
+                    }
+
+                    // ❗ عمداً اینجا updateLastLogin
+                    // نداریم.
+                    //
+                    // باز شدن profile.html یا
+                    // index.html نباید تاریخ آخرین
+                    // ورود واقعی را تغییر دهد.
+
+                    try {
+
+                      await setPresence(
+                        username,
+                        true
+                      );
+
+                    } catch (e) {
+
+                      console.warn(
+                        "Presence sync error:",
+                        e
+                      );
+                    }
 
                     console.log(
-                      "AUTO LOGIN SYNC OK:",
+                      "✅ AUTO LOGIN SYNC OK:",
                       username
                     );
+
                   }
                 )
                 .catch(
-                  (e) => {
+                  e => {
+
                     console.warn(
-                      "Auto login sync error:",
+                      "❌ Auto login sync error:",
                       e
                     );
+
                   }
                 );
             }
@@ -660,6 +817,7 @@ export async function createRoom() {
     i < 10;
     i++
   ) {
+
     const candidate =
       randomRoomCode();
 
@@ -708,6 +866,7 @@ export async function createRoom() {
 export async function getRoomMeta(
   code = getSavedRoom()
 ) {
+
   if (!code) {
     return null;
   }
@@ -728,6 +887,7 @@ export async function getRoomMeta(
 export async function isRoomOwner(
   code = getSavedRoom()
 ) {
+
   const uid = currentUid();
 
   if (
@@ -753,6 +913,7 @@ export async function isRoomOwner(
 export async function joinRoomByCode(
   rawCode
 ) {
+
   const code = String(
     rawCode || ""
   )
@@ -784,6 +945,7 @@ export async function joinRoomByCode(
   const uid = currentUid();
 
   if (uid) {
+
     const kickedSnap =
       await get(
         roomRef(
@@ -816,6 +978,7 @@ export async function checkKicked(
   code = getSavedRoom(),
   uid = currentUid()
 ) {
+
   if (
     !code ||
     !uid
@@ -842,6 +1005,7 @@ export function listenKickStatus(
   code = getSavedRoom(),
   callback
 ) {
+
   const uid = currentUid();
 
   if (
@@ -857,12 +1021,14 @@ export function listenKickStatus(
       code,
       `kicked/${uid}`
     ),
-    (snap) => {
+    snap => {
+
       callback(
         snap.exists()
           ? snap.val()
           : null
       );
+
     }
   );
 }
@@ -874,6 +1040,7 @@ export function listenKickStatus(
 export async function kickMember(
   targetUid
 ) {
+
   const code = getSavedRoom();
   const uid = currentUid();
 
@@ -982,6 +1149,7 @@ export async function kickMember(
 export async function joinLobby(
   name
 ) {
+
   const code = getSavedRoom();
   const uid = currentUid();
 
@@ -1069,6 +1237,7 @@ export async function joinLobby(
 // ============================================================
 
 export async function leaveLobby() {
+
   const code = getSavedRoom();
   const uid = currentUid();
 
@@ -1106,6 +1275,7 @@ export async function leaveLobby() {
 // ============================================================
 
 export const GAMES = [
+
   {
     id: "quiz",
     name: "کوییز اطلاعات عمومی",
@@ -1185,12 +1355,14 @@ export const GAMES = [
     icon: "💡",
     soloThreshold: 1
   }
+
 ];
 
 export function soloWon(
   gameId,
   score
 ) {
+
   const game =
     GAMES.find(
       x => x.id === gameId
@@ -1208,6 +1380,7 @@ export function soloWon(
 export async function getPublicProfile(
   name
 ) {
+
   const snap =
     await get(
       profileRef(name)
@@ -1224,6 +1397,7 @@ export function listenProfile(
   name,
   callback
 ) {
+
   return onValue(
     profileRef(name),
     snap => {
@@ -1244,6 +1418,7 @@ export async function submitResult(
   name,
   score
 ) {
+
   const code = getSavedRoom();
 
   if (!code) {
@@ -1276,6 +1451,7 @@ export async function submitResult(
 // ============================================================
 
 export async function resetSessionForNextRound() {
+
   const code = getSavedRoom();
 
   if (!code) {
@@ -1319,6 +1495,7 @@ export async function logTransaction(
     note
   }
 ) {
+
   await push(
     ref(
       db,
@@ -1337,6 +1514,7 @@ export async function getTransactions(
   name,
   limitN = 20
 ) {
+
   const snap =
     await get(
       ref(
@@ -1374,9 +1552,11 @@ export async function recordRoundResult(
   gameId,
   { won }
 ) {
+
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1418,11 +1598,16 @@ export async function recordRoundResult(
       curr.gamesPlayed++;
 
       if (won) {
+
         curr.wins++;
+
         curr.coins +=
           COIN_WIN;
+
       } else {
+
         curr.losses++;
+
         curr.coins +=
           COIN_PLAY;
       }
@@ -1472,6 +1657,7 @@ export async function recordRoundResult(
 // ============================================================
 
 export const SHOP_ITEMS = [
+
   {
     id: "theme-sunset",
     name: "تم غروب",
@@ -1571,6 +1757,7 @@ export const SHOP_ITEMS = [
       "#FF1744"
     ]
   }
+
 ];
 
 // ============================================================
@@ -1581,6 +1768,7 @@ export async function buyItem(
   name,
   itemId
 ) {
+
   const item =
     SHOP_ITEMS.find(
       i => i.id === itemId
@@ -1601,6 +1789,7 @@ export async function buyItem(
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1616,6 +1805,7 @@ export async function buyItem(
           itemId
         )
       ) {
+
         result = {
           ok: false,
           reason: "owned"
@@ -1628,6 +1818,7 @@ export async function buyItem(
         curr.coins <
         item.price
       ) {
+
         result = {
           ok: false,
           reason: "insufficient"
@@ -1652,6 +1843,7 @@ export async function buyItem(
   );
 
   if (result.ok) {
+
     await logTransaction(
       name,
       {
@@ -1675,9 +1867,11 @@ export async function equipTheme(
   name,
   itemId
 ) {
+
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1695,6 +1889,7 @@ export async function equipTheme(
 // ============================================================
 
 export const MISSIONS = [
+
   {
     id: "m-play3",
     label: "۳ بازی انجام بده",
@@ -1718,12 +1913,14 @@ export const MISSIONS = [
     target: 10,
     statKey: "gamesPlayed"
   }
+
 ];
 
 export async function claimMission(
   name,
   missionId
 ) {
+
   const mission =
     MISSIONS.find(
       m => m.id === missionId
@@ -1743,6 +1940,7 @@ export async function claimMission(
   await runTransaction(
     profileRef(name),
     curr => {
+
       curr =
         curr ||
         blankProfile();
@@ -1756,6 +1954,7 @@ export async function claimMission(
           missionId
         )
       ) {
+
         result = {
           ok: false,
           reason: "claimed"
@@ -1775,6 +1974,7 @@ export async function claimMission(
         currentValue <
         mission.target
       ) {
+
         result = {
           ok: false,
           reason: "incomplete"
@@ -1802,6 +2002,7 @@ export async function claimMission(
   );
 
   if (result.ok) {
+
     await logTransaction(
       name,
       {
@@ -1825,6 +2026,7 @@ export async function sendFriendRequest(
   myName,
   targetName
 ) {
+
   myName = String(
     myName || ""
   ).trim();
@@ -1837,6 +2039,7 @@ export async function sendFriendRequest(
     !targetName ||
     targetName === myName
   ) {
+
     return {
       ok: false,
       reason: "invalid"
@@ -1851,6 +2054,7 @@ export async function sendFriendRequest(
     );
 
   if (!targetSnap.exists()) {
+
     return {
       ok: false,
       reason: "not-found"
@@ -1864,6 +2068,7 @@ export async function sendFriendRequest(
     targetVal.friends &&
     targetVal.friends[myName]
   ) {
+
     return {
       ok: false,
       reason:
@@ -1875,6 +2080,7 @@ export async function sendFriendRequest(
     targetVal.friendRequests &&
     targetVal.friendRequests[myName]
   ) {
+
     return {
       ok: false,
       reason:
@@ -1906,6 +2112,7 @@ export async function getFriendStatus(
   myName,
   targetName
 ) {
+
   myName = String(
     myName || ""
   ).trim();
@@ -1918,6 +2125,7 @@ export async function getFriendStatus(
     !myName ||
     !targetName
   ) {
+
     return {
       isFriend: false,
       requestPending: false,
@@ -1928,6 +2136,7 @@ export async function getFriendStatus(
   if (
     myName === targetName
   ) {
+
     return {
       isFriend: false,
       requestPending: false,
@@ -1986,12 +2195,14 @@ export function listenFriendRequests(
   myName,
   callback
 ) {
+
   return onValue(
     profileRef(
       myName,
       "friendRequests"
     ),
     snap => {
+
       const val =
         snap.val() || {};
 
@@ -2006,6 +2217,7 @@ export async function acceptFriendRequest(
   myName,
   fromName
 ) {
+
   await update(
     profileRef(
       myName,
@@ -2038,6 +2250,7 @@ export async function rejectFriendRequest(
   myName,
   fromName
 ) {
+
   await remove(
     profileRef(
       myName,
@@ -2054,10 +2267,12 @@ export function listenFriends(
   myName,
   callback
 ) {
+
   let friendUnsubs = {};
   let latest = {};
 
   function emit(names) {
+
     callback(
       names.map(
         n =>
@@ -2078,6 +2293,7 @@ export function listenFriends(
         "friends"
       ),
       snap => {
+
         const val =
           snap.val() || {};
 
@@ -2088,10 +2304,13 @@ export function listenFriends(
           friendUnsubs
         ).forEach(
           n => {
+
             if (
               !names.includes(n)
             ) {
+
               friendUnsubs[n]();
+
               delete friendUnsubs[n];
               delete latest[n];
             }
@@ -2100,6 +2319,7 @@ export function listenFriends(
 
         names.forEach(
           name => {
+
             if (
               friendUnsubs[name]
             ) {
@@ -2110,6 +2330,7 @@ export function listenFriends(
               onValue(
                 profileRef(name),
                 pSnap => {
+
                   const profile =
                     pSnap.val() || {};
 
@@ -2140,24 +2361,27 @@ export function listenFriends(
                     connectionList.length ===
                     0
                   ) {
+
                     online =
-                      !!presence.online;
+                      presence.online === true;
                   }
 
                   latest[name] = {
+
                     name,
+
                     online,
 
                     lastSeen:
                       Number(
                         presence.lastSeen ||
-                          0
+                        0
                       ),
 
                     lastLogin:
                       Number(
                         profile.lastLogin ||
-                          0
+                        0
                       )
                   };
 
@@ -2172,15 +2396,18 @@ export function listenFriends(
     );
 
   return () => {
+
     mainUnsub();
 
     Object.values(
       friendUnsubs
     ).forEach(
       unsubscribe => {
+
         try {
           unsubscribe();
         } catch {}
+
       }
     );
 
@@ -2198,6 +2425,7 @@ export async function inviteFriendToRoom(
   friendName,
   roomCode
 ) {
+
   await push(
     ref(
       db,
@@ -2219,12 +2447,14 @@ export function listenInvites(
   myName,
   callback
 ) {
+
   return onValue(
     ref(
       db,
       `profiles/${encodeURIComponent(myName)}/invites`
     ),
     snap => {
+
       const val =
         snap.val() || {};
 
@@ -2255,6 +2485,7 @@ export async function dismissInvite(
   myName,
   inviteId
 ) {
+
   await remove(
     ref(
       db,
@@ -2271,6 +2502,7 @@ export function chatRef(
   code,
   path = ""
 ) {
+
   return ref(
     db,
     `rooms/${code}/chat${path ? "/" + path : ""}`
@@ -2282,6 +2514,7 @@ export async function sendChatMessage(
   name,
   text
 ) {
+
   const clean =
     String(text || "")
       .slice(0, 200)
@@ -2307,6 +2540,7 @@ export async function sendChatMessage(
   );
 
   try {
+
     const snap =
       await get(
         msgsRef
@@ -2321,6 +2555,7 @@ export async function sendChatMessage(
     if (
       keys.length > 60
     ) {
+
       const sorted =
         keys.sort(
           (a, b) =>
@@ -2337,6 +2572,7 @@ export async function sendChatMessage(
       for (
         const key of oldKeys
       ) {
+
         await remove(
           chatRef(
             code,
@@ -2345,7 +2581,9 @@ export async function sendChatMessage(
         );
       }
     }
+
   } catch (e) {
+
     console.warn(
       "Chat cleanup error:",
       e
@@ -2357,12 +2595,14 @@ export function listenChat(
   code,
   callback
 ) {
+
   return onValue(
     chatRef(
       code,
       "messages"
     ),
     snap => {
+
       const val =
         snap.val() || {};
 
@@ -2392,6 +2632,7 @@ export function listenChat(
 export async function getLeaderboard(
   limitN = 5
 ) {
+
   const snap =
     await get(
       ref(
@@ -2407,6 +2648,7 @@ export async function getLeaderboard(
     Object.entries(val)
       .map(
         ([encodedName, profile]) => ({
+
           name:
             decodeURIComponent(
               encodedName
@@ -2427,4 +2669,4 @@ export async function getLeaderboard(
     0,
     limitN
   );
-      }
+          }
