@@ -1,136 +1,3447 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>سرعت واکنش | دومیتو</title>
-<link rel="stylesheet" href="../css/style.css">
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  >
+
+  <title>آجرشکن | دومیتو</title>
+
+  <style>
+
+    :root {
+      --bg: #020617;
+      --bg2: #0f172a;
+      --accent: #38bdf8;
+      --accent2: #22d3ee;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --green: #4ade80;
+      --red: #f87171;
+      --gold: #fbbf24;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+
+      -webkit-tap-highlight-color: transparent;
+
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+
+      font-family:
+        "Segoe UI",
+        Tahoma,
+        system-ui,
+        sans-serif;
+
+      background:
+        radial-gradient(
+          ellipse at top,
+          #1e293b 0%,
+          #0f172a 40%,
+          #020617 100%
+        );
+
+      color: var(--text);
+
+      min-height: 100dvh;
+
+      display: flex;
+
+      flex-direction: column;
+
+      align-items: center;
+
+      padding:
+        10px
+        10px
+        25px;
+
+      overflow-x: hidden;
+    }
+
+    h1 {
+
+      font-size:
+        clamp(1.25rem, 5vw, 1.6rem);
+
+      color:
+        var(--accent);
+
+      margin-bottom: 6px;
+
+      text-shadow:
+        0 0 18px
+        rgba(56, 189, 248, .45);
+    }
+
+    .subtitle {
+
+      color:
+        var(--muted);
+
+      font-size: .78rem;
+
+      margin-bottom: 8px;
+
+      text-align: center;
+    }
+
+    /* =========================
+       HUD
+    ========================= */
+
+    .info {
+
+      width:
+        min(94vw, 400px);
+
+      display:
+        grid;
+
+      grid-template-columns:
+        repeat(4, 1fr);
+
+      gap: 6px;
+
+      margin-bottom: 8px;
+    }
+
+    .info span {
+
+      background:
+        rgba(15, 23, 42, .82);
+
+      border:
+        1px solid
+        rgba(56, 189, 248, .22);
+
+      padding:
+        7px 4px;
+
+      border-radius:
+        11px;
+
+      text-align:
+        center;
+
+      font-size:
+        .72rem;
+
+      backdrop-filter:
+        blur(10px);
+
+      box-shadow:
+        0 5px 20px
+        rgba(0,0,0,.12);
+    }
+
+    .info strong {
+
+      display: block;
+
+      margin-top: 2px;
+
+      color:
+        var(--accent);
+
+      font-size:
+        .95rem;
+    }
+
+    /* =========================
+       Game
+    ========================= */
+
+    .game-wrap {
+
+      position:
+        relative;
+
+      width:
+        min(94vw, 400px);
+
+      aspect-ratio:
+        4 / 5;
+    }
+
+    #canvas {
+
+      width: 100%;
+      height: 100%;
+
+      display: block;
+
+      background:
+        radial-gradient(
+          circle at 50% 30%,
+          rgba(56,189,248,.06),
+          transparent 45%
+        ),
+        #020617;
+
+      border:
+        2px solid
+        rgba(56,189,248,.7);
+
+      border-radius:
+        16px;
+
+      box-shadow:
+        0 0 30px
+        rgba(56,189,248,.18),
+
+        inset 0 0 30px
+        rgba(56,189,248,.04);
+
+      touch-action:
+        none;
+    }
+
+    /* =========================
+       Overlay
+    ========================= */
+
+    .overlay {
+
+      position:
+        absolute;
+
+      inset: 0;
+
+      background:
+        rgba(2, 6, 23, .91);
+
+      border-radius:
+        16px;
+
+      display:
+        none;
+
+      flex-direction:
+        column;
+
+      align-items:
+        center;
+
+      justify-content:
+        center;
+
+      gap: 11px;
+
+      z-index: 10;
+
+      text-align:
+        center;
+
+      padding:
+        20px;
+
+      backdrop-filter:
+        blur(7px);
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .overlay-icon {
+
+      font-size:
+        3rem;
+
+      filter:
+        drop-shadow(
+          0 0 15px
+          rgba(56,189,248,.3)
+        );
+    }
+
+    .overlay h2 {
+
+      font-size:
+        1.35rem;
+    }
+
+    .overlay h2.win {
+      color:
+        var(--green);
+    }
+
+    .overlay h2.lose {
+      color:
+        var(--red);
+    }
+
+    .overlay h2.ready {
+      color:
+        var(--accent);
+    }
+
+    .overlay h2.level {
+      color:
+        var(--gold);
+    }
+
+    .overlay p {
+
+      color:
+        var(--muted);
+
+      font-size:
+        .9rem;
+
+      line-height:
+        1.7;
+    }
+
+    .overlay p strong {
+
+      color:
+        var(--text);
+
+      font-size:
+        1.2rem;
+    }
+
+    /* =========================
+       Buttons
+    ========================= */
+
+    .btn {
+
+      appearance: none;
+
+      border: none;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--accent),
+          var(--accent2)
+        );
+
+      color:
+        #083344;
+
+      font-size:
+        1rem;
+
+      font-weight:
+        800;
+
+      padding:
+        11px 28px;
+
+      border-radius:
+        13px;
+
+      cursor:
+        pointer;
+
+      box-shadow:
+        0 5px 20px
+        rgba(34,211,238,.28);
+
+      transition:
+        transform .12s ease,
+        filter .12s ease;
+    }
+
+    .btn:active {
+
+      transform:
+        scale(.95);
+
+      filter:
+        brightness(.9);
+    }
+
+    .btn.secondary {
+
+      background:
+        rgba(255,255,255,.08);
+
+      color:
+        var(--text);
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      box-shadow:
+        none;
+    }
+
+    .button-row {
+
+      display:
+        flex;
+
+      gap: 7px;
+
+      flex-wrap:
+        wrap;
+
+      justify-content:
+        center;
+    }
+
+    /* =========================
+       Progress
+    ========================= */
+
+    .progress-wrap {
+
+      width:
+        min(94vw, 400px);
+
+      margin-top:
+        8px;
+    }
+
+    .progress-top {
+
+      display:
+        flex;
+
+      justify-content:
+        space-between;
+
+      color:
+        var(--muted);
+
+      font-size:
+        .72rem;
+
+      margin-bottom:
+        4px;
+    }
+
+    .progress {
+
+      height:
+        5px;
+
+      border-radius:
+        10px;
+
+      background:
+        rgba(255,255,255,.07);
+
+      overflow:
+        hidden;
+    }
+
+    .progress-bar {
+
+      height:
+        100%;
+
+      width:
+        0%;
+
+      border-radius:
+        inherit;
+
+      background:
+        linear-gradient(
+          90deg,
+          var(--accent),
+          var(--accent2)
+        );
+
+      transition:
+        width .2s ease;
+    }
+
+    /* =========================
+       Message
+    ========================= */
+
+    .message {
+
+      width:
+        min(94vw, 400px);
+
+      text-align:
+        center;
+
+      min-height:
+        20px;
+
+      margin-top:
+        7px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        .75rem;
+    }
+
+    /* =========================
+       Result
+    ========================= */
+
+    .result-box {
+
+      width:
+        min(94vw, 400px);
+
+      margin-top:
+        12px;
+
+      padding:
+        15px;
+
+      border-radius:
+        17px;
+
+      background:
+        rgba(15,23,42,.82);
+
+      border:
+        1px solid
+        rgba(56,189,248,.16);
+
+      box-shadow:
+        0 10px 35px
+        rgba(0,0,0,.18);
+
+      text-align:
+        center;
+    }
+
+    .result-box h3 {
+
+      margin-bottom:
+        8px;
+
+      color:
+        var(--accent);
+    }
+
+    .my-final-score {
+
+      font-size:
+        2rem;
+
+      font-weight:
+        900;
+
+      color:
+        var(--accent);
+    }
+
+    .result-status {
+
+      margin-top:
+        5px;
+
+      color:
+        var(--muted);
+
+      font-size:
+        .8rem;
+    }
+
+    .score-board {
+
+      display:
+        grid;
+
+      gap:
+        6px;
+
+      margin-top:
+        10px;
+    }
+
+    .score-row {
+
+      display:
+        flex;
+
+      align-items:
+        center;
+
+      justify-content:
+        space-between;
+
+      padding:
+        9px 11px;
+
+      border-radius:
+        11px;
+
+      background:
+        rgba(255,255,255,.045);
+
+      border:
+        1px solid
+        transparent;
+
+      font-size:
+        .82rem;
+    }
+
+    .score-row.me {
+
+      border-color:
+        rgba(56,189,248,.35);
+    }
+
+    .score-row.winner {
+
+      border-color:
+        rgba(251,191,36,.5);
+
+      background:
+        rgba(251,191,36,.08);
+    }
+
+    .rank {
+
+      min-width:
+        27px;
+
+      font-weight:
+        900;
+    }
+
+    .player-name {
+
+      flex:
+        1;
+
+      text-align:
+        right;
+
+      margin-right:
+        6px;
+
+      overflow:
+        hidden;
+
+      text-overflow:
+        ellipsis;
+
+      white-space:
+        nowrap;
+    }
+
+    .player-score {
+
+      font-weight:
+        900;
+
+      color:
+        var(--accent);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .hint {
+
+      margin-top:
+        9px;
+
+      font-size:
+        .72rem;
+
+      color:
+        var(--muted);
+
+      text-align:
+        center;
+
+      opacity:
+        .8;
+    }
+
+    @media (max-height: 680px) {
+
+      body {
+        padding-top: 5px;
+      }
+
+      h1 {
+        margin-bottom: 2px;
+      }
+
+      .subtitle {
+        display: none;
+      }
+
+      .info {
+        margin-bottom: 4px;
+      }
+
+      .progress-wrap {
+        margin-top: 4px;
+      }
+
+    }
+
+  </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="brand"><div class="brand-mark">⚡</div><h1>سرعت واکنش</h1></div>
-    <div class="card" id="playArea">
-      <h2>صبر کن سبز بشه، بعد سریع بزن</h2>
-      <div class="reaction-box wait" id="box">صبر کن...</div>
-      <p class="status-line" id="resultLine"></p>
-    </div>
-    <div class="card" id="waitArea" style="display:none">
-      <h2>نتیجه تو ثبت شد</h2>
-      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
-    </div>
-    <div class="card" id="scoreArea" style="display:none">
-      <h2 id="scoreAreaTitle">نتیجه این دور</h2>
-      <div class="score-board" id="scoreBoard"></div>
-      <div class="solo-result" id="soloResult" style="display:none"></div>
-      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
-    </div>
+
+  <h1>🧱 آجرشکن</h1>
+
+  <p class="subtitle">
+    آجرها را نابود کن و بیشترین امتیاز را برای اتاقت بگیر!
+  </p>
+
+  <div class="info">
+
+    <span>
+      امتیاز
+      <strong id="score">0</strong>
+    </span>
+
+    <span>
+      مرحله
+      <strong id="level">1</strong>
+    </span>
+
+    <span>
+      جان
+      <strong id="lives">3</strong>
+    </span>
+
+    <span>
+      بهترین
+      <strong id="highScore">0</strong>
+    </span>
+
   </div>
 
+  <div class="game-wrap">
+
+    <canvas
+      id="canvas"
+      width="400"
+      height="500"
+    ></canvas>
+
+    <!-- START -->
+
+    <div
+      class="overlay show"
+      id="startScreen"
+    >
+
+      <div class="overlay-icon">
+        🧱
+      </div>
+
+      <h2 class="ready">
+        آماده‌ای؟
+      </h2>
+
+      <p>
+        ۵ مرحله پیش رو داری
+        <br>
+        هر مرحله سخت‌تر می‌شود!
+      </p>
+
+      <button
+        class="btn"
+        id="startBtn"
+      >
+        شروع بازی 🚀
+      </button>
+
+    </div>
+
+    <!-- LEVEL -->
+
+    <div
+      class="overlay"
+      id="levelScreen"
+    >
+
+      <div class="overlay-icon">
+        🔥
+      </div>
+
+      <h2
+        class="level"
+        id="levelTitle"
+      >
+        مرحله ۲
+      </h2>
+
+      <p id="levelDesc">
+        یه کم سریع‌تر
+      </p>
+
+      <button
+        class="btn"
+        id="nextLevelBtn"
+      >
+        ادامه
+      </button>
+
+    </div>
+
+    <!-- END -->
+
+    <div
+      class="overlay"
+      id="endScreen"
+    >
+
+      <div
+        class="overlay-icon"
+        id="endIcon"
+      >
+        🏆
+      </div>
+
+      <h2
+        id="endTitle"
+        class="lose"
+      >
+        باختی!
+      </h2>
+
+      <p>
+        امتیاز نهایی:
+        <strong id="finalScore">
+          0
+        </strong>
+      </p>
+
+      <p id="endExtra">
+        نتیجه در دومیتو ثبت می‌شود...
+      </p>
+
+      <div class="button-row">
+
+        <button
+          class="btn"
+          id="restartBtn"
+        >
+          دوباره 🔄
+        </button>
+
+        <button
+          class="btn secondary"
+          id="homeBtn"
+        >
+          خانه 🏠
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="progress-wrap">
+
+    <div class="progress-top">
+
+      <span>
+        تخریب مرحله
+      </span>
+
+      <span id="brickText">
+        0%
+      </span>
+
+    </div>
+
+    <div class="progress">
+
+      <div
+        class="progress-bar"
+        id="progressBar"
+      ></div>
+
+    </div>
+
+  </div>
+
+  <p
+    class="message"
+    id="message"
+  >
+    آماده‌ای؟ 😎
+  </p>
+
+  <!-- WAIT -->
+
+  <div
+    class="result-box hidden"
+    id="waitBox"
+  >
+
+    <h3>
+      ⏳ منتظر بازیکنان
+    </h3>
+
+    <div
+      class="my-final-score"
+      id="myFinalScore"
+    >
+      0
+    </div>
+
+    <div
+      class="result-status"
+      id="waitStatus"
+    >
+      نتیجه ثبت شد...
+    </div>
+
+  </div>
+
+  <!-- SCOREBOARD -->
+
+  <div
+    class="result-box hidden"
+    id="scoreBox"
+  >
+
+    <h3>
+      🏆 نتیجه دور
+    </h3>
+
+    <div
+      class="result-status"
+      id="winnerText"
+    ></div>
+
+    <div
+      class="score-board"
+      id="scoreBoard"
+    ></div>
+
+  </div>
+
+  <p class="hint">
+    📱 انگشتت را روی صفحه بکش
+    •
+    🖥️ ماوس
+    •
+    ⌨️ ← →
+  </p>
+
+
 <script type="module">
-  import {
-    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
-    submitResult, resetSessionForNextRound, recordRoundResult, soloWon
-  } from "../js/app.js";
-  import { mountChat } from "../js/chat.js";
 
-  const isSolo = new URLSearchParams(location.search).has("solo");
-  const code = getSavedRoom();
-  const R = (p) => roomRef(code, p);
+/* =========================================================
+   DOMITO IMPORTS
+========================================================= */
 
-  let myUid, myName, players = {};
-  let box = document.getElementById("box");
-  let resultLine = document.getElementById("resultLine");
-  let goTime = null, done = false;
+import {
+  waitForUser,
+  getSavedName,
+  getSavedRoom,
+  currentUid,
+  submitResult,
+  recordRoundResult,
+  roomRef,
+  onValue
+} from "../js/app.js";
 
-  function startRound() {
-    box.className = "reaction-box wait";
-    box.textContent = "صبر کن...";
-    const delay = 1500 + Math.random() * 2500;
-    setTimeout(() => {
-      if (done) return;
-      box.className = "reaction-box go";
-      box.textContent = "بزن!";
-      goTime = performance.now();
-    }, delay);
+
+/* =========================================================
+   GAME ID
+   خیلی مهم:
+   Reaction را حذف نکرده‌ایم؛
+   آجرشکن جای آن نشسته است.
+========================================================= */
+
+const GAME_ID = "reaction";
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const canvas =
+  document.getElementById("canvas");
+
+const ctx =
+  canvas.getContext("2d");
+
+const scoreEl =
+  document.getElementById("score");
+
+const levelEl =
+  document.getElementById("level");
+
+const livesEl =
+  document.getElementById("lives");
+
+const highScoreEl =
+  document.getElementById("highScore");
+
+const finalScoreEl =
+  document.getElementById("finalScore");
+
+const startScreen =
+  document.getElementById("startScreen");
+
+const levelScreen =
+  document.getElementById("levelScreen");
+
+const endScreen =
+  document.getElementById("endScreen");
+
+const endTitle =
+  document.getElementById("endTitle");
+
+const endIcon =
+  document.getElementById("endIcon");
+
+const endExtra =
+  document.getElementById("endExtra");
+
+const levelTitle =
+  document.getElementById("levelTitle");
+
+const levelDesc =
+  document.getElementById("levelDesc");
+
+const startBtn =
+  document.getElementById("startBtn");
+
+const nextLevelBtn =
+  document.getElementById("nextLevelBtn");
+
+const restartBtn =
+  document.getElementById("restartBtn");
+
+const homeBtn =
+  document.getElementById("homeBtn");
+
+const messageEl =
+  document.getElementById("message");
+
+const progressBar =
+  document.getElementById("progressBar");
+
+const brickText =
+  document.getElementById("brickText");
+
+const waitBox =
+  document.getElementById("waitBox");
+
+const waitStatus =
+  document.getElementById("waitStatus");
+
+const myFinalScore =
+  document.getElementById("myFinalScore");
+
+const scoreBox =
+  document.getElementById("scoreBox");
+
+const scoreBoard =
+  document.getElementById("scoreBoard");
+
+const winnerText =
+  document.getElementById("winnerText");
+
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const W = 400;
+const H = 500;
+
+
+/* =========================================================
+   DOMITO STATE
+========================================================= */
+
+const isSolo =
+  new URLSearchParams(
+    location.search
+  ).has("solo");
+
+const roomCode =
+  getSavedRoom();
+
+let myUid = null;
+let myName = "";
+
+let players = {};
+
+let resultSubmitted = false;
+let roundFinished = false;
+
+
+/* =========================================================
+   AUDIO
+========================================================= */
+
+const AudioCtx =
+  window.AudioContext ||
+  window.webkitAudioContext;
+
+let audioCtx = null;
+
+
+function initAudio() {
+
+  try {
+
+    if (!audioCtx) {
+      audioCtx =
+        new AudioCtx();
+    }
+
+    if (
+      audioCtx.state ===
+      "suspended"
+    ) {
+      audioCtx.resume();
+    }
+
+  } catch (e) {}
+
+}
+
+
+function playTone(
+  freq,
+  duration,
+  type = "square",
+  vol = .06
+) {
+
+  if (!audioCtx) return;
+
+  try {
+
+    const osc =
+      audioCtx.createOscillator();
+
+    const gain =
+      audioCtx.createGain();
+
+    osc.type =
+      type;
+
+    osc.frequency.value =
+      freq;
+
+    gain.gain.setValueAtTime(
+      vol,
+      audioCtx.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      audioCtx.currentTime +
+      duration
+    );
+
+    osc.connect(gain);
+
+    gain.connect(
+      audioCtx.destination
+    );
+
+    osc.start();
+
+    osc.stop(
+      audioCtx.currentTime +
+      duration
+    );
+
+  } catch (e) {}
+
+}
+
+
+function sfxBrick() {
+
+  playTone(
+    520 +
+    Math.random() * 90,
+    .055,
+    "square",
+    .055
+  );
+
+}
+
+
+function sfxPaddle() {
+
+  playTone(
+    280,
+    .07,
+    "triangle",
+    .07
+  );
+
+}
+
+
+function sfxWall() {
+
+  playTone(
+    180,
+    .045,
+    "sine",
+    .035
+  );
+
+}
+
+
+function sfxLife() {
+
+  playTone(
+    150,
+    .2,
+    "sawtooth",
+    .08
+  );
+
+}
+
+
+function sfxLevel() {
+
+  playTone(
+    392,
+    .1,
+    "triangle",
+    .07
+  );
+
+  setTimeout(
+    () =>
+      playTone(
+        523,
+        .13,
+        "triangle",
+        .07
+      ),
+    100
+  );
+
+}
+
+
+function sfxWin() {
+
+  playTone(
+    440,
+    .1
+  );
+
+  setTimeout(
+    () =>
+      playTone(
+        554,
+        .1
+      ),
+    100
+  );
+
+  setTimeout(
+    () =>
+      playTone(
+        659,
+        .2
+      ),
+    200
+  );
+
+}
+
+
+function sfxGameOver() {
+
+  playTone(
+    200,
+    .25,
+    "sawtooth",
+    .07
+  );
+
+  setTimeout(
+    () =>
+      playTone(
+        120,
+        .35,
+        "sawtooth",
+        .07
+      ),
+    220
+  );
+
+}
+
+
+/* =========================================================
+   LEVELS
+========================================================= */
+
+const levels = [
+
+  {
+    rows: 4,
+    cols: 8,
+    speed: 3.8,
+    name: "مرحله ۱",
+    desc: "شروع آروم 😎"
+  },
+
+  {
+    rows: 5,
+    cols: 8,
+    speed: 4.15,
+    name: "مرحله ۲",
+    desc: "یه کم سریع‌تر 🔥"
+  },
+
+  {
+    rows: 5,
+    cols: 9,
+    speed: 4.55,
+    name: "مرحله ۳",
+    desc: "آجرهای بیشتر!"
+  },
+
+  {
+    rows: 6,
+    cols: 9,
+    speed: 4.9,
+    name: "مرحله ۴",
+    desc: "چالش واقعی 😈"
+  },
+
+  {
+    rows: 6,
+    cols: 10,
+    speed: 5.35,
+    name: "مرحله ۵",
+    desc: "آخرین مرحله! 🏆"
   }
 
-  box.addEventListener("click", async () => {
-    if (done) return;
-    if (goTime === null) { done = true; resultLine.textContent = "زودتر زدی! امتیاز صفر"; await finish(0); return; }
-    const ms = performance.now() - goTime;
-    done = true;
-    const score = Math.max(0, Math.round(1000 - ms));
-    resultLine.textContent = `زمان تو: ${Math.round(ms)} میلی‌ثانیه`;
-    await finish(score);
+];
+
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+
+let currentLevel = 0;
+
+let paddle = {
+
+  w: 82,
+
+  h: 12,
+
+  x: 159,
+
+  y: 470,
+
+  speed: 7
+
+};
+
+let ball = {
+
+  x: 200,
+
+  y: 400,
+
+  r: 8,
+
+  dx: 0,
+
+  dy: 0
+
+};
+
+let bricks = [];
+
+let particles = [];
+
+let trail = [];
+
+let score = 0;
+
+let lives = 3;
+
+let running = false;
+
+let animId = null;
+
+let baseSpeed = 3.8;
+
+
+/* =========================================================
+   HIGH SCORE
+========================================================= */
+
+let highScore =
+  Number(
+    localStorage.getItem(
+      "breakoutHigh"
+    ) || 0
+  );
+
+highScoreEl.textContent =
+  String(highScore);
+
+
+/* =========================================================
+   COLORS
+========================================================= */
+
+const colors = [
+
+  "#f43f5e",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#3b82f6",
+  "#a855f7"
+
+];
+
+
+/* =========================================================
+   CREATE BRICKS
+========================================================= */
+
+function createBricks() {
+
+  const lv =
+    levels[currentLevel];
+
+  bricks = [];
+
+  const brickW =
+    Math.floor(
+      (W - 30) /
+      lv.cols
+    ) - 5;
+
+  const brickH = 15;
+
+  const totalW =
+    lv.cols *
+      (brickW + 5) -
+    5;
+
+  const offsetLeft =
+    (W - totalW) / 2;
+
+  const offsetTop = 45;
+
+
+  for (
+    let r = 0;
+    r < lv.rows;
+    r++
+  ) {
+
+    for (
+      let c = 0;
+      c < lv.cols;
+      c++
+    ) {
+
+      bricks.push({
+
+        x:
+          offsetLeft +
+          c *
+          (brickW + 5),
+
+        y:
+          offsetTop +
+          r *
+          (brickH + 5),
+
+        w:
+          brickW,
+
+        h:
+          brickH,
+
+        alive:
+          true,
+
+        color:
+          colors[
+            r %
+            colors.length
+          ],
+
+        hit:
+          false
+
+      });
+
+    }
+
+  }
+
+  updateProgress();
+
+}
+
+
+/* =========================================================
+   RESET BALL
+========================================================= */
+
+function resetBall() {
+
+  ball.x =
+    W / 2;
+
+  ball.y =
+    H - 90;
+
+
+  const angle =
+    (
+      Math.random() *
+      .6 +
+      .2
+    ) *
+    Math.PI;
+
+
+  ball.dx =
+    Math.cos(angle) *
+    baseSpeed *
+    (
+      Math.random() >
+      .5
+        ? 1
+        : -1
+    );
+
+  ball.dy =
+    -Math.abs(
+      Math.sin(angle) *
+      baseSpeed
+    );
+
+
+  paddle.x =
+    (W - paddle.w) /
+    2;
+
+}
+
+
+/* =========================================================
+   START LEVEL
+========================================================= */
+
+function startLevel() {
+
+  createBricks();
+
+  resetBall();
+
+  levelEl.textContent =
+    String(
+      currentLevel + 1
+    );
+
+  updateProgress();
+
+}
+
+
+/* =========================================================
+   PARTICLES
+========================================================= */
+
+function makeParticles(
+  x,
+  y,
+  color,
+  amount = 7
+) {
+
+  for (
+    let i = 0;
+    i < amount;
+    i++
+  ) {
+
+    particles.push({
+
+      x,
+      y,
+
+      dx:
+        (
+          Math.random() -
+          .5
+        ) *
+        130,
+
+      dy:
+        (
+          Math.random() -
+          .5
+        ) *
+        130,
+
+      life:
+        .35 +
+        Math.random() *
+        .3,
+
+      size:
+        1.5 +
+        Math.random() *
+        3,
+
+      color
+
+    });
+
+  }
+
+}
+
+
+function updateParticles() {
+
+  for (
+    let i =
+      particles.length - 1;
+
+    i >= 0;
+
+    i--
+  ) {
+
+    const p =
+      particles[i];
+
+    p.x +=
+      p.dx *
+      .016;
+
+    p.y +=
+      p.dy *
+      .016;
+
+    p.dy +=
+      100 *
+      .016;
+
+    p.life -=
+      .016;
+
+    if (
+      p.life <= 0
+    ) {
+
+      particles.splice(
+        i,
+        1
+      );
+
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+function updateProgress() {
+
+  const total =
+    bricks.length;
+
+  const destroyed =
+    bricks.filter(
+      b =>
+        !b.alive
+    ).length;
+
+  const percent =
+    total
+      ? Math.round(
+          destroyed /
+          total *
+          100
+        )
+      : 0;
+
+  progressBar.style.width =
+    `${percent}%`;
+
+  brickText.textContent =
+    `${percent}%`;
+
+}
+
+
+/* =========================================================
+   DRAW
+========================================================= */
+
+function roundRect(
+  x,
+  y,
+  w,
+  h,
+  r
+) {
+
+  ctx.beginPath();
+
+  ctx.moveTo(
+    x + r,
+    y
+  );
+
+  ctx.arcTo(
+    x + w,
+    y,
+    x + w,
+    y + h,
+    r
+  );
+
+  ctx.arcTo(
+    x + w,
+    y + h,
+    x,
+    y + h,
+    r
+  );
+
+  ctx.arcTo(
+    x,
+    y + h,
+    x,
+    y,
+    r
+  );
+
+  ctx.arcTo(
+    x,
+    y,
+    x + w,
+    y,
+    r
+  );
+
+  ctx.closePath();
+
+}
+
+
+function drawBackground() {
+
+  const gradient =
+    ctx.createLinearGradient(
+      0,
+      0,
+      0,
+      H
+    );
+
+  gradient.addColorStop(
+    0,
+    "#081323"
+  );
+
+  gradient.addColorStop(
+    1,
+    "#020617"
+  );
+
+  ctx.fillStyle =
+    gradient;
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
+
+  /* ستاره‌ها */
+
+  ctx.globalAlpha =
+    .25;
+
+  for (
+    let i = 0;
+    i < 40;
+    i++
+  ) {
+
+    const x =
+      (i * 83) %
+      W;
+
+    const y =
+      (i * 47) %
+      400;
+
+    ctx.fillStyle =
+      "#ffffff";
+
+    ctx.fillRect(
+      x,
+      y,
+      1,
+      1
+    );
+
+  }
+
+  ctx.globalAlpha =
+    1;
+
+}
+
+
+function drawBricks() {
+
+  bricks.forEach(
+    b => {
+
+      if (!b.alive)
+        return;
+
+      ctx.fillStyle =
+        b.color;
+
+      ctx.shadowColor =
+        b.color;
+
+      ctx.shadowBlur =
+        7;
+
+      roundRect(
+        b.x,
+        b.y,
+        b.w,
+        b.h,
+        4
+      );
+
+      ctx.fill();
+
+    }
+  );
+
+  ctx.shadowBlur =
+    0;
+
+}
+
+
+function drawPaddle() {
+
+  const gradient =
+    ctx.createLinearGradient(
+      paddle.x,
+      paddle.y,
+      paddle.x +
+        paddle.w,
+      paddle.y
+    );
+
+  gradient.addColorStop(
+    0,
+    "#22d3ee"
+  );
+
+  gradient.addColorStop(
+    1,
+    "#38bdf8"
+  );
+
+  ctx.fillStyle =
+    gradient;
+
+  ctx.shadowColor =
+    "#22d3ee";
+
+  ctx.shadowBlur =
+    13;
+
+  roundRect(
+    paddle.x,
+    paddle.y,
+    paddle.w,
+    paddle.h,
+    6
+  );
+
+  ctx.fill();
+
+  ctx.shadowBlur =
+    0;
+
+}
+
+
+function drawBall() {
+
+  /* رد توپ */
+
+  for (
+    let i = 0;
+    i < trail.length;
+    i++
+  ) {
+
+    const t =
+      trail[i];
+
+    ctx.globalAlpha =
+      t.life * .25;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      t.x,
+      t.y,
+      ball.r *
+        t.life *
+        1.8,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fillStyle =
+      "#ffffff";
+
+    ctx.fill();
+
+  }
+
+  ctx.globalAlpha =
+    1;
+
+
+  ctx.beginPath();
+
+  ctx.arc(
+    ball.x,
+    ball.y,
+    ball.r,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.fillStyle =
+    "#f8fafc";
+
+  ctx.shadowColor =
+    "#ffffff";
+
+  ctx.shadowBlur =
+    12;
+
+  ctx.fill();
+
+  ctx.shadowBlur =
+    0;
+
+}
+
+
+function drawParticles() {
+
+  particles.forEach(
+    p => {
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          p.life
+        );
+
+      ctx.fillStyle =
+        p.color;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        p.size,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fill();
+
+    }
+  );
+
+  ctx.globalAlpha =
+    1;
+
+}
+
+
+function draw() {
+
+  drawBackground();
+
+  drawBricks();
+
+  drawPaddle();
+
+  drawBall();
+
+  drawParticles();
+
+}
+
+
+/* =========================================================
+   UPDATE
+========================================================= */
+
+function update() {
+
+  if (!running)
+    return;
+
+
+  ball.x +=
+    ball.dx;
+
+  ball.y +=
+    ball.dy;
+
+
+  /* trail */
+
+  trail.push({
+
+    x:
+      ball.x,
+
+    y:
+      ball.y,
+
+    life:
+      .35
+
   });
 
-  async function finish(score) {
-    box.style.pointerEvents = "none";
-    if (isSolo) { setTimeout(() => finishSolo(score), 700); return; }
-    setTimeout(() => { document.getElementById("playArea").style.display = "none"; document.getElementById("waitArea").style.display = "block"; }, 900);
-    await submitResult("reaction", myUid, myName, score);
+  if (
+    trail.length >
+    10
+  ) {
+
+    trail.shift();
+
   }
 
-  async function finishSolo(score) {
-    document.getElementById("playArea").style.display = "none";
-    const won = soloWon("reaction", score);
-    await recordRoundResult(myName, "reaction", { won });
-    const scoreArea = document.getElementById("scoreArea");
-    scoreArea.style.display = "block";
-    document.getElementById("scoreAreaTitle").style.display = "none";
-    document.getElementById("scoreBoard").style.display = "none";
-    document.getElementById("nextStatus").style.display = "none";
-    const soloResult = document.getElementById("soloResult");
-    soloResult.style.display = "block";
-    soloResult.innerHTML = `
-      <div class="big-emoji">${won ? "🎉" : "😅"}</div>
-      <h2>${won ? "آفرین، بردی!" : "این‌بار نشد"}</h2>
-      <div class="score-big">${score} امتیاز</div>
-      <button onclick="location.reload()" class="btn-full">دوباره بازی کن</button>
-      <a href="../index.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">بازگشت به خانه</a>
-    `;
+  trail.forEach(
+    t =>
+      t.life -=
+      .035
+  );
+
+
+  /* دیوارها */
+
+  if (
+    ball.x -
+      ball.r <
+    0
+  ) {
+
+    ball.x =
+      ball.r;
+
+    ball.dx =
+      Math.abs(
+        ball.dx
+      );
+
+    sfxWall();
+
   }
 
-  async function init() {
-    const user = await waitForUser();
-    myName = getSavedName();
-    if (!user || !myName) { window.location.href = "../index.html"; return; }
-    myUid = currentUid();
 
-    if (isSolo) { startRound(); return; }
+  if (
+    ball.x +
+      ball.r >
+    W
+  ) {
 
-    if (!code) { window.location.href = "../index.html"; return; }
-    mountChat(myName, code);
-    onValue(R("players"), (snap) => { players = snap.val() || {}; });
-    startRound();
+    ball.x =
+      W -
+      ball.r;
 
-    let handled = false;
-    onValue(R("results"), async (snap) => {
-      const results = snap.val() || {};
-      const totalPlayers = Object.keys(players).length;
-      const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
-      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
-      handled = true;
+    ball.dx =
+      -Math.abs(
+        ball.dx
+      );
 
-      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
-      const won = results[myUid]?.score === maxScore;
-      await recordRoundResult(myName, "reaction", { won });
+    sfxWall();
 
-      document.getElementById("waitArea").style.display = "none";
-      document.getElementById("scoreArea").style.display = "block";
-      const board = document.getElementById("scoreBoard");
-      board.innerHTML = "";
-      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
-        const row = document.createElement("div");
-        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
-        board.appendChild(row);
-      });
-      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
-    });
   }
-  init();
+
+
+  /* سقف */
+
+  if (
+    ball.y -
+      ball.r <
+    0
+  ) {
+
+    ball.y =
+      ball.r;
+
+    ball.dy =
+      Math.abs(
+        ball.dy
+      );
+
+    sfxWall();
+
+  }
+
+
+  /* پدل */
+
+  if (
+
+    ball.dy > 0 &&
+
+    ball.y +
+      ball.r >=
+    paddle.y &&
+
+    ball.y -
+      ball.r <=
+    paddle.y +
+      paddle.h &&
+
+    ball.x >
+      paddle.x &&
+
+    ball.x <
+      paddle.x +
+      paddle.w
+
+  ) {
+
+    const hit =
+      (
+        ball.x -
+        (
+          paddle.x +
+          paddle.w / 2
+        )
+      ) /
+      (
+        paddle.w / 2
+      );
+
+
+    ball.dx =
+      hit *
+      baseSpeed *
+      1.08;
+
+    ball.dy =
+      -Math.abs(
+        ball.dy
+      );
+
+    ball.y =
+      paddle.y -
+      ball.r;
+
+    sfxPaddle();
+
+  }
+
+
+  /* آجرها */
+
+  for (
+    let i = 0;
+    i < bricks.length;
+    i++
+  ) {
+
+    const b =
+      bricks[i];
+
+    if (!b.alive)
+      continue;
+
+
+    if (
+
+      ball.x +
+        ball.r >
+      b.x &&
+
+      ball.x -
+        ball.r <
+      b.x +
+        b.w &&
+
+      ball.y +
+        ball.r >
+      b.y &&
+
+      ball.y -
+        ball.r <
+      b.y +
+        b.h
+
+    ) {
+
+      b.alive =
+        false;
+
+      ball.dy =
+        -ball.dy;
+
+
+      score +=
+        10 +
+        currentLevel *
+        2;
+
+
+      scoreEl.textContent =
+        String(score);
+
+
+      makeParticles(
+        ball.x,
+        ball.y,
+        b.color,
+        8
+      );
+
+
+      sfxBrick();
+
+      updateProgress();
+
+
+      if (
+        bricks.every(
+          br =>
+            !br.alive
+        )
+      ) {
+
+        levelComplete();
+
+        return;
+
+      }
+
+      break;
+
+    }
+
+  }
+
+
+  /* افتادن */
+
+  if (
+    ball.y -
+      ball.r >
+    H
+  ) {
+
+    lives--;
+
+    livesEl.textContent =
+      String(lives);
+
+    sfxLife();
+
+
+    if (
+      lives <= 0
+    ) {
+
+      gameOver(
+        false
+      );
+
+      return;
+
+    }
+
+
+    messageEl.textContent =
+      "یک جان کم شد ❤️";
+
+
+    resetBall();
+
+  }
+
+
+  updateParticles();
+
+  draw();
+
+  animId =
+    requestAnimationFrame(
+      update
+    );
+
+}
+
+
+/* =========================================================
+   LEVEL COMPLETE
+========================================================= */
+
+function levelComplete() {
+
+  running =
+    false;
+
+  cancelAnimationFrame(
+    animId
+  );
+
+  sfxWin();
+
+
+  /* جایزه مرحله */
+
+  score +=
+    50 +
+    currentLevel *
+    20;
+
+  scoreEl.textContent =
+    String(score);
+
+
+  if (
+    currentLevel >=
+    levels.length - 1
+  ) {
+
+    gameOver(
+      true
+    );
+
+    return;
+
+  }
+
+
+  currentLevel++;
+
+
+  levelTitle.textContent =
+    levels[
+      currentLevel
+    ].name;
+
+  levelDesc.textContent =
+    levels[
+      currentLevel
+    ].desc;
+
+
+  levelScreen.classList.add(
+    "show"
+  );
+
+}
+
+
+/* =========================================================
+   GAME OVER
+========================================================= */
+
+async function gameOver(
+  won
+) {
+
+  if (
+    roundFinished
+  )
+    return;
+
+  roundFinished =
+    true;
+
+  running =
+    false;
+
+  cancelAnimationFrame(
+    animId
+  );
+
+
+  if (
+    score >
+    highScore
+  ) {
+
+    highScore =
+      score;
+
+    localStorage.setItem(
+      "breakoutHigh",
+      String(
+        highScore
+      )
+    );
+
+    highScoreEl.textContent =
+      String(
+        highScore
+      );
+
+  }
+
+
+  finalScoreEl.textContent =
+    String(score);
+
+
+  if (won) {
+
+    endIcon.textContent =
+      "🏆";
+
+    endTitle.textContent =
+      "تبریک! همه مراحل تمام شد 🎉";
+
+    endTitle.className =
+      "win";
+
+    endExtra.textContent =
+      "امتیازت برای دومیتو ثبت می‌شود...";
+
+    sfxWin();
+
+  } else {
+
+    endIcon.textContent =
+      "💥";
+
+    endTitle.textContent =
+      "باختی!";
+
+    endTitle.className =
+      "lose";
+
+    endExtra.textContent =
+      "امتیازت برای دومیتو ثبت می‌شود...";
+
+    sfxGameOver();
+
+  }
+
+
+  endScreen.classList.add(
+    "show"
+  );
+
+
+  /* ثبت نتیجه */
+
+  await submitGameResult(
+    won
+  );
+
+}
+
+
+/* =========================================================
+   ثبت نتیجه در دومیتو
+========================================================= */
+
+async function submitGameResult(
+  localWon
+) {
+
+  if (
+    resultSubmitted
+  ) {
+    return;
+  }
+
+  resultSubmitted =
+    true;
+
+
+  /* =========================================
+     SOLO
+  ========================================= */
+
+  if (isSolo) {
+
+    try {
+
+      /*
+       * برای حالت تک‌نفره،
+       * خود سیستم دومیتو تعیین می‌کند
+       * آیا score به threshold رسیده یا نه.
+       */
+
+      const won =
+        (
+          await import(
+            "../js/app.js"
+          )
+        ).soloWon(
+          GAME_ID,
+          score
+        );
+
+
+      await recordRoundResult(
+        myName,
+        GAME_ID,
+        {
+          won
+        }
+      );
+
+
+      endExtra.textContent =
+        won
+          ? "🏆 برد! +۱۵ سکه"
+          : "🎮 بازی شد! +۵ سکه";
+
+
+    } catch (e) {
+
+      console.warn(
+        "Solo result error:",
+        e
+      );
+
+      endExtra.textContent =
+        "نتیجه بازی ذخیره نشد.";
+
+    }
+
+    return;
+  }
+
+
+  /* =========================================
+     MULTIPLAYER
+  ========================================= */
+
+  if (
+    !roomCode ||
+    !myUid
+  ) {
+
+    endExtra.textContent =
+      "اتاق دومیتو پیدا نشد.";
+
+    return;
+
+  }
+
+
+  try {
+
+    await submitResult(
+      GAME_ID,
+      myUid,
+      myName,
+      score
+    );
+
+
+    endExtra.textContent =
+      "✅ امتیازت ثبت شد؛ منتظر بقیه باش...";
+
+
+    waitBox.classList.remove(
+      "hidden"
+    );
+
+
+    myFinalScore.textContent =
+      String(score);
+
+
+    waitStatus.textContent =
+      "نتیجه ثبت شد؛ منتظر بقیه بازیکنان هستیم...";
+
+
+  } catch (e) {
+
+    console.error(
+      "submitResult error:",
+      e
+    );
+
+    endExtra.textContent =
+      "❌ ثبت نتیجه با خطا مواجه شد.";
+
+  }
+
+}
+
+
+/* =========================================================
+   ادامه مرحله
+========================================================= */
+
+function continueLevel() {
+
+  initAudio();
+
+  sfxLevel();
+
+  startLevel();
+
+  running =
+    true;
+
+  levelScreen.classList.remove(
+    "show"
+  );
+
+  messageEl.textContent =
+    `مرحله ${
+      currentLevel + 1
+    } شروع شد! 🔥`;
+
+  draw();
+
+  animId =
+    requestAnimationFrame(
+      update
+    );
+
+}
+
+
+/* =========================================================
+   START GAME
+========================================================= */
+
+function startGame() {
+
+  initAudio();
+
+  cancelAnimationFrame(
+    animId
+  );
+
+
+  currentLevel =
+    0;
+
+  score =
+    0;
+
+  lives =
+    3;
+
+  particles =
+    [];
+
+  trail =
+    [];
+
+  roundFinished =
+    false;
+
+  resultSubmitted =
+    false;
+
+
+  scoreEl.textContent =
+    "0";
+
+  livesEl.textContent =
+    "3";
+
+  levelEl.textContent =
+    "1";
+
+
+  startLevel();
+
+
+  running =
+    true;
+
+
+  startScreen.classList.remove(
+    "show"
+  );
+
+  levelScreen.classList.remove(
+    "show"
+  );
+
+  endScreen.classList.remove(
+    "show"
+  );
+
+  waitBox.classList.add(
+    "hidden"
+  );
+
+  scoreBox.classList.add(
+    "hidden"
+  );
+
+
+  messageEl.textContent =
+    "بزن بریم! 🚀";
+
+
+  draw();
+
+
+  animId =
+    requestAnimationFrame(
+      update
+    );
+
+}
+
+
+/* =========================================================
+   PADDLE CONTROL
+========================================================= */
+
+function movePaddle(
+  x
+) {
+
+  paddle.x =
+    Math.max(
+      0,
+      Math.min(
+        W -
+          paddle.w,
+        x -
+          paddle.w / 2
+      )
+    );
+
+}
+
+
+/* =========================================================
+   MOUSE
+========================================================= */
+
+canvas.addEventListener(
+  "mousemove",
+  e => {
+
+    if (!running)
+      return;
+
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const scaleX =
+      W /
+      rect.width;
+
+    movePaddle(
+      (
+        e.clientX -
+        rect.left
+      ) *
+      scaleX
+    );
+
+  }
+);
+
+
+/* =========================================================
+   TOUCH
+========================================================= */
+
+canvas.addEventListener(
+  "touchmove",
+  e => {
+
+    e.preventDefault();
+
+    if (!running)
+      return;
+
+
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const scaleX =
+      W /
+      rect.width;
+
+
+    movePaddle(
+      (
+        e.touches[0].clientX -
+        rect.left
+      ) *
+      scaleX
+    );
+
+  },
+  {
+    passive:
+      false
+  }
+);
+
+
+/* =========================================================
+   KEYBOARD
+========================================================= */
+
+const keys = {};
+
+
+window.addEventListener(
+  "keydown",
+  e => {
+
+    keys[e.key] =
+      true;
+
+  }
+);
+
+
+window.addEventListener(
+  "keyup",
+  e => {
+
+    keys[e.key] =
+      false;
+
+  }
+);
+
+
+function keyboardLoop() {
+
+  if (running) {
+
+    if (
+      keys["ArrowLeft"] ||
+      keys["a"] ||
+      keys["A"]
+    ) {
+
+      paddle.x =
+        Math.max(
+          0,
+          paddle.x -
+          paddle.speed
+        );
+
+    }
+
+
+    if (
+      keys["ArrowRight"] ||
+      keys["d"] ||
+      keys["D"]
+    ) {
+
+      paddle.x =
+        Math.min(
+          W -
+            paddle.w,
+          paddle.x +
+          paddle.speed
+        );
+
+    }
+
+  }
+
+
+  requestAnimationFrame(
+    keyboardLoop
+  );
+
+}
+
+
+keyboardLoop();
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+startBtn.addEventListener(
+  "click",
+  startGame
+);
+
+
+nextLevelBtn.addEventListener(
+  "click",
+  continueLevel
+);
+
+
+restartBtn.addEventListener(
+  "click",
+  startGame
+);
+
+
+homeBtn.addEventListener(
+  "click",
+  () => {
+
+    location.href =
+      "../index.html";
+
+  }
+);
+
+
+/* =========================================================
+   ESCAPE / HOME
+========================================================= */
+
+window.addEventListener(
+  "keydown",
+  e => {
+
+    if (
+      e.key === "Escape"
+    ) {
+
+      location.href =
+        "../index.html";
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   INITIAL DRAW
+========================================================= */
+
+createBricks();
+
+draw();
+
+
+/* =========================================================
+   DOMITO MULTIPLAYER RESULT LISTENER
+========================================================= */
+
+function startRoomListener() {
+
+  if (
+    isSolo ||
+    !roomCode
+  ) {
+    return;
+  }
+
+
+  onValue(
+    roomRef(
+      roomCode,
+      "players"
+    ),
+    snap => {
+
+      players =
+        snap.val() || {};
+
+    }
+  );
+
+
+  onValue(
+    roomRef(
+      roomCode,
+      "results"
+    ),
+    snap => {
+
+      if (
+        !resultSubmitted
+      ) {
+        return;
+      }
+
+
+      const results =
+        snap.val() || {};
+
+
+      const playerCount =
+        Object.keys(
+          players
+        ).length;
+
+
+      const resultCount =
+        Object.keys(
+          results
+        ).length;
+
+
+      if (
+        playerCount === 0
+      ) {
+        return;
+      }
+
+
+      waitStatus.textContent =
+        `${resultCount} از ${playerCount} بازیکن نتیجه داده‌اند`;
+
+
+      /*
+       * هنوز همه تمام نکرده‌اند
+       */
+
+      if (
+        resultCount <
+        playerCount
+      ) {
+
+        return;
+
+      }
+
+
+      /*
+       * همه تمام کردند
+       */
+
+      showFinalScoreBoard(
+        results
+      );
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   FINAL SCOREBOARD
+========================================================= */
+
+async function showFinalScoreBoard(
+  results
+) {
+
+  const list =
+    Object.entries(
+      results
+    )
+    .map(
+      ([uid, data]) => ({
+
+        uid,
+
+        name:
+          data.name ||
+          "بازیکن",
+
+        score:
+          Number(
+            data.score ||
+            0
+          )
+
+      })
+    )
+    .sort(
+      (a, b) =>
+        b.score -
+        a.score
+    );
+
+
+  if (
+    list.length === 0
+  ) {
+    return;
+  }
+
+
+  const winner =
+    list[0];
+
+
+  const me =
+    list.find(
+      x =>
+        x.uid ===
+        myUid
+    );
+
+
+  const myScore =
+    me
+      ? me.score
+      : score;
+
+
+  const won =
+    !!me &&
+    me.score ===
+    winner.score;
+
+
+  /* =========================================
+     ثبت برد/باخت
+  ========================================= */
+
+  try {
+
+    await recordRoundResult(
+      myName,
+      GAME_ID,
+      {
+        won
+      }
+    );
+
+  } catch (e) {
+
+    console.warn(
+      "recordRoundResult:",
+      e
+    );
+
+  }
+
+
+  /* =========================================
+     نمایش
+  ========================================= */
+
+  waitBox.classList.add(
+    "hidden"
+  );
+
+  scoreBox.classList.remove(
+    "hidden"
+  );
+
+
+  if (won) {
+
+    winnerText.textContent =
+      "🏆 تو برنده این دور شدی! +۱۵ سکه";
+
+  } else {
+
+    winnerText.textContent =
+      `🥇 برنده: ${winner.name}`;
+
+  }
+
+
+  scoreBoard.innerHTML =
+    "";
+
+
+  list.forEach(
+    (player, index) => {
+
+      const row =
+        document.createElement(
+          "div"
+        );
+
+
+      const isMe =
+        player.uid ===
+        myUid;
+
+
+      const isWinner =
+        index === 0;
+
+
+      row.className =
+        "score-row" +
+        (
+          isMe
+            ? " me"
+            : ""
+        ) +
+        (
+          isWinner
+            ? " winner"
+            : ""
+        );
+
+
+      let medal =
+        "";
+
+
+      if (
+        index === 0
+      ) {
+        medal = "🥇";
+
+      } else if (
+        index === 1
+      ) {
+        medal = "🥈";
+
+      } else if (
+        index === 2
+      ) {
+        medal = "🥉";
+
+      }
+
+
+      row.innerHTML = `
+
+        <span class="rank">
+          ${medal || index + 1}
+        </span>
+
+        <span class="player-name">
+          ${escapeHtml(
+            player.name
+          )}
+          ${
+            isMe
+              ? " 👤"
+              : ""
+          }
+        </span>
+
+        <span class="player-score">
+          ${player.score}
+        </span>
+
+      `;
+
+
+      scoreBoard.appendChild(
+        row
+      );
+
+    }
+  );
+
+
+  /*
+   * چند ثانیه بعد
+   * لابی دور بعدی را مدیریت می‌کند.
+   *
+   * برای جلوگیری از چند reset هم فقط
+   * یک بار اجرا می‌شود.
+   */
+
+}
+
+
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
+
+function escapeHtml(
+  value
+) {
+
+  return String(
+    value
+  )
+  .replace(
+    /&/g,
+    "&amp;"
+  )
+  .replace(
+    /</g,
+    "&lt;"
+  )
+  .replace(
+    />/g,
+    "&gt;"
+  )
+  .replace(
+    /"/g,
+    "&quot;"
+  )
+  .replace(
+    /'/g,
+    "&#039;"
+  );
+
+}
+
+
+/* =========================================================
+   DOMITO INITIALIZATION
+========================================================= */
+
+async function initDomito() {
+
+  try {
+
+    const user =
+      await waitForUser();
+
+
+    /*
+     * اگر وارد دومیتو نشده باشد،
+     * برگردد به صفحه اصلی.
+     */
+
+    if (!user) {
+
+      location.href =
+        "../index.html";
+
+      return;
+
+    }
+
+
+    myName =
+      getSavedName();
+
+
+    myUid =
+      currentUid();
+
+
+    if (
+      !myName ||
+      !myUid
+    ) {
+
+      location.href =
+        "../index.html";
+
+      return;
+
+    }
+
+
+    /*
+     * اگر بازی تک‌نفره است،
+     * فقط نتیجه شخصی ثبت می‌شود.
+     */
+
+    if (isSolo) {
+
+      return;
+
+    }
+
+
+    /*
+     * بازی اتاقی نیاز به room دارد.
+     */
+
+    if (!roomCode) {
+
+      messageEl.textContent =
+        "⚠️ اتاق دومیتو پیدا نشد.";
+
+      startBtn.disabled =
+        true;
+
+      return;
+
+    }
+
+
+    messageEl.textContent =
+      `اتاق ${roomCode} آماده است 🎮`;
+
+
+    startRoomListener();
+
+
+  } catch (e) {
+
+    console.error(
+      "Domito initialization error:",
+      e
+    );
+
+    messageEl.textContent =
+      "⚠️ اتصال به دومیتو انجام نشد.";
+
+  }
+
+}
+
+
+initDomito();
+
 </script>
+
 </body>
-</html>
+  </html>
