@@ -1,214 +1,47 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
-
 <head>
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-  >
-
-  <title>دومیتو استرا</title>
-
-  <link rel="stylesheet" href="./astra.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Domito Astra</title>
+<link rel="stylesheet" href="astra.css">
 </head>
-
 <body class="astra-body">
 
-  <!-- حالت عمودی -->
-  <div
-    class="astra-rotate-screen"
-    id="astraRotateScreen"
-  >
+  <div class="astra-rotate-screen" id="astraRotateScreen">
     <div class="icon">📱</div>
-
     <h2>گوشیتو بچرخون</h2>
-
-    <p>
-      دومیتو استرا در حالت افقی بهتر اجرا می‌شود
-    </p>
+    <p>Domito Astra فقط در حالت افقی (landscape) بازی می‌شه</p>
   </div>
-
 
   <div class="astra-game-root">
-
-    <!-- =========================
-         HUD
-    ========================== -->
-
     <div class="astra-hud-top">
-
-      <!-- بازیکن خودمان -->
-      <div class="astra-hud-player">
-
-        <div
-          class="astra-hud-name p1"
-        >
-          🚀
-          <span id="p1Label">
-            تو
-          </span>
-        </div>
-
-        <div class="astra-hp-row">
-          <span id="myHp">❤️❤️❤️❤️❤️</span>
-        </div>
-
-        <div class="astra-fuel-bar">
-          <div
-            class="astra-fuel-fill p1"
-            id="fuelP1"
-            style="width:0%"
-          ></div>
-        </div>
-
-        <div class="astra-hud-sub">
-          📦
-          <span id="cargoP1">0</span>
-          &nbsp;|
-          ⚡
-          <span id="boostP1">آماده</span>
-        </div>
-
+      <div class="astra-hud-player p1">
+        <div class="astra-hud-name p1">🚀 <span id="p1Label">تو</span></div>
+        <div class="astra-fuel-bar"><div class="astra-fuel-fill p1" id="fuelP1" style="width:0%"></div></div>
+        <div class="astra-hud-sub">📦 <span id="cargoP1">0</span></div>
       </div>
-
-
-      <!-- مرکز -->
       <div class="astra-hud-center">
-
-        <div class="astra-title">
-          🚀 ASTRA
-        </div>
-
-        <div
-          class="astra-mode-badge"
-          id="astraModeBadge"
-        >
-          اتصال...
-        </div>
-
-        <div
-          class="astra-timer"
-          id="astraTimer"
-        >
-          03:00
-        </div>
-
+        <div class="astra-title" id="astraModeTitle">🚀 ASTRA</div>
+        <div class="astra-mode-badge" id="astraModeBadge"></div>
       </div>
-
-
-      <!-- سایر بازیکنان -->
-      <div
-        class="astra-hud-others"
-        id="othersHud"
-      ></div>
-
+      <div class="astra-hud-others" id="othersHud"></div>
     </div>
 
+    <div class="astra-arena-box" id="astraArenaBox">
+      <canvas id="astraCanvas"></canvas>
+      <div class="astra-overlay-msg" id="astraOverlayMsg" style="display:none;"></div>
 
-    <!-- =========================
-         Arena
-    ========================== -->
-
-    <div
-      class="astra-arena-box"
-      id="astraArenaBox"
-    >
-
-      <canvas
-        id="astraCanvas"
-      ></canvas>
-
-
-      <!-- پیام مرکزی -->
-      <div
-        class="astra-overlay-msg"
-        id="astraOverlayMsg"
-        style="display:none;"
-      ></div>
-
-
-      <!-- وضعیت اتصال -->
-      <div
-        class="astra-connection"
-        id="astraConnection"
-      >
-        🟡 اتصال...
+      <div class="astra-joystick-base left" id="astraJoyBaseP1">
+        <div class="astra-joystick-knob left" id="astraJoyKnobP1"></div>
       </div>
 
-
-      <!-- جوی‌استیک -->
-      <div
-        class="astra-joystick-base left"
-        id="astraJoyBaseP1"
-      >
-
-        <div
-          class="astra-joystick-knob left"
-          id="astraJoyKnobP1"
-        ></div>
-
-      </div>
-
-
-      <!-- شلیک -->
-      <button
-        class="astra-action-btn fire"
-        id="astraFireBtn"
-        type="button"
-      >
-        🔥
-      </button>
-
-
-      <!-- Boost -->
-      <button
-        class="astra-action-btn boost"
-        id="astraBoostBtn"
-        type="button"
-      >
-        ⚡
-      </button>
-
-
-      <!-- تمام صفحه -->
-      <button
-        class="astra-fullscreen-btn"
-        id="astraFullscreenBtn"
-        type="button"
-      >
-        ⛶
-      </button>
-
-
-      <!-- صدا -->
-      <button
-        class="astra-mute-btn"
-        id="astraMuteBtn"
-        type="button"
-      >
-        🔊
-      </button>
-
-
-      <!-- صفحه نتیجه -->
-      <div
-        class="astra-result"
-        id="astraResult"
-        style="display:none;"
-      ></div>
-
+      <button class="astra-fullscreen-btn" id="astraFullscreenBtn">⛶ تمام‌صفحه</button>
+      <button class="astra-mute-btn" id="astraMuteBtn">🔊</button>
+      <div class="astra-result" id="astraResult" style="display:none;"></div>
     </div>
-
   </div>
 
-
-  <script
-    type="module"
-    src="./astra.js"
-  ></script>
-
+<script type="module" src="astra.js"></script>
 </body>
-
 </html>
