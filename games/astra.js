@@ -2,17 +2,17 @@ import {
   waitForUser,
   getSavedName,
   currentUid,
-  getSavedRoom,
   roomRef,
-
+  getSavedRoom,
   onValue,
+  ref,
+  db,
   set,
   get,
   update,
   remove,
   runTransaction,
   onDisconnect,
-
   recordRoundResult,
   resetSessionForNextRound
 } from "../js/app.js";
@@ -21,68 +21,14 @@ import {
   mountChat
 } from "../js/chat.js";
 
-
 /* =========================================================
    CONFIG
 ========================================================= */
 
-const GAME_ID = "astra";
-
-const MAX_PLAYERS = 4;
-
-const MATCH_TIME = 180;
-
-const MAX_HP = 5;
-
-const RESOURCE_COUNT = 12;
-
-const FUEL_PER_RESOURCE = 20;
-
-const PLAYER_SPEED = 220;
-
-const BOOST_SPEED = 390;
-
-const BOOST_TIME = 2500;
-
-const BOOST_COOLDOWN = 3500;
-
-const SHOT_SPEED = 520;
-
-const SHOT_LIFE = 900;
-
-const FIRE_COOLDOWN = 500;
-
-const DAMAGE = 1;
-
-const SYNC_INTERVAL = 75;
-
-const RESPAWN_DELAY = 3500;
-
-const PLAYER_RADIUS = 15;
-
-const RESOURCE_RADIUS = 12;
-
-const DOCK_RADIUS = 32;
-
-const COLORS = [
-  "#4F7CFF",
-  "#9B5CFF",
-  "#FF4F81",
-  "#3ECF8E"
-];
-
-
-/* =========================================================
-   ROOM
-========================================================= */
-
 const params =
   new URLSearchParams(
-    location.search
+    window.location.search
   );
-
-const roundFromUrl =
-  params.get("round") || "";
 
 const isSolo =
   params.has("solo");
@@ -90,20 +36,45 @@ const isSolo =
 const code =
   getSavedRoom();
 
-const R =
-  path =>
-    roomRef(
-      code,
-      path
-    );
+const FUEL_PER_RESOURCE = 20;
+const RESOURCE_COUNT = 4;
+const CARRY_RANGE_MULT = 1.15;
 
-const A =
-  path =>
-    roomRef(
-      code,
-      `astra/${path}`
-    );
+const BASE_SPEED_FACTOR = 0.4;
 
+const CONNECTION_TIMEOUT = 10000;
+
+/* =========================================================
+   FIREBASE PATHS
+========================================================= */
+
+function roomPath(path = "") {
+
+  if (!code) {
+    throw new Error(
+      "no-room"
+    );
+  }
+
+  return roomRef(
+    code,
+    path
+  );
+}
+
+function astraRef(path = "") {
+
+  if (!code) {
+    throw new Error(
+      "no-room"
+    );
+  }
+
+  return ref(
+    db,
+    `rooms/${code}/astra/${path}`
+  );
+}
 
 /* =========================================================
    DOM
@@ -137,19 +108,14 @@ const resultScreen =
     "astraResult"
   );
 
-const connectionEl =
+const fuelP1El =
   document.getElementById(
-    "astraConnection"
+    "fuelP1"
   );
 
-const modeBadge =
+const cargoP1El =
   document.getElementById(
-    "astraModeBadge"
-  );
-
-const timerEl =
-  document.getElementById(
-    "astraTimer"
+    "cargoP1"
   );
 
 const p1Label =
@@ -157,78 +123,647 @@ const p1Label =
     "p1Label"
   );
 
-const fuelEl =
-  document.getElementById(
-    "fuelP1"
-  );
-
-const cargoEl =
-  document.getElementById(
-    "cargoP1"
-  );
-
-const hpEl =
-  document.getElementById(
-    "myHp"
-  );
-
-const boostEl =
-  document.getElementById(
-    "boostP1"
-  );
-
 const othersHud =
   document.getElementById(
     "othersHud"
   );
 
-const joystickBase =
+const modeBadge =
   document.getElementById(
-    "astraJoyBaseP1"
+    "astraModeBadge"
   );
 
-const joystickKnob =
-  document.getElementById(
-    "astraJoyKnobP1"
-  );
-
-const fireButton =
-  document.getElementById(
-    "astraFireBtn"
-  );
-
-const boostButton =
-  document.getElementById(
-    "astraBoostBtn"
-  );
-
-const fullscreenButton =
+const fullscreenBtn =
   document.getElementById(
     "astraFullscreenBtn"
   );
 
-const muteButton =
+const muteBtn =
   document.getElementById(
     "astraMuteBtn"
   );
 
+const joyBase =
+  document.getElementById(
+    "astraJoyBaseP1"
+  );
+
+const joyKnob =
+  document.getElementById(
+    "astraJoyKnobP1"
+  );
 
 /* =========================================================
-   STATE
+   CONNECTION UI
 ========================================================= */
 
-let myUid = "";
+let connectionOverlay =
+  null;
 
-let myName = "";
+function createConnectionOverlay() {
+
+  if (connectionOverlay) {
+    return;
+  }
+
+  connectionOverlay =
+    document.createElement(
+      "div"
+    );
+
+  connectionOverlay.className =
+    "astra-wait-overlay";
+
+  connectionOverlay.style.cssText = `
+    position:absolute;
+    inset:0;
+    z-index:28;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    background:rgba(5,6,15,.88);
+    backdrop-filter:blur(8px);
+    padding:20px;
+    color:#EAF0FF;
+  `;
+
+  connectionOverlay.innerHTML = `
+    <div
+      style="
+        font-size:36px;
+        margin-bottom:12px;
+      "
+    >
+      🚀
+    </div>
+
+    <h2
+      id="astraConnectionTitle"
+      style="
+        margin:0 0 8px;
+        font-size:18px;
+      "
+    >
+      در حال اتصال...
+    </h2>
+
+    <p
+      id="astraConnectionText"
+      style="
+        margin:0;
+        color:#8B93B8;
+        font-size:13px;
+        max-width:300px;
+        line-height:1.8;
+      "
+    >
+      در حال اتصال به اتاق دومیتو
+    </p>
+
+    <button
+      id="astraConnectionRetry"
+      style="
+        display:none;
+        margin-top:16px;
+        border:0;
+        border-radius:12px;
+        padding:10px 18px;
+        background:linear-gradient(
+          135deg,
+          #4F7CFF,
+          #9B5CFF
+        );
+        color:#fff;
+        font-family:inherit;
+        font-weight:800;
+        cursor:pointer;
+      "
+    >
+      🔄 تلاش دوباره
+    </button>
+  `;
+
+  arenaBox.appendChild(
+    connectionOverlay
+  );
+
+  const retry =
+    document.getElementById(
+      "astraConnectionRetry"
+    );
+
+  retry.addEventListener(
+    "click",
+    () => {
+      window.location.reload();
+    }
+  );
+}
+
+function setConnectionStatus(
+  title,
+  text,
+  isError = false
+) {
+
+  createConnectionOverlay();
+
+  const titleEl =
+    document.getElementById(
+      "astraConnectionTitle"
+    );
+
+  const textEl =
+    document.getElementById(
+      "astraConnectionText"
+    );
+
+  const retry =
+    document.getElementById(
+      "astraConnectionRetry"
+    );
+
+  titleEl.textContent =
+    title;
+
+  textEl.textContent =
+    text;
+
+  retry.style.display =
+    isError
+      ? "inline-block"
+      : "none";
+
+  connectionOverlay.style.display =
+    "flex";
+}
+
+function hideConnectionStatus() {
+
+  if (!connectionOverlay) {
+    return;
+  }
+
+  connectionOverlay.style.display =
+    "none";
+}
+
+/* =========================================================
+   TIMEOUT
+========================================================= */
+
+function withTimeout(
+  promise,
+  ms = CONNECTION_TIMEOUT,
+  label = "operation"
+) {
+
+  return Promise.race([
+
+    promise,
+
+    new Promise(
+      (_, reject) => {
+
+        setTimeout(
+          () => {
+
+            const error =
+              new Error(
+                `${label}-timeout`
+              );
+
+            error.code =
+              "timeout";
+
+            reject(error);
+
+          },
+          ms
+        );
+
+      }
+    )
+
+  ]);
+}
+
+/* =========================================================
+   ERROR TEXT
+========================================================= */
+
+function friendlyError(
+  error
+) {
+
+  const code =
+    error?.code ||
+    error?.message ||
+    "";
+
+  if (
+    String(code)
+      .includes("permission-denied")
+  ) {
+
+    return (
+      "Firebase اجازه دسترسی به بخش Astra را نداد."
+    );
+  }
+
+  if (
+    String(code)
+      .includes("timeout")
+  ) {
+
+    return (
+      "اتصال به Firebase بیش از حد طول کشید."
+    );
+  }
+
+  if (
+    String(code)
+      .includes("no-room")
+  ) {
+
+    return (
+      "کد اتاق پیدا نشد."
+    );
+  }
+
+  if (
+    String(code)
+      .includes("not-authenticated")
+  ) {
+
+    return (
+      "ورود به حساب دومیتو تأیید نشد."
+    );
+  }
+
+  return (
+    "اتصال Astra با خطای غیرمنتظره مواجه شد."
+  );
+}
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+let W = 900;
+let H = 450;
+
+let SHIP_R = 15;
+let RES_R = 12;
+let DOCK_R = 30;
+
+let BASE_SPEED = 190;
+
+let stars = [];
+
+let entitiesInitialized =
+  false;
+
+function recomputeScaledSizes() {
+
+  const minDim =
+    Math.min(
+      W,
+      H
+    );
+
+  SHIP_R =
+    Math.max(
+      10,
+      minDim * 0.036
+    );
+
+  RES_R =
+    Math.max(
+      9,
+      minDim * 0.03
+    );
+
+  DOCK_R =
+    Math.max(
+      20,
+      minDim * 0.08
+    );
+
+  BASE_SPEED =
+    minDim *
+    BASE_SPEED_FACTOR;
+}
+
+function regenerateBackground() {
+
+  stars = [];
+
+  const count =
+    Math.round(
+      (W * H) / 4500
+    );
+
+  for (
+    let i = 0;
+    i < count;
+    i++
+  ) {
+
+    stars.push({
+      x:
+        Math.random() * W,
+
+      y:
+        Math.random() * H,
+
+      r:
+        Math.random() *
+          1.4 +
+        0.3,
+
+      tw:
+        Math.random() *
+        Math.PI *
+        2
+    });
+
+  }
+}
+
+function resizeCanvasResolution() {
+
+  if (!arenaBox) {
+    return;
+  }
+
+  const rect =
+    arenaBox.getBoundingClientRect();
+
+  const cssW =
+    Math.max(
+      1,
+      rect.width
+    );
+
+  const cssH =
+    Math.max(
+      1,
+      rect.height
+    );
+
+  const dpr =
+    Math.min(
+      window.devicePixelRatio ||
+        1,
+      2.5
+    );
+
+  canvas.width =
+    Math.round(
+      cssW * dpr
+    );
+
+  canvas.height =
+    Math.round(
+      cssH * dpr
+    );
+
+  ctx.setTransform(
+    dpr,
+    0,
+    0,
+    dpr,
+    0,
+    0
+  );
+
+  const oldW = W;
+  const oldH = H;
+
+  W = cssW;
+  H = cssH;
+
+  recomputeScaledSizes();
+
+  regenerateBackground();
+
+  computeDock();
+
+  if (
+    entitiesInitialized &&
+    oldW > 0 &&
+    oldH > 0
+  ) {
+
+    const rx =
+      W / oldW;
+
+    const ry =
+      H / oldH;
+
+    if (
+      Number.isFinite(rx) &&
+      Number.isFinite(ry) &&
+      rx > 0 &&
+      ry > 0
+    ) {
+
+      [
+        me,
+        aiShip
+      ].forEach(
+        ship => {
+
+          if (!ship) {
+            return;
+          }
+
+          ship.x *= rx;
+          ship.y *= ry;
+
+          if (ship.trail) {
+
+            ship.trail.forEach(
+              point => {
+
+                point.x *= rx;
+                point.y *= ry;
+
+              }
+            );
+
+          }
+
+        }
+      );
+
+      if (
+        aiShip &&
+        aiShip.dock
+      ) {
+
+        aiShip.dock.x *= rx;
+        aiShip.dock.y *= ry;
+
+      }
+
+      localResources.forEach(
+        r => {
+
+          r.x *= rx;
+          r.y *= ry;
+
+        }
+      );
+
+      Object.values(
+        firebaseResources
+      ).forEach(
+        r => {
+
+          r.x *= rx;
+          r.y *= ry;
+
+        }
+      );
+
+      Object.values(
+        others
+      ).forEach(
+        o => {
+
+          o.x *= rx;
+          o.y *= ry;
+
+        }
+      );
+
+      me.x =
+        Math.max(
+          SHIP_R,
+          Math.min(
+            W - SHIP_R,
+            me.x
+          )
+        );
+
+      me.y =
+        Math.max(
+          SHIP_R,
+          Math.min(
+            H - SHIP_R,
+            me.y
+          )
+        );
+
+    }
+
+  }
+
+}
+
+/* =========================================================
+   DOCKS
+========================================================= */
+
+let myDock = {
+  x: 0,
+  y: 0
+};
+
+let dockColor =
+  "#4F7CFF";
+
+const DOCK_SPOTS_FRACTIONS = [
+
+  {
+    fx: 0.12,
+    fy: 0.25
+  },
+
+  {
+    fx: 0.88,
+    fy: 0.25
+  },
+
+  {
+    fx: 0.12,
+    fy: 0.75
+  },
+
+  {
+    fx: 0.88,
+    fy: 0.75
+  }
+
+];
+
+function dockForColorIndex(
+  index
+) {
+
+  const d =
+    DOCK_SPOTS_FRACTIONS[
+      index %
+        DOCK_SPOTS_FRACTIONS.length
+    ];
+
+  return {
+    x: W * d.fx,
+    y: H * d.fy
+  };
+}
+
+function computeDock() {
+
+  myDock =
+    isSolo
+
+      ? {
+          x:
+            SHIP_R * 3,
+
+          y:
+            H / 2
+        }
+
+      : dockForColorIndex(
+          myColorIndex || 0
+        );
+
+}
+
+/* =========================================================
+   GAME STATE
+========================================================= */
 
 let myColorIndex = 0;
 
-let myColor =
-  COLORS[0];
+let me = {
+  x: 0,
+  y: 0,
+  angle:
+    -Math.PI / 2,
+  fuel: 0,
+  cargo: 0,
+  carrying: null,
+  trail: []
+};
 
-let W = 900;
+let localResources = [];
 
-let H = 450;
+let aiShip = null;
+
+let others = {};
+
+let firebaseResources = {};
+
+let particles = [];
+
+let floaters = [];
 
 let running = false;
 
@@ -236,137 +771,27 @@ let paused = true;
 
 let raceOver = false;
 
-let countdownRunning = false;
+let myName = "";
 
-let gameStarted = false;
+let myUid = "";
 
-let connectionOnline = false;
-
-let roundId =
-  roundFromUrl;
-
-let gameEndsAt = 0;
-
-let winnerUid = null;
-
-let players = {};
-
-let resources = {};
-
-let shots = {};
-
-let localMe = null;
-
-let localParticles = [];
-
-let localFloaters = [];
-
-let localStars = [];
-
-let joy = {
+let joyVec = {
   x: 0,
   y: 0
 };
 
-let fireHeld = false;
-
-let lastFrame = 0;
-
-let lastSync = 0;
-
-let lastFire = 0;
-
-let lastBoost = 0;
-
-let lastResourceCheck = 0;
-
-let lastStateCheck = 0;
-
-let orientationLocked = false;
-
-let unsubscribers = [];
-
-let cleanupStarted = false;
-
+let unsubs = [];
 
 /* =========================================================
-   SOLO STATE
+   COLORS
 ========================================================= */
 
-let soloResources = [];
-
-let soloBot = null;
-
-
-/* =========================================================
-   AUDIO
-========================================================= */
-
-let muted = false;
-
-let audioContext = null;
-
-function tone(
-  frequency,
-  duration = 0.08
-) {
-
-  if (muted) {
-    return;
-  }
-
-  try {
-
-    if (!audioContext) {
-
-      audioContext =
-        new (
-          window.AudioContext ||
-          window.webkitAudioContext
-        )();
-
-    const oscillator =
-      audioContext.createOscillator();
-
-    const gain =
-      audioContext.createGain();
-
-    oscillator.frequency.value =
-      frequency;
-
-    oscillator.type =
-      "sine";
-
-    gain.gain.setValueAtTime(
-      0.08,
-      audioContext.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.001,
-      audioContext.currentTime +
-        duration
-    );
-
-    oscillator.connect(
-      gain
-    );
-
-    gain.connect(
-      audioContext.destination
-    );
-
-    oscillator.start();
-
-    oscillator.stop(
-      audioContext.currentTime +
-        duration
-    );
-
-  } catch {}
-
-}
-
+const COLORS = [
+  "#4F7CFF",
+  "#9B5CFF",
+  "#FF4F81",
+  "#3ECF8E"
+];
 
 /* =========================================================
    HELPERS
@@ -385,7 +810,7 @@ function rand(
 
 }
 
-function distance(
+function dist(
   a,
   b
 ) {
@@ -397,249 +822,624 @@ function distance(
 
 }
 
-function clamp(
-  value,
-  min,
-  max
+/* =========================================================
+   AUDIO
+========================================================= */
+
+let audioCtx = null;
+
+let muted = false;
+
+function playTone(
+  frequency,
+  duration
 ) {
 
-  return Math.max(
-    min,
-    Math.min(
-      max,
-      value
-    )
-  );
+  if (muted) {
+    return;
+  }
 
-}
+  try {
 
-function playerColor(
-  index
-) {
+    if (!audioCtx) {
 
-  return (
-    COLORS[
-      Number(index || 0) %
-        COLORS.length
-    ] ||
-    COLORS[0]
-  );
+      audioCtx =
+        new (
+          window.AudioContext ||
+          window.webkitAudioContext
+        )();
 
-}
-
-function dockFor(
-  colorIndex
-) {
-
-  const spots = [
-
-    {
-      x: W * .10,
-      y: H * .20
-    },
-
-    {
-      x: W * .90,
-      y: H * .20
-    },
-
-    {
-      x: W * .10,
-      y: H * .80
-    },
-
-    {
-      x: W * .90,
-      y: H * .80
     }
 
-  ];
+    const osc =
+      audioCtx.createOscillator();
 
-  return (
-    spots[
-      colorIndex %
-        spots.length
-    ]
-  );
+    const gain =
+      audioCtx.createGain();
+
+    osc.frequency.value =
+      frequency;
+
+    osc.type =
+      "sine";
+
+    gain.gain.setValueAtTime(
+      0.08,
+      audioCtx.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.001,
+      audioCtx.currentTime +
+        duration
+    );
+
+    osc.connect(
+      gain
+    );
+
+    gain.connect(
+      audioCtx.destination
+    );
+
+    osc.start();
+
+    osc.stop(
+      audioCtx.currentTime +
+        duration
+    );
+
+  } catch (
+    error
+  ) {}
 
 }
 
-function formatTime(
-  seconds
+muteBtn.addEventListener(
+  "click",
+  () => {
+
+    muted =
+      !muted;
+
+    muteBtn.textContent =
+      muted
+        ? "🔇"
+        : "🔊";
+
+  }
+);
+
+/* =========================================================
+   PLAYER MOVEMENT
+========================================================= */
+
+function updateMe(
+  dt
 ) {
 
-  seconds =
-    Math.max(
-      0,
-      Math.ceil(
-        seconds
+  const mag =
+    Math.min(
+      1,
+      Math.hypot(
+        joyVec.x,
+        joyVec.y
       )
     );
 
-  const min =
-    Math.floor(
-      seconds / 60
-    );
-
-  const sec =
-    seconds % 60;
-
-  return (
-    String(min).padStart(
-      2,
-      "0"
-    ) +
-    ":" +
-    String(sec).padStart(
-      2,
-      "0"
-    )
-  );
-
-}
-
-
-/* =========================================================
-   CANVAS
-========================================================= */
-
-function resizeCanvas() {
-
-  const rect =
-    arenaBox.getBoundingClientRect();
-
-  const cssWidth =
-    Math.max(
-      1,
-      rect.width
-    );
-
-  const cssHeight =
-    Math.max(
-      1,
-      rect.height
-    );
-
-  const dpr =
-    Math.min(
-      window.devicePixelRatio ||
-        1,
-      2
-    );
-
-  canvas.width =
-    Math.round(
-      cssWidth * dpr
-    );
-
-  canvas.height =
-    Math.round(
-      cssHeight * dpr
-    );
-
-  canvas.style.width =
-    cssWidth + "px";
-
-  canvas.style.height =
-    cssHeight + "px";
-
-  ctx.setTransform(
-    dpr,
-    0,
-    0,
-    dpr,
-    0,
-    0
-  );
-
-  W = cssWidth;
-
-  H = cssHeight;
-
-  createStars();
-
-  if (localMe) {
-
-    localMe.x =
-      clamp(
-        localMe.x,
-        PLAYER_RADIUS,
-        W -
-          PLAYER_RADIUS
-      );
-
-    localMe.y =
-      clamp(
-        localMe.y,
-        PLAYER_RADIUS,
-        H -
-          PLAYER_RADIUS
-      );
-
-  }
-
-}
-
-function createStars() {
-
-  localStars = [];
-
-  const count =
-    Math.round(
-      W * H / 5000
-    );
-
-  for (
-    let i = 0;
-    i < count;
-    i++
+  if (
+    mag <= 0.02
   ) {
 
-    localStars.push({
+    return;
 
-      x:
-        Math.random() *
-        W,
+  }
 
-      y:
-        Math.random() *
-        H,
+  const len =
+    Math.hypot(
+      joyVec.x,
+      joyVec.y
+    ) || 1;
 
-      r:
-        Math.random() *
-          1.4 +
-        .3,
+  const nx =
+    joyVec.x / len;
 
-      phase:
-        Math.random() *
-        Math.PI *
-        2
+  const ny =
+    joyVec.y / len;
 
-    });
+  me.angle =
+    Math.atan2(
+      ny,
+      nx
+    );
+
+  me.x +=
+    nx *
+    mag *
+    BASE_SPEED *
+    dt;
+
+  me.y +=
+    ny *
+    mag *
+    BASE_SPEED *
+    dt;
+
+  me.x =
+    Math.max(
+      SHIP_R,
+      Math.min(
+        W - SHIP_R,
+        me.x
+      )
+    );
+
+  me.y =
+    Math.max(
+      SHIP_R,
+      Math.min(
+        H - SHIP_R,
+        me.y
+      )
+    );
+
+  me.trail.push({
+    x: me.x,
+    y: me.y
+  });
+
+  if (
+    me.trail.length >
+    12
+  ) {
+
+    me.trail.shift();
 
   }
 
 }
 
-
 /* =========================================================
-   DOCK
+   RESOURCES
 ========================================================= */
 
-function myDock() {
+function spawnLocalResource() {
 
-  return dockFor(
-    myColorIndex
-  );
+  const margin =
+    RES_R * 3;
+
+  localResources.push({
+
+    id:
+      "r" +
+      Math.random(),
+
+    x:
+      rand(
+        W * 0.3,
+        W * 0.7
+      ),
+
+    y:
+      rand(
+        margin,
+        H - margin
+      ),
+
+    spawnT: 0,
+
+    pulse:
+      Math.random() *
+      Math.PI *
+      2,
+
+    takenBy:
+      null
+
+  });
 
 }
 
-
 /* =========================================================
-   PARTICLES
+   MOVE AI
 ========================================================= */
 
-function burst(
+function moveToward(
+  entity,
+  target,
+  dt
+) {
+
+  const d =
+    dist(
+      entity,
+      target
+    ) || 1;
+
+  entity.x +=
+    ((target.x -
+      entity.x) /
+      d) *
+    BASE_SPEED *
+    dt;
+
+  entity.y +=
+    ((target.y -
+      entity.y) /
+      d) *
+    BASE_SPEED *
+    dt;
+
+  entity.angle =
+    Math.atan2(
+      target.y -
+        entity.y,
+      target.x -
+        entity.x
+    );
+
+}
+
+/* =========================================================
+   CARRY LOGIC
+========================================================= */
+
+function handleCarryLogic(
+  ship,
+  resourcesArr,
+  dock,
+  isMe
+) {
+
+  if (ship.carrying) {
+
+    if (
+      dist(
+        ship,
+        dock
+      ) <
+      DOCK_R
+    ) {
+
+      ship.cargo++;
+
+      ship.fuel =
+        Math.min(
+          100,
+          ship.fuel +
+            FUEL_PER_RESOURCE
+        );
+
+      addFloater(
+        dock.x,
+        dock.y,
+        "+سوخت",
+        dockColor
+      );
+
+      burstParticles(
+        dock.x,
+        dock.y,
+        dockColor
+      );
+
+      playTone(
+        700,
+        0.08
+      );
+
+      const rid =
+        ship.carrying;
+
+      ship.carrying =
+        null;
+
+      if (isSolo) {
+
+        localResources =
+          localResources.filter(
+            r =>
+              r.id !== rid
+          );
+
+      } else {
+
+        remove(
+          astraRef(
+            `resources/${rid}`
+          )
+        ).catch(
+          () => {}
+        );
+
+      }
+
+    }
+
+    return;
+
+  }
+
+  let nearby = null;
+
+  if (isSolo) {
+
+    nearby =
+      localResources.find(
+        r =>
+          !r.takenBy &&
+          dist(
+            ship,
+            r
+          ) <
+          (
+            SHIP_R +
+            RES_R
+          ) *
+            CARRY_RANGE_MULT
+      );
+
+  } else {
+
+    nearby =
+      Object.entries(
+        firebaseResources
+      ).find(
+        ([id, r]) =>
+          !r.takenBy &&
+          dist(
+            ship,
+            r
+          ) <
+          (
+            SHIP_R +
+            RES_R
+          ) *
+            CARRY_RANGE_MULT
+      );
+
+  }
+
+  if (!nearby) {
+    return;
+  }
+
+  if (isSolo) {
+
+    nearby.takenBy =
+      myUid;
+
+    ship.carrying =
+      nearby.id;
+
+    playTone(
+      500,
+      0.06
+    );
+
+    return;
+
+  }
+
+  const [
+    id,
+    resource
+  ] = nearby;
+
+  runTransaction(
+    astraRef(
+      `resources/${id}/takenBy`
+    ),
+    current =>
+      current
+        ? current
+        : myUid
+  )
+    .then(
+      result => {
+
+        if (
+          result.committed &&
+          result.snapshot.val() ===
+            myUid
+        ) {
+
+          ship.carrying =
+            id;
+
+          playTone(
+            500,
+            0.06
+          );
+
+        }
+
+      }
+    )
+    .catch(
+      () => {}
+    );
+
+}
+
+/* =========================================================
+   SOLO
+========================================================= */
+
+function soloTick(
+  dt,
+  now
+) {
+
+  handleCarryLogic(
+    me,
+    localResources,
+    myDock,
+    true
+  );
+
+  if (!aiShip.launched) {
+
+    if (
+      aiShip.carrying
+    ) {
+
+      moveToward(
+        aiShip,
+        aiShip.dock,
+        dt
+      );
+
+      if (
+        dist(
+          aiShip,
+          aiShip.dock
+        ) <
+        DOCK_R
+      ) {
+
+        aiShip.cargo++;
+
+        aiShip.fuel =
+          Math.min(
+            100,
+            aiShip.fuel +
+              FUEL_PER_RESOURCE
+          );
+
+        aiShip.carrying =
+          null;
+
+      }
+
+    } else {
+
+      const target =
+        localResources
+          .filter(
+            r =>
+              !r.takenBy
+          )
+          .sort(
+            (a, b) =>
+              dist(
+                aiShip,
+                a
+              ) -
+              dist(
+                aiShip,
+                b
+              )
+          )[0];
+
+      if (target) {
+
+        moveToward(
+          aiShip,
+          target,
+          dt
+        );
+
+        if (
+          dist(
+            aiShip,
+            target
+          ) <
+          (
+            SHIP_R +
+            RES_R
+          ) *
+            CARRY_RANGE_MULT
+        ) {
+
+          target.takenBy =
+            "ai";
+
+          aiShip.carrying =
+            target.id;
+
+        }
+
+      }
+
+    }
+
+    aiShip.x =
+      Math.max(
+        SHIP_R,
+        Math.min(
+          W - SHIP_R,
+          aiShip.x
+        )
+      );
+
+    aiShip.y =
+      Math.max(
+        SHIP_R,
+        Math.min(
+          H - SHIP_R,
+          aiShip.y
+        )
+      );
+
+  }
+
+  localResources =
+    localResources.filter(
+      r =>
+        !r.takenBy
+    );
+
+  while (
+    localResources.length <
+    RESOURCE_COUNT
+  ) {
+
+    spawnLocalResource();
+
+  }
+
+  if (
+    me.fuel >= 100 &&
+    dist(
+      me,
+      myDock
+    ) <
+      DOCK_R &&
+    !raceOver
+  ) {
+
+    finishRace(
+      true
+    );
+
+  }
+
+  if (
+    aiShip.fuel >= 100 &&
+    dist(
+      aiShip,
+      aiShip.dock
+    ) <
+      DOCK_R &&
+    !raceOver
+  ) {
+
+    finishRace(
+      false
+    );
+
+  }
+
+  updateHudSolo();
+
+}
+
+/* =========================================================
+   EFFECTS
+========================================================= */
+
+function burstParticles(
   x,
   y,
   color,
@@ -653,27 +1453,36 @@ function burst(
   ) {
 
     const angle =
+      (
+        Math.PI *
+        2 *
+        i
+      ) /
+        count +
       Math.random() *
-      Math.PI *
-      2;
+        0.3;
 
     const speed =
       rand(
         50,
-        150
+        140
       );
 
-    localParticles.push({
+    particles.push({
 
       x,
       y,
 
       vx:
-        Math.cos(angle) *
+        Math.cos(
+          angle
+        ) *
         speed,
 
       vy:
-        Math.sin(angle) *
+        Math.sin(
+          angle
+        ) *
         speed,
 
       life: 1,
@@ -686,24 +1495,19 @@ function burst(
 
 }
 
-function floater(
+function addFloater(
   x,
   y,
   text,
   color
 ) {
 
-  localFloaters.push({
-
+  floaters.push({
     x,
     y,
-
     text,
-
     life: 1,
-
     color
-
   });
 
 }
@@ -712,2110 +1516,64 @@ function updateEffects(
   dt
 ) {
 
-  for (
-    const p of localParticles
-  ) {
+  particles.forEach(
+    p => {
 
-    p.x +=
-      p.vx * dt;
+      p.x +=
+        p.vx *
+        dt;
 
-    p.y +=
-      p.vy * dt;
+      p.y +=
+        p.vy *
+        dt;
 
-    p.vx *= .92;
+      p.vx *=
+        0.9;
 
-    p.vy *= .92;
+      p.vy *=
+        0.9;
 
-    p.life -=
-      dt * 1.5;
+      p.life -=
+        dt *
+        1.4;
 
-  }
+    }
+  );
 
-  localParticles =
-    localParticles.filter(
+  particles =
+    particles.filter(
       p =>
         p.life > 0
     );
 
-  for (
-    const f of localFloaters
-  ) {
+  floaters.forEach(
+    f => {
 
-    f.y -=
-      dt * 35;
+      f.y -=
+        dt *
+        40;
 
-    f.life -=
-      dt * .9;
+      f.life -=
+        dt *
+        0.9;
 
-  }
+    }
+  );
 
-  localFloaters =
-    localFloaters.filter(
+  floaters =
+    floaters.filter(
       f =>
         f.life > 0
     );
 
 }
 
-
 /* =========================================================
-   INIT PLAYER
-========================================================= */
-
-function createLocalPlayer() {
-
-  const dock =
-    myDock();
-
-  localMe = {
-
-    x:
-      dock.x,
-
-    y:
-      dock.y,
-
-    angle:
-      -Math.PI / 2,
-
-    hp:
-      MAX_HP,
-
-    fuel: 0,
-
-    cargo: 0,
-
-    carrying: null,
-
-    alive: true,
-
-    boostedUntil: 0,
-
-    lastHit: 0
-
-  };
-
-}
-
-
-/* =========================================================
-   FIND PLAYERS
-========================================================= */
-
-async function loadPlayers() {
-
-  const snap =
-    await get(
-      R("players")
-    );
-
-  players =
-    snap.val() || {};
-
-  const ids =
-    Object.keys(
-      players
-    ).sort();
-
-  const index =
-    ids.indexOf(
-      myUid
-    );
-
-  myColorIndex =
-    index >= 0
-      ? index
-      : 0;
-
-  myColor =
-    playerColor(
-      myColorIndex
-    );
-
-}
-
-
-/* =========================================================
-   CREATE MATCH
-========================================================= */
-
-async function ensureMatch() {
-
-  if (isSolo) {
-    return;
-  }
-
-  const metaSnap =
-    await get(
-      A("meta")
-    );
-
-  if (
-    metaSnap.exists()
-  ) {
-
-    const meta =
-      metaSnap.val();
-
-    if (
-      meta.roundId &&
-      (
-        !roundId ||
-        meta.roundId ===
-          roundId
-      )
-    ) {
-
-      roundId =
-        meta.roundId;
-
-      gameEndsAt =
-        Number(
-          meta.endsAt ||
-          0
-        );
-
-      gameStarted =
-        meta.status ===
-        "running";
-
-      return;
-
-    }
-
-  }
-
-  const now =
-    Date.now();
-
-  const newRound =
-    roundId ||
-    String(
-      now
-    );
-
-  const result =
-    await runTransaction(
-      A("meta"),
-      current => {
-
-        if (
-          current &&
-          current.roundId
-        ) {
-
-          return current;
-
-        }
-
-        return {
-
-          roundId:
-            newRound,
-
-          status:
-            "running",
-
-          startedAt:
-            now,
-
-          endsAt:
-            now +
-            MATCH_TIME *
-              1000,
-
-          winnerUid:
-            null
-
-        };
-
-      }
-    );
-
-  const meta =
-    result.snapshot.val();
-
-  if (meta) {
-
-    roundId =
-      meta.roundId;
-
-    gameEndsAt =
-      Number(
-        meta.endsAt
-      );
-
-    gameStarted =
-      meta.status ===
-      "running";
-
-  }
-
-}
-
-
-/* =========================================================
-   INITIAL RESOURCES
-========================================================= */
-
-async function ensureResources() {
-
-  const result =
-    await runTransaction(
-      A("resources"),
-      current => {
-
-        if (
-          current &&
-          Object.keys(
-            current
-          ).length
-        ) {
-
-          return current;
-
-        }
-
-        const data = {};
-
-        for (
-          let i = 0;
-          i <
-          RESOURCE_COUNT;
-          i++
-        ) {
-
-          data[
-            "r" + i
-          ] = {
-
-            x:
-              rand(
-                W * .25,
-                W * .75
-              ),
-
-            y:
-              rand(
-                H * .20,
-                H * .80
-              ),
-
-            takenBy:
-              null,
-
-            respawnAt:
-              0
-
-          };
-
-        }
-
-        return data;
-
-      }
-    );
-
-  resources =
-    result.snapshot.val() ||
-    {};
-
-}
-
-
-/* =========================================================
-   JOIN GAME
-========================================================= */
-
-async function joinGame() {
-
-  if (isSolo) {
-    return;
-  }
-
-  await loadPlayers();
-
-  await ensureMatch();
-
-  await ensureResources();
-
-  const dock =
-    myDock();
-
-  await set(
-    A(
-      `players/${myUid}`
-    ),
-    {
-
-      name:
-        myName,
-
-      x:
-        dock.x,
-
-      y:
-        dock.y,
-
-      angle:
-        -Math.PI / 2,
-
-      hp:
-        MAX_HP,
-
-      fuel:
-        0,
-
-      cargo:
-        0,
-
-      carrying:
-        null,
-
-      alive:
-        true,
-
-      colorIndex:
-        myColorIndex,
-
-      joinedAt:
-        Date.now()
-
-    }
-  );
-
-  await onDisconnect(
-    A(
-      `players/${myUid}`
-    )
-  ).remove();
-
-  await onDisconnect(
-    A(
-      `shots/${myUid}`
-    )
-  ).remove();
-
-}
-
-
-/* =========================================================
-   FIREBASE LISTENERS
-========================================================= */
-
-function listenGame() {
-
-  if (isSolo) {
-    return;
-  }
-
-  unsubscribers.push(
-
-    onValue(
-      A("players"),
-      snap => {
-
-        players =
-          snap.val() ||
-          {};
-
-        updateHud();
-
-      }
-    )
-
-  );
-
-  unsubscribers.push(
-
-    onValue(
-      A("resources"),
-      snap => {
-
-        resources =
-          snap.val() ||
-          {};
-
-      }
-    )
-
-  );
-
-  unsubscribers.push(
-
-    onValue(
-      A("shots"),
-      snap => {
-
-        shots =
-          snap.val() ||
-          {};
-
-      }
-    )
-
-  );
-
-  unsubscribers.push(
-
-    onValue(
-      A("meta"),
-      snap => {
-
-        const meta =
-          snap.val();
-
-        if (!meta) {
-          return;
-        }
-
-        gameEndsAt =
-          Number(
-            meta.endsAt ||
-            0
-          );
-
-        gameStarted =
-          meta.status ===
-          "running";
-
-        if (
-          meta.winnerUid &&
-          !winnerUid
-        ) {
-
-          winnerUid =
-            meta.winnerUid;
-
-          finishMatch(
-            winnerUid ===
-              myUid
-          );
-
-        }
-
-        if (
-          meta.status ===
-          "finished" &&
-          !raceOver
-        ) {
-
-          winnerUid =
-            meta.winnerUid ||
-            null;
-
-          finishMatch(
-            winnerUid ===
-              myUid
-          );
-
-        }
-
-      }
-    )
-
-  );
-
-}
-
-
-/* =========================================================
-   SYNC MY PLAYER
-========================================================= */
-
-async function syncPlayer() {
-
-  if (
-    isSolo ||
-    !localMe ||
-    !myUid ||
-    raceOver
-  ) {
-    return;
-  }
-
-  await update(
-    A(
-      `players/${myUid}`
-    ),
-    {
-
-      x:
-        localMe.x,
-
-      y:
-        localMe.y,
-
-      angle:
-        localMe.angle,
-
-      hp:
-        localMe.hp,
-
-      fuel:
-        localMe.fuel,
-
-      cargo:
-        localMe.cargo,
-
-      carrying:
-        localMe.carrying,
-
-      alive:
-        localMe.alive,
-
-      boostedUntil:
-        localMe.boostedUntil ||
-        0
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   MOVEMENT
-========================================================= */
-
-function updateMovement(
-  dt
-) {
-
-  if (
-    !localMe ||
-    !localMe.alive
-  ) {
-    return;
-  }
-
-  let x =
-    joy.x;
-
-  let y =
-    joy.y;
-
-  const magnitude =
-    Math.min(
-      1,
-      Math.hypot(
-        x,
-        y
-      )
-    );
-
-  if (
-    magnitude <
-    .02
-  ) {
-    return;
-  }
-
-  const len =
-    Math.hypot(
-      x,
-      y
-    ) || 1;
-
-  x /=
-    len;
-
-  y /=
-    len;
-
-  localMe.angle =
-    Math.atan2(
-      y,
-      x
-    );
-
-  const boosted =
-    Date.now() <
-    localMe.boostedUntil;
-
-  const speed =
-    boosted
-      ? BOOST_SPEED
-      : PLAYER_SPEED;
-
-  localMe.x +=
-    x *
-    speed *
-    magnitude *
-    dt;
-
-  localMe.y +=
-    y *
-    speed *
-    magnitude *
-    dt;
-
-  localMe.x =
-    clamp(
-      localMe.x,
-      PLAYER_RADIUS,
-      W -
-        PLAYER_RADIUS
-    );
-
-  localMe.y =
-    clamp(
-      localMe.y,
-      PLAYER_RADIUS,
-      H -
-        PLAYER_RADIUS
-    );
-
-}
-
-
-/* =========================================================
-   BOOST
-========================================================= */
-
-async function useBoost() {
-
-  if (
-    !localMe ||
-    !localMe.alive ||
-    raceOver
-  ) {
-    return;
-  }
-
-  const now =
-    Date.now();
-
-  if (
-    now -
-      lastBoost <
-    BOOST_COOLDOWN
-  ) {
-
-    return;
-
-  }
-
-  lastBoost =
-    now;
-
-  localMe.boostedUntil =
-    now +
-    BOOST_TIME;
-
-  burst(
-    localMe.x,
-    localMe.y,
-    myColor,
-    16
-  );
-
-  tone(
-    900,
-    .12
-  );
-
-  if (!isSolo) {
-
-    await update(
-      A(
-        `players/${myUid}`
-      ),
-      {
-        boostedUntil:
-          localMe.boostedUntil
-      }
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   FIRE
-========================================================= */
-
-async function fire() {
-
-  if (
-    !localMe ||
-    !localMe.alive ||
-    raceOver
-  ) {
-    return;
-  }
-
-  const now =
-    Date.now();
-
-  if (
-    now -
-      lastFire <
-    FIRE_COOLDOWN
-  ) {
-    return;
-  }
-
-  lastFire =
-    now;
-
-  const speed =
-    SHOT_SPEED;
-
-  const id =
-    myUid +
-    "_" +
-    now +
-    "_" +
-    Math.random()
-      .toString(36)
-      .slice(2, 7);
-
-  const shot = {
-
-    owner:
-      myUid,
-
-    x:
-      localMe.x +
-      Math.cos(
-        localMe.angle
-      ) *
-      (PLAYER_RADIUS + 5),
-
-    y:
-      localMe.y +
-      Math.sin(
-        localMe.angle
-      ) *
-      (PLAYER_RADIUS + 5),
-
-    vx:
-      Math.cos(
-        localMe.angle
-      ) *
-      speed,
-
-    vy:
-      Math.sin(
-        localMe.angle
-      ) *
-      speed,
-
-    createdAt:
-      now,
-
-    color:
-      myColor
-
-  };
-
-  if (isSolo) {
-
-    shots[id] =
-      shot;
-
-    tone(
-      800,
-      .05
-    );
-
-    return;
-
-  }
-
-  await set(
-    A(
-      `shots/${id}`
-    ),
-    shot
-  );
-
-  tone(
-    800,
-    .05
-  );
-
-}
-
-
-/* =========================================================
-   UPDATE SHOTS
-========================================================= */
-
-async function processShots(
-  dt
-) {
-
-  const now =
-    Date.now();
-
-  if (isSolo) {
-
-    for (
-      const [
-        id,
-        shot
-      ] of Object.entries(
-        shots
-      )
-    ) {
-
-      shot.x +=
-        shot.vx *
-        dt;
-
-      shot.y +=
-        shot.vy *
-        dt;
-
-      if (
-        now -
-          shot.createdAt >
-          SHOT_LIFE ||
-        shot.x <
-          -50 ||
-        shot.x >
-          W + 50 ||
-        shot.y <
-          -50 ||
-        shot.y >
-          H + 50
-      ) {
-
-        delete shots[id];
-
-      }
-
-    }
-
-    return;
-
-  }
-
-  for (
-    const [
-      id,
-      shot
-    ] of Object.entries(
-      shots
-    )
-  ) {
-
-    if (
-      now -
-        Number(
-          shot.createdAt
-        ) >
-      SHOT_LIFE
-    ) {
-
-      if (
-        shot.owner ===
-        myUid
-      ) {
-
-        remove(
-          A(
-            `shots/${id}`
-          )
-        );
-
-      }
-
-      continue;
-
-    }
-
-    /*
-      فقط صاحب تیر آن را جلو می‌برد.
-      این باعث می‌شود ۴ بازیکن
-      همزمان یک تیر را ۴ بار حرکت ندهند.
-    */
-
-    if (
-      shot.owner !==
-      myUid
-    ) {
-      continue;
-    }
-
-    const newX =
-      Number(
-        shot.x
-      ) +
-      Number(
-        shot.vx
-      ) *
-      dt;
-
-    const newY =
-      Number(
-        shot.y
-      ) +
-      Number(
-        shot.vy
-      ) *
-      dt;
-
-    await update(
-      A(
-        `shots/${id}`
-      ),
-      {
-        x:
-          newX,
-
-        y:
-          newY
-      }
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   COLLISION
-========================================================= */
-
-async function checkShotHits() {
-
-  if (
-    !localMe ||
-    !localMe.alive
-  ) {
-    return;
-  }
-
-  const now =
-    Date.now();
-
-  for (
-    const shot of
-      Object.values(
-        shots
-      )
-  ) {
-
-    if (
-      shot.owner ===
-      myUid
-    ) {
-      continue;
-    }
-
-    if (
-      now -
-        Number(
-          shot.createdAt
-        ) >
-      SHOT_LIFE
-    ) {
-      continue;
-    }
-
-    if (
-      distance(
-        localMe,
-        shot
-      ) <
-      PLAYER_RADIUS * 1.35
-    ) {
-
-      if (
-        now -
-          localMe.lastHit <
-        700
-      ) {
-        continue;
-      }
-
-      localMe.lastHit =
-        now;
-
-      localMe.hp =
-        Math.max(
-          0,
-          localMe.hp -
-            DAMAGE
-        );
-
-      burst(
-        localMe.x,
-        localMe.y,
-        "#ff4f81",
-        14
-      );
-
-      tone(
-        240,
-        .08
-      );
-
-      /*
-        فقط خود بازیکن وضعیت جان خودش
-        را تغییر می‌دهد.
-      */
-
-      if (
-        !isSolo
-      ) {
-
-        await update(
-          A(
-            `players/${myUid}`
-          ),
-          {
-            hp:
-              localMe.hp,
-
-            alive:
-              localMe.hp > 0
-          }
-        );
-
-        await remove(
-          A(
-            `shots/${findShotId(shot)}`
-          )
-        );
-
-      }
-
-      if (
-        localMe.hp <= 0
-      ) {
-
-        localMe.alive =
-          false;
-
-        localMe.carrying =
-          null;
-
-        floater(
-          localMe.x,
-          localMe.y,
-          "💥 حذف شدی",
-          "#ff4f81"
-        );
-
-      }
-
-    }
-
-  }
-
-}
-
-function findShotId(
-  target
-) {
-
-  for (
-    const [
-      id,
-      shot
-    ] of Object.entries(
-      shots
-    )
-  ) {
-
-    if (
-      shot ===
-      target
-    ) {
-      return id;
-    }
-
-  }
-
-  return "";
-
-}
-
-
-/* =========================================================
-   RESOURCES
-========================================================= */
-
-async function handleResources() {
-
-  if (
-    !localMe ||
-    !localMe.alive
-  ) {
-    return;
-  }
-
-  const now =
-    Date.now();
-
-  if (
-    now -
-      lastResourceCheck <
-    100
-  ) {
-    return;
-  }
-
-  lastResourceCheck =
-    now;
-
-  const dock =
-    myDock();
-
-  /*
-    اگر چیزی حمل می‌کنیم،
-    آن را به پایگاه برسان.
-  */
-
-  if (
-    localMe.carrying
-  ) {
-
-    if (
-      distance(
-        localMe,
-        dock
-      ) <
-      DOCK_RADIUS
-    ) {
-
-      const resourceId =
-        localMe.carrying;
-
-      localMe.carrying =
-        null;
-
-      localMe.cargo++;
-
-      localMe.fuel =
-        Math.min(
-          100,
-          localMe.fuel +
-            FUEL_PER_RESOURCE
-        );
-
-      burst(
-        dock.x,
-        dock.y,
-        myColor,
-        15
-      );
-
-      floater(
-        dock.x,
-        dock.y,
-        "+۲۰ سوخت",
-        "#ffc845"
-      );
-
-      tone(
-        720,
-        .08
-      );
-
-      if (
-        !isSolo
-      ) {
-
-        await runTransaction(
-          A(
-            `resources/${resourceId}`
-          ),
-          resource => {
-
-            if (
-              !resource
-            ) {
-              return resource;
-            }
-
-            if (
-              resource.takenBy !==
-              myUid
-            ) {
-              return resource;
-            }
-
-            return {
-
-              ...resource,
-
-              takenBy:
-                null,
-
-              respawnAt:
-                Date.now() +
-                RESPAWN_DELAY
-
-            };
-
-          }
-        );
-
-      }
-
-    }
-
-    return;
-
-  }
-
-
-  /*
-    پیدا کردن نزدیک‌ترین منبع آزاد
-  */
-
-  let nearestId =
-    null;
-
-  let nearest =
-    Infinity;
-
-  for (
-    const [
-      id,
-      resource
-    ] of Object.entries(
-      resources
-    )
-  ) {
-
-    if (
-      resource.takenBy
-    ) {
-      continue;
-    }
-
-    if (
-      Number(
-        resource.respawnAt ||
-          0
-      ) >
-      now
-    ) {
-      continue;
-    }
-
-    const d =
-      distance(
-        localMe,
-        resource
-      );
-
-    if (
-      d <
-      nearest
-    ) {
-
-      nearest =
-        d;
-
-      nearestId =
-        id;
-
-    }
-
-  }
-
-  if (
-    nearestId &&
-    nearest <
-      PLAYER_RADIUS +
-      RESOURCE_RADIUS +
-      6
-  ) {
-
-    if (
-      isSolo
-    ) {
-
-      const resource =
-        soloResources.find(
-          r =>
-            r.id ===
-            nearestId
-        );
-
-      if (
-        resource
-      ) {
-
-        resource.takenBy =
-          myUid;
-
-        localMe.carrying =
-          nearestId;
-
-      }
-
-    }
-    else {
-
-      const transaction =
-        await runTransaction(
-          A(
-            `resources/${nearestId}/takenBy`
-          ),
-          current => {
-
-            if (
-              current
-            ) {
-              return current;
-            }
-
-            return myUid;
-
-          }
-        );
-
-      if (
-        transaction.committed &&
-        transaction.snapshot.val() ===
-          myUid
-      ) {
-
-        localMe.carrying =
-          nearestId;
-
-        tone(
-          500,
-          .06
-        );
-
-      }
-
-    }
-
-  }
-
-}
-
-
-/* =========================================================
-   RESPAWN
-========================================================= */
-
-async function maintainResources() {
-
-  if (
-    isSolo ||
-    myColorIndex !== 0
-  ) {
-    return;
-  }
-
-  const now =
-    Date.now();
-
-  for (
-    const [
-      id,
-      resource
-    ] of Object.entries(
-      resources
-    )
-  ) {
-
-    if (
-      resource.takenBy
-    ) {
-      continue;
-    }
-
-    if (
-      Number(
-        resource.respawnAt ||
-          0
-      ) >
-      now
-    ) {
-      continue;
-    }
-
-  }
-
-  /*
-    اگر منبعی وجود نداشت،
-    فقط Host آن را اضافه می‌کند.
-  */
-
-  const count =
-    Object.keys(
-      resources
-    ).filter(
-      id => {
-
-        const r =
-          resources[id];
-
-        return (
-          !r.takenBy &&
-          Number(
-            r.respawnAt ||
-              0
-          ) <=
-            now
-        );
-
-      }
-    ).length;
-
-  const active =
-    Object.values(
-      resources
-    ).filter(
-      r =>
-        !r.takenBy &&
-        Number(
-          r.respawnAt ||
-            0
-        ) <=
-          now
-    ).length;
-
-  if (
-    active >=
-    RESOURCE_COUNT
-  ) {
-    return;
-  }
-
-  const missing =
-    RESOURCE_COUNT -
-    active;
-
-  for (
-    let i = 0;
-    i < missing;
-    i++
-  ) {
-
-    const id =
-      "r" +
-      Date.now() +
-      "_" +
-      Math.random()
-        .toString(36)
-        .slice(2,6);
-
-    await set(
-      A(
-        `resources/${id}`
-      ),
-      {
-
-        x:
-          rand(
-            W * .25,
-            W * .75
-          ),
-
-        y:
-          rand(
-            H * .20,
-            H * .80
-          ),
-
-        takenBy:
-          null,
-
-        respawnAt:
-          0
-
-      }
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   WIN CONDITION
-========================================================= */
-
-async function checkWinCondition() {
-
-  if (
-    isSolo ||
-    raceOver
-  ) {
-    return;
-  }
-
-  /*
-    رسیدن به 100 سوخت
-  */
-
-  if (
-    localMe &&
-    localMe.alive &&
-    localMe.fuel >= 100 &&
-    distance(
-      localMe,
-      myDock()
-    ) <
-      DOCK_RADIUS
-  ) {
-
-    await claimWinner(
-      myUid
-    );
-
-    return;
-
-  }
-
-
-  /*
-    آخرین نفر روی زمین
-  */
-
-  const alivePlayers =
-    Object.entries(
-      players
-    ).filter(
-      ([uid, player]) =>
-        player &&
-        player.alive !== false
-    );
-
-  if (
-    alivePlayers.length === 1
-  ) {
-
-    await claimWinner(
-      alivePlayers[0][0]
-    );
-
-  }
-
-}
-
-
-async function claimWinner(
-  uid
-) {
-
-  if (
-    raceOver
-  ) {
-    return;
-  }
-
-  await runTransaction(
-    A("meta"),
-    current => {
-
-      if (
-        !current
-      ) {
-        return current;
-      }
-
-      if (
-        current.winnerUid
-      ) {
-        return current;
-      }
-
-      return {
-
-        ...current,
-
-        status:
-          "finished",
-
-        winnerUid:
-          uid,
-
-        finishedAt:
-          Date.now()
-
-      };
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   TIMEOUT
-========================================================= */
-
-async function checkTimeout() {
-
-  if (
-    isSolo ||
-    raceOver ||
-    !gameEndsAt
-  ) {
-    return;
-  }
-
-  if (
-    Date.now() >=
-    gameEndsAt
-  ) {
-
-    const alive =
-      Object.entries(
-        players
-      )
-      .filter(
-        ([uid,p]) =>
-          p &&
-          p.alive !== false
-      )
-      .sort(
-        ([aUid,a],[bUid,b]) =>
-          Number(
-            b.fuel || 0
-          ) -
-          Number(
-            a.fuel || 0
-          )
-      );
-
-    const winner =
-      alive.length
-        ? alive[0][0]
-        : null;
-
-    await claimWinner(
-      winner
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   FINISH
-========================================================= */
-
-async function finishMatch(
-  iWon
-) {
-
-  if (
-    raceOver
-  ) {
-    return;
-  }
-
-  raceOver =
-    true;
-
-  running =
-    false;
-
-  paused =
-    true;
-
-  tone(
-    iWon
-      ? 1300
-      : 300,
-    .3
-  );
-
-  if (
-    localMe &&
-    localMe.alive
-  ) {
-
-    await syncPlayer();
-
-  }
-
-  try {
-
-    await recordRoundResult(
-      myName,
-      GAME_ID,
-      {
-        won:
-          iWon
-      }
-    );
-
-  } catch (
-    error
-  ) {
-
-    console.error(
-      "Astra result error:",
-      error
-    );
-
-  }
-
-  showResult(
-    iWon
-  );
-
-}
-
-
-/* =========================================================
-   RESULT SCREEN
-========================================================= */
-
-function showResult(
-  iWon
-) {
-
-  resultScreen.style.display =
-    "flex";
-
-  resultScreen.innerHTML = `
-
-    <div
-      class="headline ${
-        iWon
-          ? "winner"
-          : "loser"
-      }"
-    >
-      ${
-        iWon
-          ? "🏆 پیروزی!"
-          : "😅 این‌بار نشد"
-      }
-    </div>
-
-    <div
-      style="
-        color:#8B93B8;
-        font-size:13px;
-        margin-bottom:16px;
-      "
-    >
-      ${
-        winnerUid
-          ? (
-            winnerUid ===
-            myUid
-              ? "تو آخرین بازیکن باقی‌مانده بودی."
-              : "یک بازیکن دیگر برنده شد."
-          )
-          : "زمان مسابقه تمام شد."
-      }
-    </div>
-
-    <button
-      id="astraBackLobby"
-    >
-      🏠 بازگشت به اتاق
-    </button>
-
-    <button
-      id="astraHome"
-      class="ghost"
-    >
-      🏠 بازگشت به خانه
-    </button>
-
-  `;
-
-  const back =
-    document.getElementById(
-      "astraBackLobby"
-    );
-
-  const home =
-    document.getElementById(
-      "astraHome"
-    );
-
-  back.addEventListener(
-    "click",
-    async () => {
-
-      try {
-
-        if (
-          !isSolo &&
-          myUid
-        ) {
-
-          await remove(
-            A(
-              `players/${myUid}`
-            )
-          );
-
-        }
-
-      } catch {}
-
-      window.location.href =
-        "../lobby.html";
-
-    }
-  );
-
-  home.addEventListener(
-    "click",
-    () => {
-
-      window.location.href =
-        "../index.html";
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   HUD
-========================================================= */
-
-function updateHud() {
-
-  if (!localMe) {
-    return;
-  }
-
-  fuelEl.style.width =
-    clamp(
-      localMe.fuel,
-      0,
-      100
-    ) +
-    "%";
-
-  cargoEl.textContent =
-    localMe.cargo;
-
-  hpEl.textContent =
-    "❤️".repeat(
-      Math.max(
-        0,
-        localMe.hp
-      )
-    ) +
-    "🖤".repeat(
-      Math.max(
-        0,
-        MAX_HP -
-          localMe.hp
-      )
-    );
-
-  const remaining =
-    Math.max(
-      0,
-      localMe.boostedUntil -
-        Date.now()
-    );
-
-  boostEl.textContent =
-    remaining > 0
-      ? "فعال"
-      : (
-        Date.now() -
-          lastBoost <
-        BOOST_COOLDOWN
-          ? "درحال شارژ"
-          : "آماده"
-      );
-
-  const otherPlayers =
-    Object.entries(
-      players
-    )
-    .filter(
-      ([uid]) =>
-        uid !==
-        myUid
-    );
-
-  othersHud.innerHTML =
-    otherPlayers
-      .map(
-        ([uid,p]) => {
-
-          const color =
-            playerColor(
-              p.colorIndex
-            );
-
-          const hp =
-            Number(
-              p.hp ??
-              MAX_HP
-            );
-
-          const fuel =
-            Number(
-              p.fuel ||
-              0
-            );
-
-          return `
-
-            <div
-              class="astra-hud-chip"
-            >
-
-              <div
-                class="name"
-                style="
-                  color:${color};
-                "
-              >
-                🚀
-                ${escapeHtml(
-                  p.name ||
-                  "بازیکن"
-                )}
-              </div>
-
-              <div
-                style="
-                  font-size:8px;
-                "
-              >
-                ${"❤️".repeat(
-                  Math.max(
-                    0,
-                    hp
-                  )
-                )}
-              </div>
-
-              <div
-                class="mini-bar"
-              >
-
-                <div
-                  class="mini-fill"
-                  style="
-                    width:${clamp(
-                      fuel,
-                      0,
-                      100
-                    )}%;
-                    background:${color};
-                  "
-                ></div>
-
-              </div>
-
-            </div>
-
-          `;
-
-        }
-      )
-      .join("");
-
-}
-
-function escapeHtml(
-  value
-) {
-
-  return String(
-    value
-  )
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
-
-}
-
-
-/* =========================================================
-   TIMER
-========================================================= */
-
-function updateTimer() {
-
-  if (
-    isSolo
-  ) {
-
-    timerEl.textContent =
-      "تک‌نفره";
-
-    return;
-
-  }
-
-  if (
-    !gameEndsAt
-  ) {
-
-    timerEl.textContent =
-      "03:00";
-
-    return;
-
-  }
-
-  const seconds =
-    (
-      gameEndsAt -
-      Date.now()
-    ) / 1000;
-
-  timerEl.textContent =
-    formatTime(
-      seconds
-    );
-
-  if (
-    seconds <= 10
-  ) {
-
-    timerEl.style.color =
-      "#ff4f81";
-
-  } else {
-
-    timerEl.style.color =
-      "#ffc845";
-
-  }
-
-}
-
-
-/* =========================================================
-   DRAW
+   DRAW BACKGROUND
 ========================================================= */
 
 function drawBackground(
-  time
+  t
 ) {
 
   ctx.fillStyle =
@@ -2828,31 +1586,32 @@ function drawBackground(
     H
   );
 
-  const gradient =
+  const neb =
     ctx.createRadialGradient(
-      W * .25,
-      H * .20,
+      W * 0.25,
+      H * 0.2,
       0,
-      W * .25,
-      H * .20,
+      W * 0.25,
+      H * 0.2,
       Math.max(
         W,
         H
-      ) * .6
+      ) *
+        0.5
     );
 
-  gradient.addColorStop(
+  neb.addColorStop(
     0,
-    "rgba(124,77,255,.15)"
+    "rgba(124,77,255,.14)"
   );
 
-  gradient.addColorStop(
+  neb.addColorStop(
     1,
     "rgba(124,77,255,0)"
   );
 
   ctx.fillStyle =
-    gradient;
+    neb;
 
   ctx.fillRect(
     0,
@@ -2861,26 +1620,60 @@ function drawBackground(
     H
   );
 
-
-  const grid =
-    Math.max(
-      36,
-      Math.min(
+  const neb2 =
+    ctx.createRadialGradient(
+      W * 0.8,
+      H * 0.85,
+      0,
+      W * 0.8,
+      H * 0.85,
+      Math.max(
         W,
         H
-      ) / 12
+      ) *
+        0.45
     );
 
+  neb2.addColorStop(
+    0,
+    "rgba(79,124,255,.12)"
+  );
+
+  neb2.addColorStop(
+    1,
+    "rgba(79,124,255,0)"
+  );
+
+  ctx.fillStyle =
+    neb2;
+
+  ctx.fillRect(
+    0,
+    0,
+    W,
+    H
+  );
+
   ctx.strokeStyle =
-    "rgba(255,255,255,.025)";
+    "rgba(255,255,255,.03)";
 
   ctx.lineWidth =
     1;
 
+  const gap =
+    Math.max(
+      30,
+      Math.min(
+        W,
+        H
+      ) /
+        12
+    );
+
   for (
     let x = 0;
     x < W;
-    x += grid
+    x += gap
   ) {
 
     ctx.beginPath();
@@ -2902,7 +1695,7 @@ function drawBackground(
   for (
     let y = 0;
     y < H;
-    y += grid
+    y += gap
   ) {
 
     ctx.beginPath();
@@ -2921,47 +1714,39 @@ function drawBackground(
 
   }
 
+  stars.forEach(
+    s => {
 
-  for (
-    const star of
-      localStars
-  ) {
+      const alpha =
+        0.4 +
+        Math.sin(
+          t * 2 +
+            s.tw
+        ) *
+          0.3;
 
-    const alpha =
-      .35 +
-      Math.sin(
-        time * 2 +
-        star.phase
-      ) * .25;
+      ctx.beginPath();
 
-    ctx.globalAlpha =
-      Math.max(
-        .08,
-        alpha
+      ctx.arc(
+        s.x,
+        s.y,
+        s.r,
+        0,
+        Math.PI * 2
       );
 
-    ctx.fillStyle =
-      "#fff";
+      ctx.fillStyle =
+        `rgba(255,255,255,${Math.max(
+          0.1,
+          alpha
+        )})`;
 
-    ctx.beginPath();
+      ctx.fill();
 
-    ctx.arc(
-      star.x,
-      star.y,
-      star.r,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fill();
-
-  }
-
-  ctx.globalAlpha =
-    1;
+    }
+  );
 
 }
-
 
 /* =========================================================
    DRAW DOCK
@@ -2973,14 +1758,12 @@ function drawDock(
   active
 ) {
 
-  ctx.save();
-
   ctx.beginPath();
 
   ctx.arc(
     dock.x,
     dock.y,
-    DOCK_RADIUS,
+    DOCK_R,
     0,
     Math.PI * 2
   );
@@ -2988,269 +1771,167 @@ function drawDock(
   ctx.strokeStyle =
     color;
 
+  ctx.globalAlpha =
+    active
+      ? 0.9
+      : 0.3;
+
   ctx.lineWidth =
     active
       ? 3
       : 1.5;
 
-  ctx.globalAlpha =
-    active
-      ? .95
-      : .35;
-
-  if (
-    active
-  ) {
+  if (active) {
 
     ctx.shadowColor =
       color;
 
     ctx.shadowBlur =
-      18;
+      16;
 
   }
 
   ctx.stroke();
 
-  ctx.restore();
-
-}
-
-
-/* =========================================================
-   DRAW RESOURCE
-========================================================= */
-
-function drawResource(
-  resource,
-  time
-) {
-
-  if (
-    resource.takenBy
-  ) {
-    return;
-  }
-
-  if (
-    Number(
-      resource.respawnAt ||
-        0
-    ) >
-    Date.now()
-  ) {
-    return;
-  }
-
-  const pulse =
-    1 +
-    Math.sin(
-      time * 4 +
-      Number(
-        resource.x
-      )
-    ) *
-    .10;
-
-  ctx.save();
-
-  ctx.beginPath();
-
-  ctx.arc(
-    resource.x,
-    resource.y,
-    RESOURCE_RADIUS *
-      pulse,
-    0,
-    Math.PI * 2
-  );
-
-  ctx.fillStyle =
-    "#ffc845";
-
-  ctx.shadowColor =
-    "#ffc845";
-
-  ctx.shadowBlur =
-    14;
-
-  ctx.fill();
-
   ctx.shadowBlur =
     0;
 
-  ctx.fillStyle =
-    "#05060f";
-
-  ctx.font =
-    "10px sans-serif";
-
-  ctx.textAlign =
-    "center";
-
-  ctx.textBaseline =
-    "middle";
-
-  ctx.fillText(
-    "⚡",
-    resource.x,
-    resource.y
-  );
-
-  ctx.restore();
+  ctx.globalAlpha =
+    1;
 
 }
 
-
 /* =========================================================
-   DRAW SHOT
+   DRAW TRAIL
 ========================================================= */
 
-function drawShot(
-  shot
+function drawTrail(
+  trail,
+  color
 ) {
 
-  ctx.save();
+  trail.forEach(
+    (p, i) => {
 
-  ctx.beginPath();
+      const a =
+        (i /
+          trail.length) *
+        0.3;
 
-  ctx.arc(
-    shot.x,
-    shot.y,
-    4,
-    0,
-    Math.PI * 2
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        SHIP_R *
+          (
+            0.25 +
+            (
+              i /
+              trail.length
+            ) *
+              0.4
+          ),
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        color;
+
+      ctx.globalAlpha =
+        a;
+
+      ctx.fill();
+
+      ctx.globalAlpha =
+        1;
+
+    }
   );
-
-  ctx.fillStyle =
-    shot.color ||
-    "#fff";
-
-  ctx.shadowColor =
-    shot.color ||
-    "#fff";
-
-  ctx.shadowBlur =
-    12;
-
-  ctx.fill();
-
-  ctx.restore();
 
 }
 
-
 /* =========================================================
-   DRAW PLAYER
+   DRAW ROCKET
 ========================================================= */
 
-function drawPlayer(
-  player,
+function drawRocket(
+  x,
+  y,
+  angle,
   color,
-  name,
-  isMe
+  label,
+  carrying,
+  boosted
 ) {
-
-  if (
-    !player ||
-    player.alive === false
-  ) {
-    return;
-  }
-
-  const angle =
-    Number(
-      player.angle ||
-      0
-    );
 
   ctx.save();
 
   ctx.translate(
-    player.x,
-    player.y
+    x,
+    y
   );
 
   ctx.rotate(
     angle
   );
 
-  /*
-    Boost flame
-  */
+  ctx.beginPath();
 
-  const boosted =
-    Number(
-      player.boostedUntil ||
-      0
-    ) >
-    Date.now();
+  ctx.moveTo(
+    -SHIP_R * 1.1,
+    -SHIP_R * 0.4
+  );
 
-  if (
-    boosted
-  ) {
+  ctx.lineTo(
+    -SHIP_R *
+      (
+        1.8 +
+        Math.random() *
+          0.4
+      ),
+    0
+  );
 
-    ctx.beginPath();
+  ctx.lineTo(
+    -SHIP_R * 1.1,
+    SHIP_R * 0.4
+  );
 
-    ctx.moveTo(
-      -10,
-      -4
-    );
+  ctx.closePath();
 
-    ctx.lineTo(
-      -24 -
-        Math.random() * 8,
-      0
-    );
+  ctx.fillStyle =
+    "#FFC845";
 
-    ctx.lineTo(
-      -10,
-      4
-    );
+  ctx.globalAlpha =
+    0.85;
 
-    ctx.closePath();
+  ctx.fill();
 
-    ctx.fillStyle =
-      "#ffc845";
-
-    ctx.shadowColor =
-      "#ffc845";
-
-    ctx.shadowBlur =
-      15;
-
-    ctx.fill();
-
-    ctx.shadowBlur =
-      0;
-
-  }
-
-
-  /*
-    Rocket
-  */
+  ctx.globalAlpha =
+    1;
 
   ctx.beginPath();
 
   ctx.moveTo(
-    18,
+    SHIP_R * 1.3,
     0
   );
 
   ctx.lineTo(
-    -11,
-    -11
+    -SHIP_R * 0.8,
+    -SHIP_R * 0.75
   );
 
   ctx.lineTo(
-    -7,
+    -SHIP_R * 0.4,
     0
   );
 
   ctx.lineTo(
-    -11,
-    11
+    -SHIP_R * 0.8,
+    SHIP_R * 0.75
   );
 
   ctx.closePath();
@@ -3262,71 +1943,53 @@ function drawPlayer(
     color;
 
   ctx.shadowBlur =
-    isMe
-      ? 14
-      : 8;
+    boosted
+      ? Math.min(
+          22,
+          SHIP_R * 1.5
+        )
+      : Math.min(
+          10,
+          SHIP_R * 0.8
+        );
 
   ctx.fill();
 
   ctx.shadowBlur =
     0;
 
-
-  /*
-    cockpit
-  */
-
-  ctx.beginPath();
-
-  ctx.arc(
-    3,
-    0,
-    5,
-    0,
-    Math.PI * 2
-  );
-
-  ctx.fillStyle =
-    "#dff6ff";
-
-  ctx.fill();
-
-
   ctx.restore();
 
-
-  /*
-    carrying resource
-  */
-
-  if (
-    player.carrying
-  ) {
+  if (carrying) {
 
     ctx.beginPath();
 
     ctx.arc(
-      player.x -
+      x -
         Math.cos(
           angle
-        ) * 20,
+        ) *
+          SHIP_R *
+          1.6,
 
-      player.y -
+      y -
         Math.sin(
           angle
-        ) * 20,
+        ) *
+          SHIP_R *
+          1.6,
 
-      5,
+      RES_R * 0.5,
 
       0,
       Math.PI * 2
     );
 
     ctx.fillStyle =
-      "#ffc845";
+      "#FFC845";
 
     ctx.shadowColor =
-      "#ffc845";
+      "#FFC845";
 
     ctx.shadowBlur =
       8;
@@ -3338,238 +2001,556 @@ function drawPlayer(
 
   }
 
-
-  /*
-    name
-  */
-
   ctx.fillStyle =
-    "#eaf0ff";
+    "#EAF0FF";
 
   ctx.font =
-    "bold 10px Vazirmatn, Arial";
+    `${Math.max(
+      9,
+      SHIP_R * 0.65
+    )}px Vazirmatn, sans-serif`;
 
   ctx.textAlign =
     "center";
 
   ctx.fillText(
-    name ||
-      "بازیکن",
-    player.x,
-    player.y -
-      24
+    label,
+    x,
+    y -
+      SHIP_R -
+      8
   );
 
 }
 
+/* =========================================================
+   DRAW RESOURCES
+========================================================= */
+
+function drawResources(
+  t,
+  list
+) {
+
+  list.forEach(
+    r => {
+
+      if (r.takenBy) {
+        return;
+      }
+
+      r.spawnT =
+        Math.min(
+          1,
+          (
+            r.spawnT ||
+            0
+          ) +
+            0.06
+        );
+
+      const pulse =
+        1 +
+        Math.sin(
+          t * 3 +
+            (
+              r.pulse ||
+              0
+            )
+        ) *
+          0.1;
+
+      const rad =
+        RES_R *
+        r.spawnT *
+        pulse;
+
+      ctx.beginPath();
+
+      ctx.arc(
+        r.x,
+        r.y,
+        rad,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        "#FFC845";
+
+      ctx.shadowColor =
+        "#FFC845";
+
+      ctx.shadowBlur =
+        Math.min(
+          16,
+          rad
+        );
+
+      ctx.fill();
+
+      ctx.shadowBlur =
+        0;
+
+      ctx.fillStyle =
+        "#05060f";
+
+      ctx.font =
+        `${Math.max(
+          8,
+          rad * 0.8
+        )}px sans-serif`;
+
+      ctx.textAlign =
+        "center";
+
+      ctx.fillText(
+        "⚡",
+        r.x,
+        r.y +
+          rad * 0.3
+      );
+
+    }
+  );
+
+}
+
+/* =========================================================
+   DRAW EFFECTS
+========================================================= */
+
+function drawEffects() {
+
+  particles.forEach(
+    p => {
+
+      ctx.beginPath();
+
+      ctx.arc(
+        p.x,
+        p.y,
+        2.4,
+        0,
+        Math.PI * 2
+      );
+
+      ctx.fillStyle =
+        p.color;
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          p.life
+        );
+
+      ctx.fill();
+
+      ctx.globalAlpha =
+        1;
+
+    }
+  );
+
+  floaters.forEach(
+    f => {
+
+      ctx.font =
+        "bold 12px Vazirmatn, sans-serif";
+
+      ctx.textAlign =
+        "center";
+
+      ctx.fillStyle =
+        f.color;
+
+      ctx.globalAlpha =
+        Math.max(
+          0,
+          f.life
+        );
+
+      ctx.fillText(
+        f.text,
+        f.x,
+        f.y
+      );
+
+      ctx.globalAlpha =
+        1;
+
+    }
+  );
+
+}
 
 /* =========================================================
    DRAW
 ========================================================= */
 
 function draw(
-  time
+  t
 ) {
 
   drawBackground(
-    time
+    t
   );
-
-  const dock =
-    myDock();
 
   drawDock(
-    dock,
-    myColor,
-    localMe &&
-      localMe.fuel >= 100
+    myDock,
+    dockColor,
+    me.fuel >= 100
   );
 
+  if (isSolo) {
 
-  /*
-    منابع
-  */
-
-  const resourceList =
-    isSolo
-      ? soloResources
-      : Object.values(
-          resources
-        );
-
-  for (
-    const resource of
-      resourceList
-  ) {
-
-    drawResource(
-      resource,
-      time
+    drawResources(
+      t,
+      localResources
     );
 
-  }
-
-
-  /*
-    بازیکنان دیگر
-  */
-
-  if (
-    !isSolo
-  ) {
-
-    for (
-      const [
-        uid,
-        player
-      ] of Object.entries(
-        players
-      )
-    ) {
-
-      if (
-        uid ===
-        myUid
-      ) {
-        continue;
-      }
-
-      const color =
-        playerColor(
-          player.colorIndex
-        );
-
-      const dock =
-        dockFor(
-          player.colorIndex
-        );
+    if (aiShip) {
 
       drawDock(
-        dock,
-        color,
-        Number(
-          player.fuel ||
-            0
-        ) >= 100
+        aiShip.dock,
+        "#9B5CFF",
+        aiShip.fuel >=
+          100
       );
 
-      drawPlayer(
-        player,
-        color,
-        player.name,
+      drawTrail(
+        aiShip.trail ||
+          [],
+        "#9B5CFF"
+      );
+
+      drawRocket(
+        aiShip.x,
+        aiShip.y,
+        aiShip.angle,
+        "#9B5CFF",
+        "ربات",
+        aiShip.carrying,
         false
       );
 
     }
 
-  }
+  } else {
 
-
-  /*
-    خودمان
-  */
-
-  if (
-    localMe
-  ) {
-
-    drawPlayer(
-      localMe,
-      myColor,
-      myName,
-      true
-    );
-
-  }
-
-
-  /*
-    تیرها
-  */
-
-  for (
-    const shot of
-      Object.values(
-        shots
+    drawResources(
+      t,
+      Object.entries(
+        firebaseResources
+      ).map(
+        ([id, r]) => ({
+          ...r,
+          id
+        })
       )
-  ) {
+    );
 
-    drawShot(
-      shot
+    Object.values(
+      others
+    ).forEach(
+      o => {
+
+        const oDock =
+          dockForColorIndex(
+            o.colorIndex ||
+              0
+          );
+
+        drawDock(
+          oDock,
+          o.color,
+          (o.fuel || 0) >=
+            100
+        );
+
+        drawTrail(
+          o.trail || [],
+          o.color
+        );
+
+        drawRocket(
+          o.x,
+          o.y,
+          o.angle || 0,
+          o.color,
+          o.name,
+          o.carrying,
+          false
+        );
+
+      }
     );
 
   }
 
+  drawTrail(
+    me.trail,
+    dockColor
+  );
 
-  /*
-    Effects
-  */
+  drawRocket(
+    me.x,
+    me.y,
+    me.angle,
+    dockColor,
+    myName || "تو",
+    me.carrying,
+    false
+  );
 
-  for (
-    const particle of
-      localParticles
-  ) {
-
-    ctx.globalAlpha =
-      Math.max(
-        0,
-        particle.life
-      );
-
-    ctx.fillStyle =
-      particle.color;
-
-    ctx.beginPath();
-
-    ctx.arc(
-      particle.x,
-      particle.y,
-      2.5,
-      0,
-      Math.PI * 2
-    );
-
-    ctx.fill();
-
-  }
-
-  ctx.globalAlpha =
-    1;
-
-
-  for (
-    const f of
-      localFloaters
-  ) {
-
-    ctx.globalAlpha =
-      Math.max(
-        0,
-        f.life
-      );
-
-    ctx.fillStyle =
-      f.color;
-
-    ctx.font =
-      "bold 12px Vazirmatn";
-
-    ctx.textAlign =
-      "center";
-
-    ctx.fillText(
-      f.text,
-      f.x,
-      f.y
-    );
-
-  }
-
-  ctx.globalAlpha =
-    1;
+  drawEffects();
 
 }
 
+/* =========================================================
+   HUD
+========================================================= */
+
+function updateHudSolo() {
+
+  fuelP1El.style.width =
+    `${me.fuel}%`;
+
+  cargoP1El.textContent =
+    me.cargo;
+
+  othersHud.innerHTML = `
+    <div class="astra-hud-chip">
+      <div
+        class="name"
+        style="color:#9B5CFF;"
+      >
+        🤖 ربات
+      </div>
+
+      <div class="mini-bar">
+        <div
+          class="mini-fill"
+          style="
+            width:${aiShip.fuel}%;
+            background:#9B5CFF;
+          "
+        ></div>
+      </div>
+    </div>
+  `;
+
+}
+
+function updateHudRoom() {
+
+  fuelP1El.style.width =
+    `${me.fuel}%`;
+
+  cargoP1El.textContent =
+    me.cargo;
+
+  othersHud.innerHTML =
+    Object.values(
+      others
+    )
+      .map(
+        o => `
+          <div
+            class="astra-hud-chip"
+          >
+            <div
+              class="name"
+              style="
+                color:${o.color};
+              "
+            >
+              🚀 ${o.name}
+            </div>
+
+            <div class="mini-bar">
+              <div
+                class="mini-fill"
+                style="
+                  width:${o.fuel || 0}%;
+                  background:${o.color};
+                "
+              ></div>
+            </div>
+          </div>
+        `
+      )
+      .join("");
+
+}
+
+/* =========================================================
+   RENDER LOOP
+========================================================= */
+
+let lastTime =
+  null;
+
+let lastBroadcast =
+  0;
+
+function loop(
+  timestamp
+) {
+
+  if (
+    lastTime ===
+    null
+  ) {
+
+    lastTime =
+      timestamp;
+
+  }
+
+  const dt =
+    Math.min(
+      0.05,
+      (
+        timestamp -
+        lastTime
+      ) /
+        1000
+    );
+
+  lastTime =
+    timestamp;
+
+  const now =
+    timestamp /
+    1000;
+
+  if (
+    running &&
+    !paused &&
+    !raceOver
+  ) {
+
+    updateMe(
+      dt
+    );
+
+    updateEffects(
+      dt
+    );
+
+    if (isSolo) {
+
+      soloTick(
+        dt,
+        now
+      );
+
+    } else {
+
+      handleCarryLogic(
+        me,
+        [],
+        myDock,
+        true
+      );
+
+      if (
+        me.fuel >= 100 &&
+        dist(
+          me,
+          myDock
+        ) <
+          DOCK_R
+      ) {
+
+        tryClaimWin();
+
+      }
+
+      updateHudRoom();
+
+      if (
+        timestamp -
+          lastBroadcast >
+        90
+      ) {
+
+        lastBroadcast =
+          timestamp;
+
+        update(
+          astraRef(
+            `players/${myUid}`
+          ),
+          {
+            x: me.x,
+            y: me.y,
+            angle: me.angle,
+            fuel: me.fuel,
+            cargo: me.cargo,
+            carrying:
+              !!me.carrying
+          }
+        ).catch(
+          error => {
+            console.warn(
+              "Astra sync error:",
+              error
+            );
+          }
+        );
+
+      }
+
+    }
+
+  }
+
+  draw(
+    now
+  );
+
+  requestAnimationFrame(
+    loop
+  );
+
+}
+
+/* =========================================================
+   WINNER
+========================================================= */
+
+async function tryClaimWin() {
+
+  if (raceOver) {
+    return;
+  }
+
+  try {
+
+    await runTransaction(
+      astraRef(
+        "winner"
+      ),
+      current =>
+        current
+          ? current
+          : myUid
+    );
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Astra winner error:",
+      error
+    );
+
+  }
+
+}
 
 /* =========================================================
    COUNTDOWN
@@ -3577,51 +2558,36 @@ function draw(
 
 async function countdown() {
 
-  if (
-    countdownRunning
-  ) {
-    return;
-  }
-
-  countdownRunning =
-    true;
-
   paused =
     true;
 
   for (
-    const text of
-      [
-        "۳",
-        "۲",
-        "۱",
-        "برو!"
-      ]
+    const step of [
+      "۳",
+      "۲",
+      "۱",
+      "برو!"
+    ]
   ) {
 
-    overlayMsg.innerHTML = `
-
-      <div class="big">
-        ${text}
-      </div>
-
-    `;
+    overlayMsg.innerHTML =
+      `<div class="big">${step}</div>`;
 
     overlayMsg.style.display =
       "flex";
 
-    tone(
-      text === "برو!"
+    playTone(
+      step === "برو!"
         ? 900
         : 500,
-      .08
+      0.08
     );
 
     await new Promise(
       resolve =>
         setTimeout(
           resolve,
-          600
+          550
         )
     );
 
@@ -3633,77 +2599,201 @@ async function countdown() {
   paused =
     orientationLocked;
 
-  countdownRunning =
-    false;
-
 }
 
-
 /* =========================================================
-   SOLO
+   FINISH
 ========================================================= */
 
-function createSoloResources() {
+async function finishRace(
+  iWon
+) {
 
-  soloResources = [];
+  if (raceOver) {
+    return;
+  }
 
-  for (
-    let i = 0;
-    i <
-    RESOURCE_COUNT;
-    i++
+  raceOver =
+    true;
+
+  running =
+    false;
+
+  playTone(
+    iWon
+      ? 1300
+      : 300,
+    0.3
+  );
+
+  try {
+
+    await withTimeout(
+      recordRoundResult(
+        myName,
+        "astra",
+        {
+          won:
+            iWon
+        }
+      ),
+      CONNECTION_TIMEOUT,
+      "record-result"
+    );
+
+  } catch (
+    error
   ) {
 
-    soloResources.push({
-
-      id:
-        "solo_" +
-        i,
-
-      x:
-        rand(
-          W * .25,
-          W * .75
-        ),
-
-      y:
-        rand(
-          H * .20,
-          H * .80
-        ),
-
-      takenBy:
-        null,
-
-      respawnAt:
-        0
-
-    });
+    console.error(
+      "Astra result error:",
+      error
+    );
 
   }
 
+  showResult(
+    iWon
+  );
+
 }
 
-function createSoloBot() {
+/* =========================================================
+   RESULT SCREEN
+========================================================= */
 
-  const dock =
-    dockFor(
-      1
+function showResult(
+  iWon
+) {
+
+  resultScreen.style.display =
+    "flex";
+
+  resultScreen.innerHTML = `
+
+    <div
+      class="headline ${
+        iWon
+          ? "p1"
+          : "p2"
+      }"
+    >
+      ${
+        iWon
+          ? "🏆 پیروزی!"
+          : "😅 این‌بار نشد"
+      }
+    </div>
+
+    <div
+      style="
+        color:#8B93B8;
+        font-size:13px;
+        margin-bottom:16px;
+      "
+    >
+      🌍 پایان مسابقه
+    </div>
+
+    <button
+      id="rematchBtn"
+    >
+      ${
+        isSolo
+          ? "🔄 دوباره بازی کن"
+          : "🏠 بازگشت به اتاق"
+      }
+    </button>
+
+    <button
+      id="homeBtn"
+      class="ghost"
+    >
+      🏠 بازگشت به خانه
+    </button>
+
+  `;
+
+  document
+    .getElementById(
+      "rematchBtn"
+    )
+    .addEventListener(
+      "click",
+      async () => {
+
+        if (isSolo) {
+
+          window.location.reload();
+
+          return;
+
+        }
+
+        try {
+
+          await withTimeout(
+            resetSessionForNextRound(),
+            CONNECTION_TIMEOUT,
+            "reset-round"
+          );
+
+        } catch (
+          error
+        ) {
+
+          console.warn(
+            "Round reset error:",
+            error
+          );
+
+        }
+
+        window.location.href =
+          "../lobby.html";
+
+      }
     );
 
-  soloBot = {
+  document
+    .getElementById(
+      "homeBtn"
+    )
+    .addEventListener(
+      "click",
+      () => {
+
+        window.location.href =
+          "../index.html";
+
+      }
+    );
+
+}
+
+/* =========================================================
+   SOLO START
+========================================================= */
+
+async function startSolo() {
+
+  modeBadge.textContent =
+    "تک‌نفره در برابر ربات";
+
+  resizeCanvasResolution();
+
+  computeDock();
+
+  me = {
 
     x:
-      dock.x,
+      myDock.x,
 
     y:
-      dock.y,
+      myDock.y,
 
     angle:
-      Math.PI,
-
-    hp:
-      MAX_HP,
+      0,
 
     fuel:
       0,
@@ -3714,246 +2804,630 @@ function createSoloBot() {
     carrying:
       null,
 
-    alive:
-      true,
-
-    colorIndex:
-      1
+    trail:
+      []
 
   };
 
-}
+  aiShip = {
 
-function updateSoloBot(
-  dt
-) {
+    x:
+      W -
+      SHIP_R *
+        3,
 
-  if (
-    !soloBot ||
-    !soloBot.alive
-  ) {
-    return;
-  }
+    y:
+      H / 2,
 
-  let target =
-    null;
+    angle:
+      Math.PI,
 
-  if (
-    soloBot.carrying
-  ) {
+    fuel:
+      0,
 
-    target =
-      dockFor(
-        1
-      );
+    cargo:
+      0,
 
-  } else {
+    carrying:
+      null,
 
-    target =
-      soloResources
-        .filter(
-          r =>
-            !r.takenBy
-        )
-        .sort(
-          (a,b) =>
-            distance(
-              soloBot,
-              a
-            ) -
-            distance(
-              soloBot,
-              b
-            )
-        )[0];
+    trail:
+      [],
 
-  }
+    dock: {
 
-  if (!target) {
-    return;
-  }
+      x:
+        W -
+        SHIP_R *
+          3,
 
-  const dx =
-    target.x -
-    soloBot.x;
+      y:
+        H / 2
 
-  const dy =
-    target.y -
-    soloBot.y;
+    },
 
-  const d =
-    Math.hypot(
-      dx,
-      dy
-    ) || 1;
-
-  soloBot.angle =
-    Math.atan2(
-      dy,
-      dx
-    );
-
-  soloBot.x +=
-    dx / d *
-    120 *
-    dt;
-
-  soloBot.y +=
-    dy / d *
-    120 *
-    dt;
-
-  if (
-    distance(
-      soloBot,
-      target
-    ) <
-    PLAYER_RADIUS +
-      RESOURCE_RADIUS +
-      6
-  ) {
-
-    if (
-      soloBot.carrying
-    ) {
-
-      soloBot.cargo++;
-
-      soloBot.fuel =
-        Math.min(
-          100,
-          soloBot.fuel +
-            FUEL_PER_RESOURCE
-        );
-
-      const resource =
-        soloResources.find(
-          r =>
-            r.id ===
-            soloBot.carrying
-        );
-
-      if (
-        resource
-      ) {
-
-        resource.takenBy =
-          null;
-
-        resource.x =
-          rand(
-            W * .25,
-            W * .75
-          );
-
-        resource.y =
-          rand(
-            H * .20,
-            H * .80
-          );
-
-      }
-
-      soloBot.carrying =
-        null;
-
-    } else {
-
-      const resource =
-        target;
-
-      resource.takenBy =
-        "bot";
-
-      soloBot.carrying =
-        resource.id;
-
-    }
-
-  }
-
-  if (
-    soloBot.fuel >=
-      100 &&
-    distance(
-      soloBot,
-      dockFor(1)
-    ) <
-      DOCK_RADIUS
-  ) {
-
-    finishMatch(
+    launched:
       false
-    );
+
+  };
+
+  localResources =
+    [];
+
+  for (
+    let i = 0;
+    i <
+      RESOURCE_COUNT;
+    i++
+  ) {
+
+    spawnLocalResource();
 
   }
 
-}
+  entitiesInitialized =
+    true;
 
+  hideConnectionStatus();
+
+  paused =
+    true;
+
+  await countdown();
+
+}
 
 /* =========================================================
-   SOLO LOOP
+   ROOM START
 ========================================================= */
 
-async function updateSolo(
-  dt
-) {
+async function startRoom() {
 
-  await handleResources();
+  modeBadge.textContent =
+    "چندنفره — تا ۴ نفر";
 
-  updateSoloBot(
-    dt
+  setConnectionStatus(
+    "در حال اتصال...",
+    "در حال اتصال به اتاق دومیتو"
   );
 
-  if (
-    localMe &&
-    localMe.fuel >= 100 &&
-    distance(
-      localMe,
-      myDock()
-    ) <
-      DOCK_RADIUS
+  resizeCanvasResolution();
+
+  /*
+   * این دو عملیات مستقل هستند.
+   * قبلاً پشت سر هم اجرا می‌شدند و اگر Firebase
+   * روی یکی گیر می‌کرد، کل Astra ظاهراً Freeze می‌شد.
+   */
+
+  let playersSnap;
+  let resourcesResult;
+
+  try {
+
+    [
+      playersSnap,
+      resourcesResult
+    ] =
+      await Promise.all([
+
+        withTimeout(
+          get(
+            roomPath(
+              "players"
+            )
+          ),
+          CONNECTION_TIMEOUT,
+          "load-players"
+        ),
+
+        withTimeout(
+          runTransaction(
+            astraRef(
+              "resources"
+            ),
+            current => {
+
+              if (current) {
+                return current;
+              }
+
+              const obj =
+                {};
+
+              for (
+                let i = 0;
+                i <
+                  RESOURCE_COUNT;
+                i++
+              ) {
+
+                const margin =
+                  RES_R * 3;
+
+                obj[
+                  "r" + i
+                ] = {
+
+                  x:
+                    rand(
+                      W * 0.3,
+                      W * 0.7
+                    ),
+
+                  y:
+                    rand(
+                      margin,
+                      H -
+                        margin
+                    ),
+
+                  takenBy:
+                    null
+
+                };
+
+              }
+
+              return obj;
+
+            }
+          ),
+          CONNECTION_TIMEOUT,
+          "create-resources"
+        )
+
+      ]);
+
+  } catch (
+    error
   ) {
 
-    finishMatch(
+    console.error(
+      "Astra connection failed:",
+      error
+    );
+
+    paused =
+      true;
+
+    setConnectionStatus(
+      "❌ اتصال برقرار نشد",
+      friendlyError(
+        error
+      ),
       true
     );
 
+    return;
+
   }
 
-}
+  const roomPlayers =
+    playersSnap.val() ||
+    {};
 
+  const uids =
+    Object.keys(
+      roomPlayers
+    ).sort();
+
+  const myIndex =
+    uids.indexOf(
+      myUid
+    );
+
+  myColorIndex =
+    myIndex >= 0
+      ? myIndex
+      : 0;
+
+  dockColor =
+    COLORS[
+      myColorIndex %
+        COLORS.length
+    ] ||
+    COLORS[0];
+
+  computeDock();
+
+  me = {
+
+    x:
+      myDock.x,
+
+    y:
+      myDock.y,
+
+    angle:
+      0,
+
+    fuel:
+      0,
+
+    cargo:
+      0,
+
+    carrying:
+      null,
+
+    trail:
+      []
+
+  };
+
+  entitiesInitialized =
+    true;
+
+  try {
+
+    await withTimeout(
+
+      set(
+        astraRef(
+          `players/${myUid}`
+        ),
+        {
+
+          name:
+            myName,
+
+          x:
+            me.x,
+
+          y:
+            me.y,
+
+          angle:
+            0,
+
+          fuel:
+            0,
+
+          cargo:
+            0,
+
+          carrying:
+            false,
+
+          colorIndex:
+            myColorIndex %
+            COLORS.length
+
+        }
+      ),
+
+      CONNECTION_TIMEOUT,
+
+      "register-player"
+
+    );
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      "Astra player registration failed:",
+      error
+    );
+
+    paused =
+      true;
+
+    setConnectionStatus(
+      "❌ ورود به Astra انجام نشد",
+      friendlyError(
+        error
+      ),
+      true
+    );
+
+    return;
+
+  }
+
+  /*
+   * اگر صفحه بسته یا اتصال قطع شود،
+   * بازیکن از Astra حذف می‌شود.
+   */
+
+  try {
+
+    await onDisconnect(
+      astraRef(
+        `players/${myUid}`
+      )
+    ).remove();
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Astra onDisconnect error:",
+      error
+    );
+
+  }
+
+  /* =======================================================
+     RESOURCE LISTENER
+  ======================================================= */
+
+  unsubs.push(
+
+    onValue(
+      astraRef(
+        "resources"
+      ),
+      snapshot => {
+
+        const value =
+          snapshot.val() ||
+          {};
+
+        firebaseResources =
+          {
+            ...value
+          };
+
+        /*
+         * بازیکن اول مسئول پر کردن منابع کم‌شده است.
+         */
+
+        if (
+          myColorIndex ===
+            0 &&
+          Object.keys(
+            firebaseResources
+          ).length <
+            RESOURCE_COUNT
+        ) {
+
+          const needed =
+            RESOURCE_COUNT -
+            Object.keys(
+              firebaseResources
+            ).length;
+
+          for (
+            let i = 0;
+            i < needed;
+            i++
+          ) {
+
+            const id =
+              "r" +
+              Date.now() +
+              Math.random()
+                .toString(
+                  36
+                )
+                .slice(
+                  2
+                );
+
+            const margin =
+              RES_R * 3;
+
+            const resource = {
+
+              x:
+                rand(
+                  W * 0.3,
+                  W * 0.7
+                ),
+
+              y:
+                rand(
+                  margin,
+                  H -
+                    margin
+                ),
+
+              takenBy:
+                null
+
+            };
+
+            set(
+              astraRef(
+                `resources/${id}`
+              ),
+              resource
+            ).catch(
+              error => {
+
+                console.warn(
+                  "Resource respawn error:",
+                  error
+                );
+
+              }
+            );
+
+          }
+
+        }
+
+      }
+    )
+
+  );
+
+  /* =======================================================
+     PLAYERS LISTENER
+  ======================================================= */
+
+  unsubs.push(
+
+    onValue(
+      astraRef(
+        "players"
+      ),
+      snapshot => {
+
+        const value =
+          snapshot.val() ||
+          {};
+
+        others =
+          {};
+
+        Object.entries(
+          value
+        ).forEach(
+          ([uid, player]) => {
+
+            if (
+              uid === myUid
+            ) {
+
+              return;
+
+            }
+
+            const index =
+              Number(
+                player.colorIndex ||
+                0
+              );
+
+            others[uid] = {
+
+              ...player,
+
+              color:
+                COLORS[
+                  index %
+                    COLORS.length
+                ] ||
+                COLORS[1]
+
+            };
+
+          }
+        );
+
+      }
+    )
+
+  );
+
+  /* =======================================================
+     WINNER LISTENER
+  ======================================================= */
+
+  unsubs.push(
+
+    onValue(
+      astraRef(
+        "winner"
+      ),
+      snapshot => {
+
+        const winnerUid =
+          snapshot.val();
+
+        if (
+          winnerUid &&
+          !raceOver
+        ) {
+
+          finishRace(
+            winnerUid ===
+              myUid
+          );
+
+        }
+
+      }
+    )
+
+  );
+
+  /*
+   * چت اتاق
+   */
+
+  try {
+
+    mountChat(
+      myName,
+      code
+    );
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Astra chat error:",
+      error
+    );
+
+  }
+
+  hideConnectionStatus();
+
+  /*
+   * بازی از اینجا به بعد شروع می‌شود.
+   */
+
+  paused =
+    true;
+
+  await countdown();
+
+}
 
 /* =========================================================
    JOYSTICK
 ========================================================= */
 
-function setupJoystick() {
+function setupJoystick(
+  baseEl,
+  knobEl
+) {
+
+  if (
+    !baseEl ||
+    !knobEl
+  ) {
+
+    console.warn(
+      "Astra joystick elements not found."
+    );
+
+    return;
+
+  }
 
   let active =
     false;
-
-  let pointerId =
-    null;
 
   let origin = {
     x: 0,
     y: 0
   };
 
+  let pointerId =
+    null;
+
   function start(
-    event
+    clientX,
+    clientY
   ) {
 
     active =
       true;
 
-    pointerId =
-      event.pointerId;
+    baseEl.classList.add(
+      "pressed"
+    );
 
     const rect =
-      joystickBase
-        .getBoundingClientRect();
+      baseEl.getBoundingClientRect();
 
     origin = {
 
@@ -3967,59 +3441,51 @@ function setupJoystick() {
 
     };
 
-    joystickBase.classList.add(
-      "pressed"
-    );
-
-    joystickBase.setPointerCapture(
-      event.pointerId
-    );
-
   }
 
   function move(
-    event
+    clientX,
+    clientY
   ) {
 
-    if (
-      !active ||
-      event.pointerId !==
-        pointerId
-    ) {
+    if (!active) {
       return;
     }
 
     let dx =
-      event.clientX -
+      clientX -
       origin.x;
 
     let dy =
-      event.clientY -
+      clientY -
       origin.y;
 
     const max =
-      joystickBase
-        .getBoundingClientRect()
+      baseEl.getBoundingClientRect()
         .width *
-      .38;
+      0.38;
 
-    const length =
+    const deadZone =
+      max *
+      0.14;
+
+    const d =
       Math.hypot(
         dx,
         dy
       );
 
     if (
-      length <
-      max * .12
+      d <
+      deadZone
     ) {
 
-      joy = {
+      joyVec = {
         x: 0,
         y: 0
       };
 
-      joystickKnob.style.transform =
+      knobEl.style.transform =
         "translate(0,0)";
 
       return;
@@ -4027,24 +3493,28 @@ function setupJoystick() {
     }
 
     if (
-      length >
+      d >
       max
     ) {
 
       dx =
-        dx / length *
+        (
+          dx / d
+        ) *
         max;
 
       dy =
-        dy / length *
+        (
+          dy / d
+        ) *
         max;
 
     }
 
-    joystickKnob.style.transform =
+    knobEl.style.transform =
       `translate(${dx}px, ${dy}px)`;
 
-    joy = {
+    joyVec = {
 
       x:
         dx / max,
@@ -4064,109 +3534,141 @@ function setupJoystick() {
     pointerId =
       null;
 
-    joy = {
+    baseEl.classList.remove(
+      "pressed"
+    );
+
+    knobEl.style.transform =
+      "translate(0,0)";
+
+    joyVec = {
       x: 0,
       y: 0
     };
 
-    joystickKnob.style.transform =
-      "translate(0,0)";
-
-    joystickBase.classList.remove(
-      "pressed"
-    );
-
   }
 
-  joystickBase.addEventListener(
+  baseEl.addEventListener(
     "pointerdown",
     event => {
 
       event.preventDefault();
 
+      if (
+        pointerId !==
+        null
+      ) {
+
+        return;
+
+      }
+
+      pointerId =
+        event.pointerId;
+
+      try {
+
+        baseEl.setPointerCapture(
+          event.pointerId
+        );
+
+      } catch (
+        error
+      ) {}
+
       start(
-        event
+        event.clientX,
+        event.clientY
+      );
+
+      move(
+        event.clientX,
+        event.clientY
       );
 
     }
   );
 
-  joystickBase.addEventListener(
+  baseEl.addEventListener(
     "pointermove",
     event => {
 
-      event.preventDefault();
+      if (
+        event.pointerId ===
+        pointerId
+      ) {
 
-      move(
-        event
-      );
+        event.preventDefault();
 
-    }
-  );
+        move(
+          event.clientX,
+          event.clientY
+        );
 
-  joystickBase.addEventListener(
-    "pointerup",
-    end
-  );
-
-  joystickBase.addEventListener(
-    "pointercancel",
-    end
-  );
-
-}
-
-
-/* =========================================================
-   FIRE BUTTON
-========================================================= */
-
-function setupFire() {
-
-  fireButton.addEventListener(
-    "pointerdown",
-    event => {
-
-      event.preventDefault();
-
-      fireHeld =
-        true;
-
-      fire();
+      }
 
     }
   );
 
-  fireButton.addEventListener(
+  baseEl.addEventListener(
     "pointerup",
     event => {
 
-      event.preventDefault();
+      if (
+        event.pointerId ===
+        pointerId
+      ) {
 
-      fireHeld =
-        false;
+        end();
+
+      }
 
     }
   );
 
-  fireButton.addEventListener(
+  baseEl.addEventListener(
     "pointercancel",
+    event => {
+
+      if (
+        event.pointerId ===
+        pointerId
+      ) {
+
+        end();
+
+      }
+
+    }
+  );
+
+  baseEl.addEventListener(
+    "lostpointercapture",
     () => {
 
-      fireHeld =
-        false;
+      if (active) {
+        end();
+      }
 
     }
   );
 
+  baseEl.style.touchAction =
+    "none";
+
 }
 
+setupJoystick(
+  joyBase,
+  joyKnob
+);
 
 /* =========================================================
    KEYBOARD
 ========================================================= */
 
-const keys = {};
+const keys =
+  {};
 
 window.addEventListener(
   "keydown",
@@ -4176,7 +3678,7 @@ window.addEventListener(
       event.key
     ] = true;
 
-    updateKeyboard();
+    updateKeyVec();
 
   }
 );
@@ -4189,104 +3691,122 @@ window.addEventListener(
       event.key
     ] = false;
 
-    updateKeyboard();
+    updateKeyVec();
 
   }
 );
 
-function updateKeyboard() {
+function updateKeyVec() {
 
   let x = 0;
-
   let y = 0;
 
   if (
-    keys.ArrowLeft ||
-    keys.a
+    keys["ArrowLeft"] ||
+    keys["a"] ||
+    keys["A"]
   ) {
-    x--;
+
+    x -= 1;
+
   }
 
   if (
-    keys.ArrowRight ||
-    keys.d
+    keys["ArrowRight"] ||
+    keys["d"] ||
+    keys["D"]
   ) {
-    x++;
+
+    x += 1;
+
   }
 
   if (
-    keys.ArrowUp ||
-    keys.w
+    keys["ArrowUp"] ||
+    keys["w"] ||
+    keys["W"]
   ) {
-    y--;
+
+    y -= 1;
+
   }
 
   if (
-    keys.ArrowDown ||
-    keys.s
-  ) {
-    y++;
-  }
-
-  if (
-    x !== 0 ||
-    y !== 0
+    keys["ArrowDown"] ||
+    keys["s"] ||
+    keys["S"]
   ) {
 
-    joy = {
-      x,
-      y
-    };
+    y += 1;
 
   }
+
+  joyVec = {
+    x,
+    y
+  };
 
 }
-
 
 /* =========================================================
-   FIRE LOOP
+   FULLSCREEN
 ========================================================= */
 
-function fireLoop() {
+fullscreenBtn.addEventListener(
+  "click",
+  async () => {
 
-  if (
-    fireHeld &&
-    running &&
-    !paused &&
-    !raceOver
-  ) {
+    try {
 
-    fire();
+      if (
+        !document.fullscreenElement
+      ) {
+
+        await document.documentElement
+          .requestFullscreen();
+
+        fullscreenBtn.textContent =
+          "⛶ خروج";
+
+      } else {
+
+        await document.exitFullscreen();
+
+        fullscreenBtn.textContent =
+          "⛶ تمام‌صفحه";
+
+      }
+
+    } catch (
+      error
+    ) {}
 
   }
-
-  requestAnimationFrame(
-    fireLoop
-  );
-
-}
-
+);
 
 /* =========================================================
    ORIENTATION
 ========================================================= */
 
+let orientationLocked =
+  false;
+
 function checkOrientation() {
 
-  const width =
+  const w =
     window.innerWidth;
 
-  const height =
+  const h =
     window.innerHeight;
 
   orientationLocked =
-    width <
-      height &&
     Math.min(
-      width,
-      height
+      w,
+      h
     ) <
-      700;
+      700 &&
+    h >
+      w;
 
   rotateScreen.classList.toggle(
     "show",
@@ -4305,361 +3825,80 @@ function checkOrientation() {
 
 }
 
+function handleViewportChange() {
 
-/* =========================================================
-   CONNECTION UI
-========================================================= */
-
-function setConnection(
-  online
-) {
-
-  connectionOnline =
-    online;
-
-  connectionEl.textContent =
-    online
-      ? "🟢 آنلاین"
-      : "🔴 قطع اتصال";
-
-  connectionEl.style.color =
-    online
-      ? "#3ecf8e"
-      : "#ff4f81";
-
-}
-
-
-/* =========================================================
-   MAIN LOOP
-========================================================= */
-
-async function loop(
-  timestamp
-) {
+  checkOrientation();
 
   if (
-    !running
+    !orientationLocked
   ) {
 
     requestAnimationFrame(
-      loop
-    );
+      () => {
 
-    return;
-
-  }
-
-  if (
-    !lastFrame
-  ) {
-
-    lastFrame =
-      timestamp;
-
-  }
-
-  const dt =
-    Math.min(
-      .05,
-      (
-        timestamp -
-        lastFrame
-      ) /
-      1000
-    );
-
-  lastFrame =
-    timestamp;
-
-
-  if (
-    !paused &&
-    !raceOver
-  ) {
-
-    updateMovement(
-      dt
-    );
-
-    updateEffects(
-      dt
-    );
-
-    if (
-      isSolo
-    ) {
-
-      await updateSolo(
-        dt
-      );
-
-    }
-    else {
-
-      await handleResources();
-
-      await processShots(
-        dt
-      );
-
-      await checkShotHits();
-
-      await maintainResources();
-
-      await checkWinCondition();
-
-      await checkTimeout();
-
-
-      if (
-        timestamp -
-          lastSync >
-        SYNC_INTERVAL
-      ) {
-
-        lastSync =
-          timestamp;
-
-        syncPlayer();
+        requestAnimationFrame(
+          resizeCanvasResolution
+        );
 
       }
-
-    }
+    );
 
   }
 
-  updateHud();
+}
 
-  updateTimer();
+window.addEventListener(
+  "resize",
+  handleViewportChange
+);
 
-  draw(
-    timestamp / 1000
-  );
+window.addEventListener(
+  "orientationchange",
+  handleViewportChange
+);
 
-  requestAnimationFrame(
-    loop
+if (
+  window.visualViewport
+) {
+
+  window.visualViewport.addEventListener(
+    "resize",
+    handleViewportChange
   );
 
 }
-
-
-/* =========================================================
-   START
-========================================================= */
-
-async function startSolo() {
-
-  modeBadge.textContent =
-    "تک‌نفره";
-
-  resizeCanvas();
-
-  createLocalPlayer();
-
-  createSoloResources();
-
-  createSoloBot();
-
-  running =
-    true;
-
-  gameStarted =
-    true;
-
-  requestAnimationFrame(
-    loop
-  );
-
-  await countdown();
-
-}
-
-
-async function startMultiplayer() {
-
-  modeBadge.textContent =
-    "چندنفره — تا ۴ نفر";
-
-  resizeCanvas();
-
-  await joinGame();
-
-  createLocalPlayer();
-
-  listenGame();
-
-  mountChat(
-    myName,
-    code
-  );
-
-  setConnection(
-    true
-  );
-
-  running =
-    true;
-
-  requestAnimationFrame(
-    loop
-  );
-
-  await countdown();
-
-}
-
 
 /* =========================================================
    CLEANUP
 ========================================================= */
 
-async function cleanup() {
+function cleanupFirebaseListeners() {
 
-  if (
-    cleanupStarted
-  ) {
-    return;
-  }
+  unsubs.forEach(
+    unsubscribe => {
 
-  cleanupStarted =
-    true;
+      try {
 
-  for (
-    const unsubscribe of
-      unsubscribers
-  ) {
+        if (
+          typeof unsubscribe ===
+          "function"
+        ) {
 
-    try {
-      unsubscribe();
-    } catch {}
+          unsubscribe();
 
-  }
+        }
 
-  unsubscribers =
+      } catch (
+        error
+      ) {}
+
+    }
+  );
+
+  unsubs =
     [];
 
-  if (
-    !isSolo &&
-    myUid
-  ) {
-
-    try {
-
-      await remove(
-        A(
-          `players/${myUid}`
-        )
-      );
-
-    } catch {}
-
-  }
-
 }
-
-
-/* =========================================================
-   BUTTONS
-========================================================= */
-
-muteButton.addEventListener(
-  "click",
-  () => {
-
-    muted =
-      !muted;
-
-    muteButton.textContent =
-      muted
-        ? "🔇"
-        : "🔊";
-
-  }
-);
-
-
-boostButton.addEventListener(
-  "pointerdown",
-  event => {
-
-    event.preventDefault();
-
-    useBoost();
-
-  }
-);
-
-
-fullscreenButton.addEventListener(
-  "click",
-  async () => {
-
-    try {
-
-      if (
-        !document.fullscreenElement
-      ) {
-
-        await document
-          .documentElement
-          .requestFullscreen();
-
-      }
-      else {
-
-        await document.exitFullscreen();
-
-      }
-
-    } catch {}
-
-  }
-);
-
-
-/* =========================================================
-   WINDOW EVENTS
-========================================================= */
-
-window.addEventListener(
-  "resize",
-  () => {
-
-    checkOrientation();
-
-    resizeCanvas();
-
-  }
-);
-
-window.addEventListener(
-  "orientationchange",
-  () => {
-
-    setTimeout(
-      () => {
-
-        checkOrientation();
-
-        resizeCanvas();
-
-      },
-      150
-    );
-
-  }
-);
-
-window.addEventListener(
-  "beforeunload",
-  () => {
-
-    cleanup();
-
-  }
-);
-
 
 /* =========================================================
    INIT
@@ -4667,30 +3906,42 @@ window.addEventListener(
 
 async function init() {
 
+  /*
+   * اول Canvas را راه می‌اندازیم.
+   * بنابراین حتی هنگام اتصال Firebase هم صفحه Freeze
+   * یا کاملاً بی‌حرکت دیده نمی‌شود.
+   */
+
+  resizeCanvasResolution();
+
+  checkOrientation();
+
+  running =
+    true;
+
+  requestAnimationFrame(
+    loop
+  );
+
+  setConnectionStatus(
+    "در حال اتصال...",
+    "در حال بررسی ورود و اتصال به اتاق"
+  );
+
   try {
 
     const user =
-      await waitForUser();
-
-    if (
-      !user
-    ) {
-
-      window.location.href =
-        "../index.html";
-
-      return;
-
-    }
+      await withTimeout(
+        waitForUser(),
+        CONNECTION_TIMEOUT,
+        "auth"
+      );
 
     myName =
       getSavedName();
 
-    myUid =
-      currentUid();
-
     if (
-      !myUid ||
+      !user ||
       !myName
     ) {
 
@@ -4701,42 +3952,39 @@ async function init() {
 
     }
 
+    myUid =
+      currentUid();
+
+    if (!myUid) {
+
+      throw new Error(
+        "not-authenticated"
+      );
+
+    }
+
     p1Label.textContent =
       myName;
 
     checkOrientation();
 
-    resizeCanvas();
-
-    setupJoystick();
-
-    setupFire();
-
-    fireLoop();
-
-    if (
-      isSolo
-    ) {
+    if (isSolo) {
 
       await startSolo();
 
-    }
-    else {
-
-      if (
-        !code
-      ) {
-
-        window.location.href =
-          "../index.html";
-
-        return;
-
-      }
-
-      await startMultiplayer();
+      return;
 
     }
+
+    if (!code) {
+
+      throw new Error(
+        "no-room"
+      );
+
+    }
+
+    await startRoom();
 
   } catch (
     error
@@ -4747,28 +3995,57 @@ async function init() {
       error
     );
 
-    overlayMsg.innerHTML = `
+    running =
+      true;
 
-      <div class="big">
-        ❌
-      </div>
+    paused =
+      true;
 
-      <div class="sub">
-        اتصال به بازی برقرار نشد
-      </div>
-
-    `;
-
-    overlayMsg.style.display =
-      "flex";
+    setConnectionStatus(
+      "❌ Astra متوقف شد",
+      friendlyError(
+        error
+      ),
+      true
+    );
 
   }
 
 }
 
+/* =========================================================
+   PAGE CLOSE
+========================================================= */
+
+window.addEventListener(
+  "beforeunload",
+  () => {
+
+    cleanupFirebaseListeners();
+
+    if (
+      !isSolo &&
+      myUid &&
+      code
+    ) {
+
+      remove(
+        astraRef(
+          `players/${myUid}`
+        )
+      ).catch(
+        () => {}
+      );
+
+    }
+
+  }
+);
 
 /* =========================================================
-   RUN
+   START
 ========================================================= */
+
+createConnectionOverlay();
 
 init();
