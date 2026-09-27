@@ -1292,7 +1292,7 @@ export const GAMES = [
     id: "math",
     name: "پرش از سکو ",
     desc: "بپر برو بالا و برنده شو ",
-    icon: "🚀",
+    icon: "⬆️",
     soloThreshold: 40
   },
 
