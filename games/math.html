@@ -218,6 +218,43 @@
       font-weight: 800;
     }
 
+    .room-exit {
+      position: absolute;
+
+      top: 10px;
+      right: 10px;
+
+      z-index: 16;
+
+      border: none;
+
+      padding:
+        7px 10px;
+
+      border-radius: 11px;
+
+      background:
+        rgba(248,113,113,.13);
+
+      border:
+        1px solid
+        rgba(248,113,113,.25);
+
+      color: #fecaca;
+
+      font-size: .68rem;
+
+      font-weight: 700;
+
+      cursor: pointer;
+
+      display: none;
+    }
+
+    .room-exit.show {
+      display: block;
+    }
+
     .overlay {
       position: absolute;
 
@@ -381,6 +418,15 @@
     </button>
 
 
+    <button
+      class="room-exit"
+      id="roomExitBtn"
+      type="button"
+    >
+      🚪 خروج از اتاق
+    </button>
+
+
     <div class="hud">
 
       <div class="score">
@@ -504,19 +550,17 @@
       currentUid,
 
       getSavedRoom,
-      getRoomMeta,
-
       roomRef,
+      get,
       onValue,
       set,
-      get,
       runTransaction,
-
-      joinLobby,
 
       submitResult,
       recordRoundResult,
-      soloWon
+      soloWon,
+
+      leaveLobby
 
     } from "../js/app.js";
 
@@ -527,9 +571,6 @@
 
     const GAME_ID =
       "math";
-
-    const MAX_PLAYERS =
-      4;
 
     const SYNC_INTERVAL =
       100;
@@ -590,6 +631,9 @@
     const muteBtn =
       document.getElementById("muteBtn");
 
+    const roomExitBtn =
+      document.getElementById("roomExitBtn");
+
     const startTitle =
       document.getElementById("startTitle");
 
@@ -646,8 +690,6 @@
     let myUid = null;
 
     let roomCode = "";
-    let roomMeta = null;
-
     let multiplayer = false;
 
     let roundId = null;
@@ -665,6 +707,8 @@
     let winnerResolved = false;
 
     let gameStarted = false;
+
+    let leavingRoom = false;
 
 
     // ============================================================
@@ -790,7 +834,7 @@
 
 
     // ============================================================
-    // تشخیص حالت
+    // تشخیص واقعی اتاق
     // ============================================================
 
     async function detectRoom() {
@@ -800,17 +844,30 @@
 
 
       /*
-       * هیچ اتاقی ذخیره نشده:
-       * بازی کاملاً تک‌نفره است.
+       * فقط وجود domito_room کافی نیست.
        */
 
       if (!saved) {
 
-        multiplayer =
-          false;
+        setSoloMode();
 
-        modeLabel.textContent =
-          "🎮 تک‌نفره";
+        return;
+
+      }
+
+
+      const code =
+        String(saved)
+          .trim()
+          .toUpperCase();
+
+
+      if (
+        !code ||
+        !myUid
+      ) {
+
+        setSoloMode();
 
         return;
 
@@ -819,36 +876,67 @@
 
       try {
 
-        const meta =
-          await getRoomMeta(saved);
-
-
         /*
-         * اگر domito_room قدیمی باشد
-         * ولی اتاق واقعاً وجود نداشته باشد،
-         * بازی تک‌نفره می‌شود.
+         * اول خود اتاق را بررسی می‌کنیم.
          */
 
-        if (!meta) {
+        const roomSnap =
+          await get(
+            roomRef(code)
+          );
 
-          multiplayer =
-            false;
 
-          modeLabel.textContent =
-            "🎮 تک‌نفره";
+        if (
+          !roomSnap.exists()
+        ) {
+
+          /*
+           * اتاق واقعاً در Firebase وجود ندارد.
+           */
+
+          setSoloMode();
 
           return;
 
         }
 
 
-        roomCode =
-          saved
-            .trim()
-            .toUpperCase();
+        /*
+         * حالا بررسی می‌کنیم خود کاربر
+         * واقعاً عضو players این اتاق است.
+         */
 
-        roomMeta =
-          meta;
+        const myPlayerSnap =
+          await get(
+            roomRef(
+              code,
+              `players/${myUid}`
+            )
+          );
+
+
+        if (
+          !myPlayerSnap.exists()
+        ) {
+
+          /*
+           * اتاق وجود دارد ولی کاربر
+           * عضو آن نیست.
+           */
+
+          setSoloMode();
+
+          return;
+
+        }
+
+
+        /*
+         * اینجا اتاق معتبر است.
+         */
+
+        roomCode =
+          code;
 
         multiplayer =
           true;
@@ -856,17 +944,12 @@
         modeLabel.textContent =
           "👥 مولتی‌پلیر";
 
-        userLabel.textContent =
-          `👤 ${currentUserName} • اتاق ${roomCode}`;
-
-
-        /*
-         * مطمئن می‌شویم بازیکن در اتاق ثبت شده.
-         */
-
-        await joinLobby(
-          currentUserName
+        roomExitBtn.classList.add(
+          "show"
         );
+
+        userLabel.textContent =
+          `👤 ${currentUserName || "کاربر"} • اتاق ${roomCode}`;
 
 
         await setupMultiplayer();
@@ -880,18 +963,48 @@
           error
         );
 
+        setSoloMode();
 
-        multiplayer =
-          false;
+      }
 
-        roomCode =
-          "";
+    }
 
-        roomMeta =
-          null;
 
-        modeLabel.textContent =
-          "🎮 تک‌نفره";
+
+    // ============================================================
+    // حالت تک‌نفره
+    // ============================================================
+
+    function setSoloMode() {
+
+      multiplayer =
+        false;
+
+      roomCode =
+        "";
+
+      roundId =
+        null;
+
+      roomPlayers =
+        {};
+
+      remoteStates =
+        {};
+
+      modeLabel.textContent =
+        "🎮 تک‌نفره";
+
+      roomExitBtn.classList.remove(
+        "show"
+      );
+
+      if (
+        currentUserName
+      ) {
+
+        userLabel.textContent =
+          `👤 ${currentUserName}`;
 
       }
 
@@ -926,10 +1039,6 @@
         );
 
 
-      /*
-       * بازیکنان اتاق
-       */
-
       roomUnsubs.push(
         onValue(
           playersRef,
@@ -938,23 +1047,12 @@
             roomPlayers =
               snap.val() || {};
 
-
             renderAliveList();
 
           }
         )
       );
 
-
-      /*
-       * وضعیت بازی‌های بازیکنان
-       *
-       * وضعیت هر بازیکن داخل:
-       *
-       * players/<uid>/jump
-       *
-       * قرار می‌گیرد.
-       */
 
       roomUnsubs.push(
         onValue(
@@ -973,7 +1071,9 @@
                     !p ||
                     !p.jump
                   ) {
+
                     return;
+
                   }
 
 
@@ -998,10 +1098,6 @@
       );
 
 
-      /*
-       * نتیجه‌ها
-       */
-
       roomUnsubs.push(
         onValue(
           resultRef,
@@ -1009,7 +1105,6 @@
 
             const results =
               snap.val() || {};
-
 
             handleRoomResults(
               results
@@ -1019,13 +1114,6 @@
         )
       );
 
-
-      /*
-       * currentGame
-       *
-       * اگر از لابی وارد شده باشیم،
-       * roundId از اینجا گرفته می‌شود.
-       */
 
       roomUnsubs.push(
         onValue(
@@ -1095,23 +1183,15 @@
       }
 
 
-      const entries =
-        Object.entries(
-          roomPlayers
-        );
-
-
-      entries.forEach(
+      Object.entries(
+        roomPlayers
+      )
+      .forEach(
         ([uid, p]) => {
 
           const state =
             remoteStates[uid];
 
-
-          /*
-           * اگر وضعیت تازه‌ای نداریم،
-           * بازیکن را هنوز زنده در نظر می‌گیریم.
-           */
 
           const alive =
             !state ||
@@ -1405,7 +1485,6 @@
     }
 
 
-
     function sfxJump() {
 
       beep(
@@ -1426,7 +1505,6 @@
         "square",
         .06
       );
-
 
       setTimeout(
         () =>
@@ -1462,7 +1540,6 @@
         "sawtooth",
         .08
       );
-
 
       setTimeout(
         () =>
@@ -1543,7 +1620,7 @@
 
 
     // ============================================================
-    // Seed مشترک اتاق
+    // Seed
     // ============================================================
 
     function hashString(str) {
@@ -1677,11 +1754,6 @@
       let type =
         "normal";
 
-
-      /*
-       * در مولتی‌پلیر سختی
-       * برای همه یکسان است.
-       */
 
       const difficulty =
         Math.min(
@@ -1977,7 +2049,7 @@
 
 
     // ============================================================
-    // ارسال وضعیت من
+    // ارسال وضعیت
     // ============================================================
 
     async function writeMyState(
@@ -2003,6 +2075,7 @@
             `players/${myUid}/jump`
           ),
           {
+
             x:
               Number(
                 player?.x || 0
@@ -2028,6 +2101,7 @@
 
             at:
               Date.now()
+
           }
         );
 
@@ -2047,7 +2121,7 @@
 
 
     // ============================================================
-    // شروع Sync
+    // Sync
     // ============================================================
 
     function startSync() {
@@ -2177,11 +2251,6 @@
         player.vy * dt;
 
 
-
-      // ========================================================
-      // سکوهای متحرک
-      // ========================================================
-
       platforms.forEach(
         p => {
 
@@ -2224,11 +2293,6 @@
         }
       );
 
-
-
-      // ========================================================
-      // برخورد
-      // ========================================================
 
       if (
         player.vy > 0
@@ -2369,11 +2433,6 @@
       }
 
 
-
-      // ========================================================
-      // دوربین
-      // ========================================================
-
       const targetCam =
         player.y -
         H * .52;
@@ -2397,11 +2456,6 @@
       }
 
 
-
-      // ========================================================
-      // امتیاز
-      // ========================================================
-
       const newScore =
         Math.max(
           0,
@@ -2419,17 +2473,11 @@
         score =
           newScore;
 
-
         scoreEl.textContent =
           score;
 
       }
 
-
-
-      // ========================================================
-      // حذف سکوهای پایین
-      // ========================================================
 
       platforms =
         platforms.filter(
@@ -2441,11 +2489,6 @@
         );
 
 
-
-      // ========================================================
-      // ساخت سکوهای جدید
-      // ========================================================
-
       let highestY =
         platforms.length
           ? Math.min(
@@ -2455,20 +2498,6 @@
             )
           : camY;
 
-
-      /*
-       * برای مولتی‌پلیر:
-       *
-       * اینجا نقشه باید برای همه
-       * یکسان بماند.
-       *
-       * چون کل پلتفرم‌ها با seed
-       * یکسان ساخته شده‌اند،
-       * در اکثر حالت‌ها ترتیب یکی است.
-       *
-       * سکوهای جدید با index ادامه
-       * همان seed ساخته می‌شوند.
-       */
 
       while (
         platforms.length <
@@ -2518,11 +2547,6 @@
       }
 
 
-
-      // ========================================================
-      // باخت
-      // ========================================================
-
       if (
         player.y >
         camY +
@@ -2534,11 +2558,6 @@
 
       }
 
-
-
-      // ========================================================
-      // ذرات
-      // ========================================================
 
       particles.forEach(
         p => {
@@ -2573,7 +2592,7 @@
 
 
     // ============================================================
-    // پایان بازی
+    // پایان
     // ============================================================
 
     function gameOver() {
@@ -2642,7 +2661,6 @@
 
         checkForLastPlayer();
 
-
       }
 
       else {
@@ -2665,7 +2683,7 @@
 
 
     // ============================================================
-    // بررسی آخرین بازیکن
+    // آخرین بازیکن
     // ============================================================
 
     async function checkForLastPlayer() {
@@ -2680,11 +2698,6 @@
 
       }
 
-
-      /*
-       * کمی صبر می‌کنیم تا Firebase
-       * وضعیت آخرین بازیکن را ببیند.
-       */
 
       setTimeout(
         async () => {
@@ -2745,11 +2758,6 @@
               );
 
 
-            /*
-             * اگر فقط یک نفر زنده است،
-             * او برنده است.
-             */
-
             if (
               alive.length === 1
             ) {
@@ -2767,12 +2775,6 @@
                   "results/jump/winner"
                 ),
                 current => {
-
-                  /*
-                   * اگر شخص دیگری قبلاً
-                   * برنده را ثبت کرده،
-                   * به آن دست نمی‌زنیم.
-                   */
 
                   if (
                     current &&
@@ -2834,7 +2836,7 @@
 
 
     // ============================================================
-    // نتیجه تک‌نفره
+    // نتیجه Solo
     // ============================================================
 
     async function submitSoloResult() {
@@ -2914,7 +2916,7 @@
 
 
     // ============================================================
-    // نتیجه مولتی‌پلیر
+    // نتیجه Multiplayer
     // ============================================================
 
     async function submitMultiplayerResult(
@@ -2959,10 +2961,6 @@
         }
 
 
-        /*
-         * نتیجه معمول اتاق
-         */
-
         await submitResult(
           GAME_ID,
           uid,
@@ -2971,16 +2969,13 @@
         );
 
 
-        /*
-         * نتیجه مخصوص پرش
-         */
-
         await set(
           roomRef(
             roomCode,
             `results/jump/players/${uid}`
           ),
           {
+
             uid,
 
             name,
@@ -2988,7 +2983,6 @@
             score,
 
             won:
-
               won === true,
 
             roundId:
@@ -3023,6 +3017,188 @@
 
         resultSubmitted =
           false;
+
+      }
+
+    }
+
+
+
+    // ============================================================
+    // خروج از اتاق
+    // ============================================================
+
+    async function exitRoom() {
+
+      if (
+        leavingRoom
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        !multiplayer ||
+        !roomCode
+      ) {
+
+        return;
+
+      }
+
+
+      const ok =
+        confirm(
+          "از اتاق خارج می‌شوید؟"
+        );
+
+
+      if (!ok) {
+        return;
+      }
+
+
+      leavingRoom =
+        true;
+
+      roomExitBtn.disabled =
+        true;
+
+      roomExitBtn.textContent =
+        "⏳ در حال خروج...";
+
+
+      try {
+
+        stopSync();
+
+
+        await leaveLobby();
+
+
+        roomUnsubs.forEach(
+          unsub => {
+
+            try {
+              unsub();
+            }
+
+            catch (_) {}
+
+          }
+        );
+
+
+        roomUnsubs =
+          [];
+
+
+        multiplayer =
+          false;
+
+        roomCode =
+          "";
+
+        roundId =
+          null;
+
+        roomPlayers =
+          {};
+
+        remoteStates =
+          {};
+
+
+        roomExitBtn.classList.remove(
+          "show"
+        );
+
+
+        modeLabel.textContent =
+          "🎮 تک‌نفره";
+
+
+        userLabel.textContent =
+          `👤 ${currentUserName || "کاربر"}`;
+
+
+        aliveList.innerHTML =
+          "";
+
+
+        /*
+         * اگر وسط بازی خارج شدیم،
+         * بازی را متوقف می‌کنیم.
+         */
+
+        running =
+          false;
+
+        over =
+          true;
+
+
+        startOverlay.classList.add(
+          "show"
+        );
+
+
+        endOverlay.classList.remove(
+          "show"
+        );
+
+
+        startTitle.textContent =
+          "پرش از سکو";
+
+
+        startText.innerHTML =
+          `
+          انگشتت رو چپ و راست بکش<br>
+          روی سکوها فرود بیا و تا جایی که می‌تونی بالا برو<br>
+          آبی = عادی • بنفش = متحرک<br>
+          قرمز = شکستنی • سبز = فنری
+          `;
+
+
+        reset();
+
+
+        /*
+         * بازی از این لحظه Solo است.
+         */
+
+        gameStarted =
+          false;
+
+      }
+
+      catch (error) {
+
+        console.error(
+          "Exit room error:",
+          error
+        );
+
+
+        alert(
+          "خروج از اتاق انجام نشد."
+        );
+
+      }
+
+      finally {
+
+        leavingRoom =
+          false;
+
+        roomExitBtn.disabled =
+          false;
+
+        roomExitBtn.textContent =
+          "🚪 خروج از اتاق";
 
       }
 
@@ -3124,11 +3300,6 @@
         -camY
       );
 
-
-
-      // ========================================================
-      // سکوها
-      // ========================================================
 
       platforms.forEach(
         p => {
@@ -3284,11 +3455,6 @@
       );
 
 
-
-      // ========================================================
-      // بازیکنان دیگر
-      // ========================================================
-
       if (multiplayer) {
 
         Object.entries(
@@ -3358,11 +3524,6 @@
       }
 
 
-
-      // ========================================================
-      // بازیکن خودمان
-      // ========================================================
-
       if (player) {
 
         drawPlayer(
@@ -3373,11 +3534,6 @@
 
       }
 
-
-
-      // ========================================================
-      // ذرات
-      // ========================================================
 
       particles.forEach(
         p => {
@@ -3500,7 +3656,7 @@
 
 
     // ============================================================
-    // رسم بازیکن دیگر
+    // بازیکن دیگر
     // ============================================================
 
     function drawRemotePlayer(
@@ -3538,10 +3694,6 @@
       ctx.globalAlpha =
         1;
 
-
-      /*
-       * اسم بازیکن
-       */
 
       const p =
         roomPlayers[uid];
@@ -3705,7 +3857,6 @@
       e => {
 
         e.preventDefault();
-
 
         touching =
           true;
@@ -3939,6 +4090,25 @@
 
 
     // ============================================================
+    // خروج از اتاق
+    // ============================================================
+
+    roomExitBtn.addEventListener(
+      "click",
+      e => {
+
+        e.preventDefault();
+
+        e.stopPropagation();
+
+        exitRoom();
+
+      }
+    );
+
+
+
+    // ============================================================
     // دکمه‌ها
     // ============================================================
 
@@ -4020,7 +4190,7 @@
 
 
     // ============================================================
-    // مقداردهی اولیه
+    // مقداردهی
     // ============================================================
 
     resize();
