@@ -129,10 +129,38 @@
       color: #94a3b8;
     }
 
+    .mode {
+      position: absolute;
+
+      top: 43px;
+      right: 14px;
+
+      z-index: 5;
+
+      font-size: .68rem;
+
+      color:
+        rgba(255,255,255,.7);
+
+      background:
+        rgba(255,255,255,.07);
+
+      border:
+        1px solid
+        rgba(255,255,255,.12);
+
+      padding:
+        4px 8px;
+
+      border-radius: 10px;
+
+      pointer-events: none;
+    }
+
     .user {
       position: absolute;
 
-      top: 42px;
+      top: 43px;
       left: 14px;
 
       z-index: 5;
@@ -140,9 +168,54 @@
       color:
         rgba(255,255,255,.55);
 
-      font-size: .72rem;
+      font-size: .68rem;
 
       pointer-events: none;
+    }
+
+    .alive-list {
+      position: absolute;
+
+      top: 72px;
+      right: 14px;
+
+      z-index: 5;
+
+      max-width: 150px;
+
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      pointer-events: none;
+    }
+
+    .alive-player {
+      font-size: .62rem;
+
+      padding:
+        3px 7px;
+
+      border-radius: 8px;
+
+      background:
+        rgba(0,0,0,.22);
+
+      color:
+        rgba(255,255,255,.72);
+
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+
+      white-space: nowrap;
+
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .alive-player.me {
+      color: #fff;
+      font-weight: 800;
     }
 
     .overlay {
@@ -286,9 +359,8 @@
 
 <body>
 
-
   <h1>
-    🦘 پرش از سکو
+    🪂 پرش از سکو
   </h1>
 
 
@@ -296,7 +368,6 @@
     class="wrap"
     id="wrap"
   >
-
 
     <canvas id="c"></canvas>
 
@@ -326,11 +397,25 @@
 
 
     <div
+      class="mode"
+      id="modeLabel"
+    >
+      تک‌نفره
+    </div>
+
+
+    <div
       class="user"
       id="userLabel"
     >
       در حال ورود...
     </div>
+
+
+    <div
+      class="alive-list"
+      id="aliveList"
+    ></div>
 
 
     <!-- شروع -->
@@ -340,11 +425,14 @@
       id="startOverlay"
     >
 
-      <h2 style="color:#38bdf8">
+      <h2
+        id="startTitle"
+        style="color:#38bdf8"
+      >
         پرش از سکو
       </h2>
 
-      <p>
+      <p id="startText">
         انگشتت رو چپ و راست بکش<br>
         روی سکوها فرود بیا و تا جایی که می‌تونی بالا برو<br>
         آبی = عادی • بنفش = متحرک<br>
@@ -397,7 +485,6 @@
 
     </div>
 
-
   </div>
 
 
@@ -411,38 +498,44 @@
 
   <script type="module">
 
-    /*
-     * ============================================================
-     * DOMITO INTEGRATION
-     * ============================================================
-     *
-     * این بازی از سیستم فعلی دومیتو استفاده می‌کند.
-     *
-     * ورود خودکار:
-     * waitForUser()
-     *
-     * نام:
-     * getSavedName()
-     *
-     * UID:
-     * currentUid()
-     *
-     * ثبت نتیجه:
-     * submitResult()
-     *
-     * ============================================================
-     */
-
     import {
       waitForUser,
       getSavedName,
       currentUid,
-      submitResult
+
+      getSavedRoom,
+      getRoomMeta,
+
+      roomRef,
+      onValue,
+      set,
+      get,
+      runTransaction,
+
+      joinLobby,
+
+      submitResult,
+      recordRoundResult,
+      soloWon
+
     } from "../js/app.js";
 
 
+    // ============================================================
+    // تنظیمات
+    // ============================================================
+
     const GAME_ID =
-      "jump";
+      "math";
+
+    const MAX_PLAYERS =
+      4;
+
+    const SYNC_INTERVAL =
+      100;
+
+    const REMOTE_TIMEOUT =
+      3500;
 
 
     // ============================================================
@@ -470,6 +563,12 @@
     const userLabel =
       document.getElementById("userLabel");
 
+    const modeLabel =
+      document.getElementById("modeLabel");
+
+    const aliveList =
+      document.getElementById("aliveList");
+
     const startOverlay =
       document.getElementById("startOverlay");
 
@@ -491,14 +590,25 @@
     const muteBtn =
       document.getElementById("muteBtn");
 
+    const startTitle =
+      document.getElementById("startTitle");
+
+    const startText =
+      document.getElementById("startText");
+
 
     // ============================================================
-    // وضعیت
+    // Canvas
     // ============================================================
 
     let W = 360;
     let H = 640;
     let dpr = 1;
+
+
+    // ============================================================
+    // بازی
+    // ============================================================
 
     let player;
     let platforms;
@@ -527,13 +637,76 @@
 
     let actx = null;
 
-    let resultSubmitted = false;
+
+    // ============================================================
+    // دومیتو
+    // ============================================================
 
     let currentUserName = null;
+    let myUid = null;
+
+    let roomCode = "";
+    let roomMeta = null;
+
+    let multiplayer = false;
+
+    let roundId = null;
+
+    let roomPlayers = {};
+
+    let remoteStates = {};
+
+    let syncTimer = null;
+
+    let roomUnsubs = [];
+
+    let resultSubmitted = false;
+
+    let winnerResolved = false;
+
+    let gameStarted = false;
+
+
+    // ============================================================
+    // رنگ بازیکنان
+    // ============================================================
+
+    const PLAYER_COLORS = [
+      "#fbbf24",
+      "#38bdf8",
+      "#f472b6",
+      "#4ade80"
+    ];
 
 
     bestEl.textContent =
       best;
+
+
+
+    // ============================================================
+    // رنگ بازیکن
+    // ============================================================
+
+    function colorForUid(uid) {
+
+      const keys =
+        Object.keys(roomPlayers);
+
+      const index =
+        Math.max(
+          0,
+          keys.indexOf(uid)
+        );
+
+      return (
+        PLAYER_COLORS[
+          index %
+          PLAYER_COLORS.length
+        ]
+      );
+
+    }
 
 
 
@@ -554,7 +727,8 @@
           userLabel.textContent =
             "وارد حساب دومیتو شوید";
 
-          startBtn.disabled = true;
+          startBtn.disabled =
+            true;
 
           startBtn.style.opacity =
             ".5";
@@ -567,18 +741,26 @@
         currentUserName =
           getSavedName();
 
+        myUid =
+          currentUid();
+
 
         if (!currentUserName) {
 
           userLabel.textContent =
             "کاربر دومیتو";
 
-        } else {
+        }
+
+        else {
 
           userLabel.textContent =
             `👤 ${currentUserName}`;
 
         }
+
+
+        await detectRoom();
 
 
         return true;
@@ -588,7 +770,7 @@
       catch (error) {
 
         console.error(
-          "Domito login error:",
+          "Domito init error:",
           error
         );
 
@@ -608,81 +790,515 @@
 
 
     // ============================================================
-    // ثبت نتیجه در دومیتو
+    // تشخیص حالت
     // ============================================================
 
-    async function submitGameResult() {
+    async function detectRoom() {
 
-      if (resultSubmitted) {
+      const saved =
+        getSavedRoom();
+
+
+      /*
+       * هیچ اتاقی ذخیره نشده:
+       * بازی کاملاً تک‌نفره است.
+       */
+
+      if (!saved) {
+
+        multiplayer =
+          false;
+
+        modeLabel.textContent =
+          "🎮 تک‌نفره";
+
         return;
+
       }
-
-
-      resultSubmitted = true;
 
 
       try {
 
-        const uid =
-          currentUid();
+        const meta =
+          await getRoomMeta(saved);
 
 
-        const name =
-          currentUserName ||
-          getSavedName();
+        /*
+         * اگر domito_room قدیمی باشد
+         * ولی اتاق واقعاً وجود نداشته باشد،
+         * بازی تک‌نفره می‌شود.
+         */
 
+        if (!meta) {
 
-        if (!uid || !name) {
+          multiplayer =
+            false;
 
-          saveMessage.textContent =
-            "⚠️ نتیجه به حساب دومیتو متصل نشد.";
+          modeLabel.textContent =
+            "🎮 تک‌نفره";
 
           return;
 
         }
 
 
-        saveMessage.textContent =
-          "⏳ در حال ثبت نتیجه در دومیتو...";
+        roomCode =
+          saved
+            .trim()
+            .toUpperCase();
+
+        roomMeta =
+          meta;
+
+        multiplayer =
+          true;
+
+        modeLabel.textContent =
+          "👥 مولتی‌پلیر";
+
+        userLabel.textContent =
+          `👤 ${currentUserName} • اتاق ${roomCode}`;
 
 
         /*
-         * سیستم فعلی دومیتو:
-         *
-         * submitResult(
-         *   gameId,
-         *   uid,
-         *   name,
-         *   score
-         * )
+         * مطمئن می‌شویم بازیکن در اتاق ثبت شده.
          */
 
-        await submitResult(
-          GAME_ID,
-          uid,
-          name,
-          score
+        await joinLobby(
+          currentUserName
         );
 
 
-        saveMessage.textContent =
-          "✅ نتیجه در دومیتو ثبت شد";
-
+        await setupMultiplayer();
 
       }
 
       catch (error) {
 
-        console.error(
-          "Domito result error:",
+        console.warn(
+          "Room detection failed:",
           error
         );
 
 
-        saveMessage.textContent =
-          "⚠️ نتیجه بازی ذخیره نشد.";
+        multiplayer =
+          false;
+
+        roomCode =
+          "";
+
+        roomMeta =
+          null;
+
+        modeLabel.textContent =
+          "🎮 تک‌نفره";
 
       }
+
+    }
+
+
+
+    // ============================================================
+    // آماده‌سازی مولتی‌پلیر
+    // ============================================================
+
+    async function setupMultiplayer() {
+
+      const playersRef =
+        roomRef(
+          roomCode,
+          "players"
+        );
+
+
+      const gameRef =
+        roomRef(
+          roomCode,
+          "currentGame"
+        );
+
+
+      const resultRef =
+        roomRef(
+          roomCode,
+          "results"
+        );
+
+
+      /*
+       * بازیکنان اتاق
+       */
+
+      roomUnsubs.push(
+        onValue(
+          playersRef,
+          snap => {
+
+            roomPlayers =
+              snap.val() || {};
+
+
+            renderAliveList();
+
+          }
+        )
+      );
+
+
+      /*
+       * وضعیت بازی‌های بازیکنان
+       *
+       * وضعیت هر بازیکن داخل:
+       *
+       * players/<uid>/jump
+       *
+       * قرار می‌گیرد.
+       */
+
+      roomUnsubs.push(
+        onValue(
+          playersRef,
+          snap => {
+
+            const data =
+              snap.val() || {};
+
+
+            Object.entries(data)
+              .forEach(
+                ([uid, p]) => {
+
+                  if (
+                    !p ||
+                    !p.jump
+                  ) {
+                    return;
+                  }
+
+
+                  const state =
+                    p.jump;
+
+
+                  remoteStates[uid] = {
+                    ...state,
+                    receivedAt:
+                      performance.now()
+                  };
+
+                }
+              );
+
+
+            renderAliveList();
+
+          }
+        )
+      );
+
+
+      /*
+       * نتیجه‌ها
+       */
+
+      roomUnsubs.push(
+        onValue(
+          resultRef,
+          snap => {
+
+            const results =
+              snap.val() || {};
+
+
+            handleRoomResults(
+              results
+            );
+
+          }
+        )
+      );
+
+
+      /*
+       * currentGame
+       *
+       * اگر از لابی وارد شده باشیم،
+       * roundId از اینجا گرفته می‌شود.
+       */
+
+      roomUnsubs.push(
+        onValue(
+          gameRef,
+          snap => {
+
+            const current =
+              snap.val();
+
+
+            if (
+              !current ||
+              current.gameId !==
+                GAME_ID
+            ) {
+
+              return;
+
+            }
+
+
+            roundId =
+              String(
+                current.roundId ||
+                ""
+              );
+
+
+            if (
+              !gameStarted &&
+              !running &&
+              !over
+            ) {
+
+              startTitle.textContent =
+                "👥 بازی گروهی آماده است";
+
+              startText.innerHTML =
+                `
+                همه در یک نقشه بازی می‌کنید.<br>
+                آخرین بازیکن باقی‌مانده برنده است.<br>
+                بازیکن‌های دیگر را روی صفحه می‌بینی.
+                `;
+
+            }
+
+          }
+        )
+      );
+
+    }
+
+
+
+    // ============================================================
+    // لیست بازیکنان زنده
+    // ============================================================
+
+    function renderAliveList() {
+
+      aliveList.innerHTML =
+        "";
+
+
+      if (!multiplayer) {
+        return;
+      }
+
+
+      const entries =
+        Object.entries(
+          roomPlayers
+        );
+
+
+      entries.forEach(
+        ([uid, p]) => {
+
+          const state =
+            remoteStates[uid];
+
+
+          /*
+           * اگر وضعیت تازه‌ای نداریم،
+           * بازیکن را هنوز زنده در نظر می‌گیریم.
+           */
+
+          const alive =
+            !state ||
+            state.alive !== false;
+
+
+          if (!alive) {
+            return;
+          }
+
+
+          const el =
+            document.createElement(
+              "div"
+            );
+
+
+          el.className =
+            "alive-player" +
+            (
+              uid === myUid
+                ? " me"
+                : ""
+            );
+
+
+          el.style.borderRight =
+            `3px solid ${colorForUid(uid)}`;
+
+
+          el.textContent =
+            uid === myUid
+              ? `● ${p.name || currentUserName}`
+              : `● ${p.name || "بازیکن"}`;
+
+
+          aliveList.appendChild(
+            el
+          );
+
+        }
+      );
+
+    }
+
+
+
+    // ============================================================
+    // دریافت نتیجه‌های اتاق
+    // ============================================================
+
+    function handleRoomResults(results) {
+
+      if (!multiplayer) {
+        return;
+      }
+
+
+      const jumpResults =
+        results.jump || {};
+
+
+      const winner =
+        jumpResults.winner;
+
+
+      if (
+        winner &&
+        winner.uid &&
+        !winnerResolved
+      ) {
+
+        winnerResolved =
+          true;
+
+
+        if (
+          winner.uid ===
+          myUid
+        ) {
+
+          if (!over) {
+            finishAsWinner();
+          }
+
+        }
+
+        else {
+
+          if (!over) {
+            finishAsLoser(
+              winner.name ||
+              "بازیکن دیگر"
+            );
+          }
+
+        }
+
+      }
+
+    }
+
+
+
+    // ============================================================
+    // پایان برنده
+    // ============================================================
+
+    function finishAsWinner() {
+
+      if (over) {
+        return;
+      }
+
+
+      over =
+        true;
+
+      running =
+        false;
+
+
+      endTitle.textContent =
+        "🏆 تو برنده شدی!";
+
+
+      finalScoreEl.textContent =
+        score;
+
+
+      saveMessage.textContent =
+        "🏆 آخرین بازیکن باقی‌مانده بودی";
+
+
+      endOverlay.classList.add(
+        "show"
+      );
+
+
+      submitMultiplayerResult(
+        true
+      );
+
+    }
+
+
+
+    // ============================================================
+    // پایان بازنده
+    // ============================================================
+
+    function finishAsLoser(
+      winnerName
+    ) {
+
+      if (over) {
+        return;
+      }
+
+
+      over =
+        true;
+
+      running =
+        false;
+
+
+      endTitle.textContent =
+        "😅 از بازی خارج شدی";
+
+
+      finalScoreEl.textContent =
+        score;
+
+
+      saveMessage.textContent =
+        `🏆 برنده: ${winnerName}`;
+
+
+      endOverlay.classList.add(
+        "show"
+      );
+
+
+      submitMultiplayerResult(
+        false
+      );
 
     }
 
@@ -927,12 +1543,87 @@
 
 
     // ============================================================
+    // Seed مشترک اتاق
+    // ============================================================
+
+    function hashString(str) {
+
+      let h =
+        2166136261;
+
+
+      for (
+        let i = 0;
+        i < str.length;
+        i++
+      ) {
+
+        h ^=
+          str.charCodeAt(i);
+
+        h =
+          Math.imul(
+            h,
+            16777619
+          );
+
+      }
+
+
+      return (
+        h >>> 0
+      );
+
+    }
+
+
+
+    function createRng(seed) {
+
+      let state =
+        seed >>> 0;
+
+
+      return function () {
+
+        state =
+          (
+            Math.imul(
+              1664525,
+              state
+            ) +
+            1013904223
+          ) >>> 0;
+
+
+        return (
+          state /
+          4294967296
+        );
+
+      };
+
+    }
+
+
+
+    // ============================================================
     // ستاره‌ها
     // ============================================================
 
     function makeStars() {
 
       stars = [];
+
+
+      const rng =
+        createRng(
+          hashString(
+            multiplayer
+              ? `stars-${roomCode}`
+              : "solo-stars"
+          )
+        );
 
 
       for (
@@ -944,20 +1635,20 @@
         stars.push({
 
           x:
-            Math.random() * W,
+            rng() * W,
 
           y:
-            Math.random() *
+            rng() *
             H *
             4,
 
           r:
-            Math.random() *
+            rng() *
             1.4 +
             .3,
 
           a:
-            Math.random() *
+            rng() *
             .5 +
             .2
 
@@ -973,10 +1664,14 @@
     // ساخت سکو
     // ============================================================
 
-    function createPlatform(y) {
+    function createPlatform(
+      y,
+      index,
+      rng
+    ) {
 
       const rnd =
-        Math.random();
+        rng();
 
 
       let type =
@@ -984,15 +1679,17 @@
 
 
       /*
-       * در ابتدا بازی راحت‌تر است.
-       * هرچه امتیاز بالاتر برود،
-       * احتمال سکوهای خاص بیشتر می‌شود.
+       * در مولتی‌پلیر سختی
+       * برای همه یکسان است.
        */
 
       const difficulty =
         Math.min(
           1,
-          score / 1000
+          Math.max(
+            0,
+            index / 80
+          )
         );
 
 
@@ -1035,7 +1732,7 @@
           50,
           82 -
           difficulty * 20 +
-          Math.random() * 24
+          rng() * 24
         );
 
 
@@ -1043,7 +1740,7 @@
 
         x:
           12 +
-          Math.random() *
+          rng() *
           Math.max(
             10,
             W -
@@ -1062,19 +1759,19 @@
         type,
 
         dir:
-          Math.random() < .5
+          rng() < .5
             ? 1
             : -1,
 
         speed:
           40 +
-          Math.random() *
-          45 +
-          difficulty *
-          45,
+          rng() * 45 +
+          difficulty * 45,
 
         broken:
-          false
+          false,
+
+        index
 
       };
 
@@ -1087,6 +1784,21 @@
     // ============================================================
 
     function reset() {
+
+      const seed =
+        multiplayer
+          ? hashString(
+              `${roomCode}:${roundId || "default"}`
+            )
+          : Math.floor(
+              Math.random() *
+              4294967295
+            );
+
+
+      const rng =
+        createRng(seed);
+
 
       player = {
 
@@ -1110,10 +1822,6 @@
 
       platforms = [];
 
-
-      /*
-       * سکوی اول همیشه امن است.
-       */
 
       platforms.push({
 
@@ -1139,7 +1847,10 @@
           0,
 
         broken:
-          false
+          false,
+
+        index:
+          0
 
       });
 
@@ -1156,12 +1867,16 @@
 
         y -=
           48 +
-          Math.random() *
+          rng() *
           25;
 
 
         platforms.push(
-          createPlatform(y)
+          createPlatform(
+            y,
+            i,
+            rng
+          )
         );
 
       }
@@ -1180,12 +1895,24 @@
       resultSubmitted =
         false;
 
+      winnerResolved =
+        false;
+
 
       scoreEl.textContent =
         "0";
 
 
       makeStars();
+
+
+      if (multiplayer) {
+
+        writeMyState(
+          true
+        );
+
+      }
 
     }
 
@@ -1250,6 +1977,130 @@
 
 
     // ============================================================
+    // ارسال وضعیت من
+    // ============================================================
+
+    async function writeMyState(
+      alive
+    ) {
+
+      if (
+        !multiplayer ||
+        !roomCode ||
+        !myUid
+      ) {
+
+        return;
+
+      }
+
+
+      try {
+
+        await set(
+          roomRef(
+            roomCode,
+            `players/${myUid}/jump`
+          ),
+          {
+            x:
+              Number(
+                player?.x || 0
+              ),
+
+            y:
+              Number(
+                player?.y || 0
+              ),
+
+            score:
+              Number(
+                score || 0
+              ),
+
+            alive:
+              alive === true,
+
+            roundId:
+              String(
+                roundId || ""
+              ),
+
+            at:
+              Date.now()
+          }
+        );
+
+      }
+
+      catch (error) {
+
+        console.warn(
+          "Jump state sync error:",
+          error
+        );
+
+      }
+
+    }
+
+
+
+    // ============================================================
+    // شروع Sync
+    // ============================================================
+
+    function startSync() {
+
+      stopSync();
+
+
+      if (!multiplayer) {
+        return;
+      }
+
+
+      syncTimer =
+        setInterval(
+          () => {
+
+            if (
+              running ||
+              over
+            ) {
+
+              writeMyState(
+                !over
+              );
+
+            }
+
+          },
+          SYNC_INTERVAL
+        );
+
+    }
+
+
+
+    function stopSync() {
+
+      if (syncTimer) {
+
+        clearInterval(
+          syncTimer
+        );
+
+        syncTimer =
+          null;
+
+      }
+
+    }
+
+
+
+    // ============================================================
     // بازی
     // ============================================================
 
@@ -1259,10 +2110,6 @@
         return;
       }
 
-
-      /*
-       * سختی تدریجی
-       */
 
       const difficulty =
         Math.min(
@@ -1295,10 +2142,6 @@
         player.vx * dt;
 
 
-      /*
-       * پیچیدن از لبه
-       */
-
       if (
         player.x <
         -player.r
@@ -1320,10 +2163,6 @@
 
       }
 
-
-      /*
-       * گرانش
-       */
 
       const gravity =
         1550 +
@@ -1388,7 +2227,7 @@
 
 
       // ========================================================
-      // برخورد با سکو
+      // برخورد
       // ========================================================
 
       if (
@@ -1617,23 +2456,62 @@
           : camY;
 
 
+      /*
+       * برای مولتی‌پلیر:
+       *
+       * اینجا نقشه باید برای همه
+       * یکسان بماند.
+       *
+       * چون کل پلتفرم‌ها با seed
+       * یکسان ساخته شده‌اند،
+       * در اکثر حالت‌ها ترتیب یکی است.
+       *
+       * سکوهای جدید با index ادامه
+       * همان seed ساخته می‌شوند.
+       */
+
       while (
         platforms.length <
         18
       ) {
 
+        const nextIndex =
+          Math.max(
+            ...platforms.map(
+              p =>
+                Number(
+                  p.index || 0
+                )
+            )
+          ) + 1;
+
+
+        const seed =
+          multiplayer
+            ? hashString(
+                `${roomCode}:${roundId || "default"}:${nextIndex}`
+              )
+            : Math.floor(
+                Math.random() *
+                4294967295
+              );
+
+
+        const rng =
+          createRng(seed);
+
+
         highestY -=
           48 +
-          Math.random() *
-          (
-            25 +
-            difficulty * 15
-          );
+          rng() *
+          25;
 
 
         platforms.push(
           createPlatform(
-            highestY
+            highestY,
+            nextIndex,
+            rng
           )
         );
 
@@ -1751,20 +2629,402 @@
         score;
 
 
-      saveMessage.textContent =
-        "⏳ در حال ثبت نتیجه در دومیتو...";
+      if (multiplayer) {
+
+        saveMessage.textContent =
+          "⏳ در حال ثبت خروج از بازی...";
+
+
+        writeMyState(
+          false
+        );
+
+
+        checkForLastPlayer();
+
+
+      }
+
+      else {
+
+        saveMessage.textContent =
+          "⏳ در حال ثبت نتیجه در دومیتو...";
+
+
+        submitSoloResult();
+
+      }
 
 
       endOverlay.classList.add(
         "show"
       );
 
+    }
+
+
+
+    // ============================================================
+    // بررسی آخرین بازیکن
+    // ============================================================
+
+    async function checkForLastPlayer() {
+
+      if (
+        !multiplayer ||
+        !roomCode ||
+        !myUid
+      ) {
+
+        return;
+
+      }
+
 
       /*
-       * ثبت نتیجه فقط همین‌جا انجام می‌شود.
+       * کمی صبر می‌کنیم تا Firebase
+       * وضعیت آخرین بازیکن را ببیند.
        */
 
-      submitGameResult();
+      setTimeout(
+        async () => {
+
+          try {
+
+            const snap =
+              await get(
+                roomRef(
+                  roomCode,
+                  "players"
+                )
+              );
+
+
+            const players =
+              snap.val() || {};
+
+
+            const alive =
+              Object.entries(
+                players
+              )
+              .filter(
+                ([uid, p]) => {
+
+                  if (
+                    !p ||
+                    !p.jump
+                  ) {
+
+                    return true;
+
+                  }
+
+
+                  if (
+                    p.jump.roundId &&
+                    String(
+                      p.jump.roundId
+                    ) !==
+                      String(
+                        roundId || ""
+                      )
+                  ) {
+
+                    return true;
+
+                  }
+
+
+                  return (
+                    p.jump.alive !==
+                    false
+                  );
+
+                }
+              );
+
+
+            /*
+             * اگر فقط یک نفر زنده است،
+             * او برنده است.
+             */
+
+            if (
+              alive.length === 1
+            ) {
+
+              const [
+                winnerUid,
+                winnerPlayer
+              ] =
+                alive[0];
+
+
+              await runTransaction(
+                roomRef(
+                  roomCode,
+                  "results/jump/winner"
+                ),
+                current => {
+
+                  /*
+                   * اگر شخص دیگری قبلاً
+                   * برنده را ثبت کرده،
+                   * به آن دست نمی‌زنیم.
+                   */
+
+                  if (
+                    current &&
+                    current.uid
+                  ) {
+
+                    return current;
+
+                  }
+
+
+                  return {
+
+                    uid:
+                      winnerUid,
+
+                    name:
+                      winnerPlayer?.name ||
+                      "بازیکن",
+
+                    score:
+                      Number(
+                        winnerPlayer?.jump?.score ||
+                        0
+                      ),
+
+                    roundId:
+                      String(
+                        roundId || ""
+                      ),
+
+                    at:
+                      Date.now()
+
+                  };
+
+                }
+              );
+
+            }
+
+          }
+
+          catch (error) {
+
+            console.warn(
+              "Winner check error:",
+              error
+            );
+
+          }
+
+        },
+        250
+      );
+
+    }
+
+
+
+    // ============================================================
+    // نتیجه تک‌نفره
+    // ============================================================
+
+    async function submitSoloResult() {
+
+      if (
+        resultSubmitted ||
+        multiplayer
+      ) {
+
+        return;
+
+      }
+
+
+      resultSubmitted =
+        true;
+
+
+      try {
+
+        const name =
+          currentUserName ||
+          getSavedName();
+
+
+        if (!name) {
+
+          saveMessage.textContent =
+            "⚠️ حساب دومیتو پیدا نشد.";
+
+          return;
+
+        }
+
+
+        const won =
+          soloWon(
+            GAME_ID,
+            score
+          );
+
+
+        await recordRoundResult(
+          name,
+          GAME_ID,
+          {
+            won
+          }
+        );
+
+
+        saveMessage.textContent =
+          won
+            ? "🏆 برد! +۱۵ سکه در دومیتو"
+            : "✅ نتیجه ثبت شد • +۵ سکه";
+
+      }
+
+      catch (error) {
+
+        console.error(
+          "Solo result error:",
+          error
+        );
+
+
+        saveMessage.textContent =
+          "⚠️ نتیجه بازی ذخیره نشد.";
+
+        resultSubmitted =
+          false;
+
+      }
+
+    }
+
+
+
+    // ============================================================
+    // نتیجه مولتی‌پلیر
+    // ============================================================
+
+    async function submitMultiplayerResult(
+      won
+    ) {
+
+      if (
+        resultSubmitted ||
+        !multiplayer
+      ) {
+
+        return;
+
+      }
+
+
+      resultSubmitted =
+        true;
+
+
+      try {
+
+        const uid =
+          currentUid();
+
+
+        const name =
+          currentUserName ||
+          getSavedName();
+
+
+        if (
+          !uid ||
+          !name
+        ) {
+
+          saveMessage.textContent =
+            "⚠️ حساب دومیتو پیدا نشد.";
+
+          return;
+
+        }
+
+
+        /*
+         * نتیجه معمول اتاق
+         */
+
+        await submitResult(
+          GAME_ID,
+          uid,
+          name,
+          score
+        );
+
+
+        /*
+         * نتیجه مخصوص پرش
+         */
+
+        await set(
+          roomRef(
+            roomCode,
+            `results/jump/players/${uid}`
+          ),
+          {
+            uid,
+
+            name,
+
+            score,
+
+            won:
+
+              won === true,
+
+            roundId:
+              String(
+                roundId || ""
+              ),
+
+            at:
+              Date.now()
+
+          }
+        );
+
+
+        saveMessage.textContent =
+          won
+            ? "🏆 نتیجه برد در اتاق ثبت شد"
+            : "✅ نتیجه بازی در اتاق ثبت شد";
+
+      }
+
+      catch (error) {
+
+        console.error(
+          "Multiplayer result error:",
+          error
+        );
+
+
+        saveMessage.textContent =
+          "⚠️ نتیجه در اتاق ذخیره نشد.";
+
+        resultSubmitted =
+          false;
+
+      }
 
     }
 
@@ -1775,10 +3035,6 @@
     // ============================================================
 
     function draw() {
-
-      /*
-       * پس‌زمینه
-       */
 
       const g =
         ctx.createLinearGradient(
@@ -1812,11 +3068,6 @@
         H
       );
 
-
-
-      /*
-       * ستاره‌ها
-       */
 
       stars.forEach(
         s => {
@@ -1976,10 +3227,6 @@
             0;
 
 
-          /*
-           * علامت سکو
-           */
-
           if (
             p.type ===
             "spring"
@@ -2039,83 +3286,98 @@
 
 
       // ========================================================
-      // بازیکن
+      // بازیکنان دیگر
       // ========================================================
 
-      ctx.beginPath();
+      if (multiplayer) {
+
+        Object.entries(
+          remoteStates
+        )
+        .forEach(
+          ([uid, state]) => {
+
+            if (
+              uid === myUid
+            ) {
+
+              return;
+
+            }
 
 
-      ctx.arc(
-        player.x,
-        player.y,
-        player.r,
-        0,
-        Math.PI * 2
-      );
+            if (
+              !state ||
+              state.alive === false
+            ) {
+
+              return;
+
+            }
 
 
-      ctx.fillStyle =
-        "#fbbf24";
+            if (
+              state.roundId &&
+              String(
+                state.roundId
+              ) !==
+                String(
+                  roundId || ""
+                )
+            ) {
+
+              return;
+
+            }
 
 
-      ctx.shadowColor =
-        "#fbbf24";
+            const received =
+              state.receivedAt ||
+              0;
 
 
-      ctx.shadowBlur =
-        16;
+            if (
+              performance.now() -
+                received >
+              REMOTE_TIMEOUT
+            ) {
+
+              return;
+
+            }
 
 
-      ctx.fill();
+            drawRemotePlayer(
+              state,
+              uid
+            );
 
+          }
+        );
 
-      ctx.shadowBlur =
-        0;
-
-
-
-      /*
-       * چشم‌ها
-       */
-
-      ctx.fillStyle =
-        "#0f172a";
-
-
-      ctx.beginPath();
-
-
-      ctx.arc(
-        player.x - 4.5,
-        player.y - 3,
-        2.8,
-        0,
-        Math.PI * 2
-      );
-
-
-      ctx.fill();
-
-
-      ctx.beginPath();
-
-
-      ctx.arc(
-        player.x + 4.5,
-        player.y - 3,
-        2.8,
-        0,
-        Math.PI * 2
-      );
-
-
-      ctx.fill();
+      }
 
 
 
-      /*
-       * ذرات
-       */
+      // ========================================================
+      // بازیکن خودمان
+      // ========================================================
+
+      if (player) {
+
+        drawPlayer(
+          player.x,
+          player.y,
+          PLAYER_COLORS[0]
+        );
+
+      }
+
+
+
+      // ========================================================
+      // ذرات
+      // ========================================================
 
       particles.forEach(
         p => {
@@ -2154,6 +3416,161 @@
 
 
       ctx.restore();
+
+    }
+
+
+
+    // ============================================================
+    // رسم بازیکن
+    // ============================================================
+
+    function drawPlayer(
+      x,
+      y,
+      color
+    ) {
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+        x,
+        y,
+        13,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.fillStyle =
+        color;
+
+
+      ctx.shadowColor =
+        color;
+
+
+      ctx.shadowBlur =
+        16;
+
+
+      ctx.fill();
+
+
+      ctx.shadowBlur =
+        0;
+
+
+      ctx.fillStyle =
+        "#0f172a";
+
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+        x - 4.5,
+        y - 3,
+        2.8,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.fill();
+
+
+      ctx.beginPath();
+
+
+      ctx.arc(
+        x + 4.5,
+        y - 3,
+        2.8,
+        0,
+        Math.PI * 2
+      );
+
+
+      ctx.fill();
+
+    }
+
+
+
+    // ============================================================
+    // رسم بازیکن دیگر
+    // ============================================================
+
+    function drawRemotePlayer(
+      state,
+      uid
+    ) {
+
+      const x =
+        Number(
+          state.x || 0
+        );
+
+
+      const y =
+        Number(
+          state.y || 0
+        );
+
+
+      const color =
+        colorForUid(uid);
+
+
+      ctx.globalAlpha =
+        .82;
+
+
+      drawPlayer(
+        x,
+        y,
+        color
+      );
+
+
+      ctx.globalAlpha =
+        1;
+
+
+      /*
+       * اسم بازیکن
+       */
+
+      const p =
+        roomPlayers[uid];
+
+
+      if (
+        p &&
+        p.name
+      ) {
+
+        ctx.font =
+          "9px system-ui";
+
+
+        ctx.textAlign =
+          "center";
+
+
+        ctx.fillStyle =
+          "rgba(255,255,255,.8)";
+
+
+        ctx.fillText(
+          p.name,
+          x,
+          y - 19
+        );
+
+      }
 
     }
 
@@ -2237,13 +3654,17 @@
       running =
         true;
 
+      gameStarted =
+        true;
 
       over =
         false;
 
-
       lastTs =
         null;
+
+
+      startSync();
 
 
       requestAnimationFrame(
@@ -2291,10 +3712,13 @@
 
 
         try {
+
           canvas.setPointerCapture(
             e.pointerId
           );
+
         }
+
         catch (_) {}
 
 
@@ -2568,18 +3992,40 @@
 
 
     // ============================================================
+    // خروج صفحه
+    // ============================================================
+
+    window.addEventListener(
+      "beforeunload",
+      () => {
+
+        stopSync();
+
+
+        roomUnsubs.forEach(
+          unsub => {
+
+            try {
+              unsub();
+            }
+
+            catch (_) {}
+
+          }
+        );
+
+      }
+    );
+
+
+
+    // ============================================================
     // مقداردهی اولیه
     // ============================================================
 
     resize();
 
-
     reset();
-
-
-    /*
-     * قبل از شروع بازی، ورود دومیتو بررسی می‌شود.
-     */
 
     initDomito();
 
