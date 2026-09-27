@@ -1290,9 +1290,9 @@ export const GAMES = [
 
   {
     id: "math",
-    name: "اسپرینت ریاضی",
-    desc: "سریع و درست حساب کن",
-    icon: "🔢",
+    name: "پرش از سکو ",
+    desc: "بپر برو بالا و برنده شو ",
+    icon: "🚀",
     soloThreshold: 40
   },
 
