@@ -5,106 +5,1438 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>کیف‌پول | دومیتو</title>
 <link rel="stylesheet" href="css/style.css">
+
+<style>
+  .wallet-hero {
+    text-align: center;
+  }
+
+  .available-box {
+    margin-top: 10px;
+    font-size: 13px;
+  }
+
+  .transfer-box {
+    margin-top: 16px;
+  }
+
+  .transfer-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .transfer-form input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .transfer-info {
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .transfer-message {
+    margin-top: 10px;
+    font-size: 13px;
+    min-height: 20px;
+  }
+
+  .incoming-row {
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .incoming-row:last-child {
+    border-bottom: none;
+  }
+
+  .incoming-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .incoming-amount {
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  .incoming-time {
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: .65;
+  }
+
+  .incoming-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .incoming-actions button {
+    flex: 1;
+  }
+
+  .btn-danger {
+    border: none;
+    cursor: pointer;
+  }
+
+  .pending-box {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.05);
+    font-size: 13px;
+  }
+
+  .empty-transfer {
+    opacity: .65;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+
+  .tx-row:last-child {
+    border-bottom: none;
+  }
+
+  .plus {
+    color: #48e28a;
+    font-weight: bold;
+    direction: ltr;
+  }
+
+  .minus {
+    color: #ff6678;
+    font-weight: bold;
+    direction: ltr;
+  }
+
+  .muted-small {
+    font-size: 12px;
+    opacity: .65;
+  }
+</style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="brand">
-      <div class="brand-mark">🪙</div>
-      <h1>کیف‌پول</h1>
-    </div>
 
-    <div class="card" id="noNameCard" style="display:none">
-      <p class="status-line">هنوز وارد نشدی.</p>
-      <a href="index.html" class="btn btn-full">ورود</a>
-    </div>
+<div class="wrap">
 
-    <div id="walletContent" style="display:none">
-      <div class="wallet-hero">
-        <div class="muted">موجودی فعلی</div>
-        <div class="amt">🪙 <span id="balanceNum">0</span></div>
-      </div>
+  <!-- ====================================================== -->
+  <!-- Header -->
+  <!-- ====================================================== -->
 
-      <div class="card" style="margin-top:16px;">
-        <h2>🎯 ماموریت‌های امروز</h2>
-        <div id="missionList"></div>
-      </div>
-
-      <div class="card">
-        <h2>تاریخچه تراکنش</h2>
-        <div id="txList"></div>
-        <p class="muted" id="txEmpty" style="display:none;">هنوز تراکنشی ثبت نشده</p>
-      </div>
-    </div>
-
-    <a href="profile.html" class="link-back">← بازگشت به پروفایل</a>
+  <div class="brand">
+    <div class="brand-mark">🪙</div>
+    <h1>کیف‌پول</h1>
   </div>
 
+
+  <!-- ====================================================== -->
+  <!-- Login required -->
+  <!-- ====================================================== -->
+
+  <div class="card" id="noNameCard" style="display:none">
+
+    <p class="status-line">
+      هنوز وارد نشدی.
+    </p>
+
+    <a
+      href="index.html"
+      class="btn btn-full"
+    >
+      ورود
+    </a>
+
+  </div>
+
+
+  <!-- ====================================================== -->
+  <!-- Wallet -->
+  <!-- ====================================================== -->
+
+  <div
+    id="walletContent"
+    style="display:none"
+  >
+
+
+    <!-- ==================================================== -->
+    <!-- Balance -->
+    <!-- ==================================================== -->
+
+    <div class="wallet-hero">
+
+      <div class="muted">
+        موجودی فعلی
+      </div>
+
+      <div class="amt">
+        🪙
+        <span id="balanceNum">0</span>
+      </div>
+
+      <div
+        class="available-box muted"
+        id="availableBox"
+      >
+        قابل استفاده: 0 🪙
+      </div>
+
+      <div
+        class="pending-box"
+        id="pendingBox"
+      >
+        در انتظار انتقال: 0 🪙
+      </div>
+
+    </div>
+
+
+    <!-- ==================================================== -->
+    <!-- Transfer -->
+    <!-- ==================================================== -->
+
+    <div
+      class="card transfer-box"
+    >
+
+      <h2>
+        💸 انتقال سکه
+      </h2>
+
+      <p class="muted-small">
+        سکه بعد از ارسال تا زمان قبول یا رد درخواست،
+        برای شما رزرو می‌شود.
+      </p>
+
+
+      <div class="transfer-form">
+
+        <input
+          id="receiverInput"
+          type="text"
+          placeholder="نام کاربری گیرنده"
+          autocomplete="off"
+        >
+
+        <input
+          id="amountInput"
+          type="number"
+          min="1"
+          step="1"
+          placeholder="مقدار سکه"
+          inputmode="numeric"
+        >
+
+        <button
+          id="sendBtn"
+          class="btn btn-full"
+        >
+          💸 ارسال درخواست
+        </button>
+
+      </div>
+
+
+      <div
+        id="transferMessage"
+        class="transfer-message"
+      ></div>
+
+    </div>
+
+
+    <!-- ==================================================== -->
+    <!-- Incoming -->
+    <!-- ==================================================== -->
+
+    <div class="card">
+
+      <h2>
+        📥 درخواست‌های دریافتی
+      </h2>
+
+      <div id="incomingList">
+
+        <p class="empty-transfer">
+          درخواست جدیدی نداری.
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <!-- ==================================================== -->
+    <!-- Missions -->
+    <!-- ==================================================== -->
+
+    <div class="card">
+
+      <h2>
+        🎯 ماموریت‌های امروز
+      </h2>
+
+      <div id="missionList"></div>
+
+    </div>
+
+
+    <!-- ==================================================== -->
+    <!-- Transactions -->
+    <!-- ==================================================== -->
+
+    <div class="card">
+
+      <h2>
+        📜 تاریخچه تراکنش
+      </h2>
+
+      <div id="txList"></div>
+
+      <p
+        class="muted"
+        id="txEmpty"
+        style="display:none;"
+      >
+        هنوز تراکنشی ثبت نشده
+      </p>
+
+    </div>
+
+
+  </div>
+
+
+  <!-- ====================================================== -->
+  <!-- Back -->
+  <!-- ====================================================== -->
+
+  <a
+    href="profile.html"
+    class="link-back"
+  >
+    ← بازگشت به پروفایل
+  </a>
+
+</div>
+
+
 <script type="module">
-  import {
-    getSavedName, profileRef, onValue, getTransactions, MISSIONS, claimMission, waitForUser
-  } from "./js/app.js";
 
-  waitForUser().then(async (user) => {
-    const name = getSavedName();
-    if (!user || !name) { document.getElementById("noNameCard").style.display = "block"; return; }
-    document.getElementById("walletContent").style.display = "block";
+import {
 
-    let latestProfile = null;
+  getSavedName,
 
-    onValue(profileRef(name), (snap) => {
-      const p = snap.val() || { coins: 0, gamesPlayed: 0, wins: 0, claimedMissions: [] };
-      latestProfile = p;
-      document.getElementById("balanceNum").textContent = p.coins || 0;
-      renderMissions(p);
-      refreshTx();
-    });
+  profileRef,
 
-    function renderMissions(p) {
-      const claimed = p.claimedMissions || [];
-      const list = document.getElementById("missionList");
-      list.innerHTML = "";
-      MISSIONS.forEach((m) => {
-        const progressVal = p[m.statKey] || 0;
-        const pct = Math.min(100, Math.round((progressVal / m.target) * 100));
-        const done = progressVal >= m.target;
-        const isClaimed = claimed.includes(m.id);
-        const row = document.createElement("div");
-        row.className = "mission-row";
-        row.innerHTML = `
-          <div class="top"><span class="txt">${m.label}</span><span class="reward">🪙 +${m.reward}</span></div>
-          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-        `;
-        const btn = document.createElement("button");
-        if (isClaimed) { btn.textContent = "دریافت شد"; btn.disabled = true; btn.className = "btn-ghost"; }
-        else if (done) {
-          btn.textContent = "دریافت پاداش"; btn.className = "btn-gold";
-          btn.addEventListener("click", async () => {
-            btn.disabled = true;
-            const res = await claimMission(name, m.id);
-            if (!res.ok) btn.disabled = false;
-          });
-        } else {
-          btn.textContent = `${progressVal} از ${m.target}`; btn.disabled = true; btn.className = "btn-ghost";
+  onValue,
+
+  getTransactions,
+
+  MISSIONS,
+
+  claimMission,
+
+  waitForUser,
+
+  sendCoins,
+
+  listenIncomingTransfers,
+
+  acceptTransfer,
+
+  rejectTransfer,
+
+  startTransferWatcher,
+
+  listenOutgoingTransfers
+
+} from "./js/app.js";
+
+
+// ============================================================
+// شروع
+// ============================================================
+
+waitForUser().then(async user => {
+
+  const name =
+    getSavedName();
+
+
+  // ----------------------------------------------------------
+  // ورود لازم است
+  // ----------------------------------------------------------
+
+  if (
+    !user ||
+    !name
+  ) {
+
+    document
+      .getElementById("noNameCard")
+      .style.display =
+        "block";
+
+    return;
+
+  }
+
+
+  document
+    .getElementById("walletContent")
+    .style.display =
+      "block";
+
+
+  // ==========================================================
+  // عناصر
+  // ==========================================================
+
+  const balanceNum =
+    document.getElementById(
+      "balanceNum"
+    );
+
+  const availableBox =
+    document.getElementById(
+      "availableBox"
+    );
+
+  const pendingBox =
+    document.getElementById(
+      "pendingBox"
+    );
+
+  const receiverInput =
+    document.getElementById(
+      "receiverInput"
+    );
+
+  const amountInput =
+    document.getElementById(
+      "amountInput"
+    );
+
+  const sendBtn =
+    document.getElementById(
+      "sendBtn"
+    );
+
+  const transferMessage =
+    document.getElementById(
+      "transferMessage"
+    );
+
+  const incomingList =
+    document.getElementById(
+      "incomingList"
+    );
+
+
+  // ==========================================================
+  // بررسی انتقال‌های ردشده
+  // ==========================================================
+
+  startTransferWatcher(
+    name
+  );
+
+
+  // ==========================================================
+  // پروفایل
+  // ==========================================================
+
+  onValue(
+    profileRef(name),
+    snap => {
+
+      const p =
+        snap.val() || {
+
+          coins: 0,
+
+          gamesPlayed: 0,
+
+          wins: 0,
+
+          claimedMissions: []
+
+        };
+
+
+      const coins =
+        Number(
+          p.coins || 0
+        );
+
+
+      // ------------------------------------------------------
+      // محاسبه پول در انتظار
+      // ------------------------------------------------------
+
+      let pending =
+        0;
+
+
+      const outgoing =
+        p.outgoingTransfers ||
+        {};
+
+
+      Object.values(
+        outgoing
+      ).forEach(
+        transfer => {
+
+          if (
+            transfer &&
+            transfer.status ===
+              "pending"
+          ) {
+
+            const amount =
+              Number(
+                transfer.amount
+              );
+
+
+            if (
+              Number.isInteger(amount) &&
+              amount > 0
+            ) {
+
+              pending +=
+                amount;
+
+            }
+
+          }
+
         }
-        row.appendChild(btn);
-        list.appendChild(row);
-      });
+      );
+
+
+      // ------------------------------------------------------
+      // نمایش
+      // ------------------------------------------------------
+
+      balanceNum.textContent =
+        coins;
+
+
+      const available =
+        Math.max(
+          0,
+          coins
+        );
+
+
+      availableBox.textContent =
+        `قابل استفاده: ${available} 🪙`;
+
+
+      pendingBox.textContent =
+        `در انتظار انتقال: ${pending} 🪙`;
+
+
+      renderMissions(
+        p
+      );
+
+
+      refreshTx();
+
+    }
+  );
+
+
+  // ==========================================================
+  // ارسال سکه
+  // ==========================================================
+
+  sendBtn.addEventListener(
+    "click",
+    async () => {
+
+      const receiver =
+        receiverInput.value.trim();
+
+      const amount =
+        Number(
+          amountInput.value
+        );
+
+
+      transferMessage.textContent =
+        "";
+
+
+      if (!receiver) {
+
+        showMessage(
+          "❌ نام کاربری گیرنده را وارد کن.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (
+        !Number.isInteger(amount) ||
+        amount <= 0
+      ) {
+
+        showMessage(
+          "❌ مقدار سکه معتبر نیست.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      if (
+        receiver.toLowerCase() ===
+        name.toLowerCase()
+      ) {
+
+        showMessage(
+          "❌ نمی‌توانی به خودت سکه انتقال بدهی.",
+          true
+        );
+
+        return;
+
+      }
+
+
+      sendBtn.disabled =
+        true;
+
+      sendBtn.textContent =
+        "⏳ در حال ارسال...";
+
+
+      try {
+
+        const result =
+          await sendCoins(
+            name,
+            receiver,
+            amount
+          );
+
+
+        if (!result.ok) {
+
+          const messages = {
+
+            "invalid-name":
+              "❌ نام کاربری معتبر نیست.",
+
+            "self-transfer":
+              "❌ نمی‌توانی به خودت سکه بفرستی.",
+
+            "invalid-amount":
+              "❌ مقدار سکه معتبر نیست.",
+
+            "receiver-not-found":
+              "❌ چنین کاربری پیدا نشد.",
+
+            "sender-not-found":
+              "❌ پروفایل شما پیدا نشد.",
+
+            "insufficient":
+              "❌ موجودی قابل استفاده کافی نیست.",
+
+            "transfer-create-failed":
+              "❌ ساخت درخواست انتقال ناموفق بود.",
+
+            "id-generation-failed":
+              "❌ ساخت شناسه انتقال ناموفق بود."
+
+          };
+
+
+          showMessage(
+            messages[result.reason] ||
+            "❌ انتقال انجام نشد.",
+            true
+          );
+
+
+          return;
+
+        }
+
+
+        receiverInput.value =
+          "";
+
+        amountInput.value =
+          "";
+
+
+        showMessage(
+          `✅ درخواست انتقال ${amount} سکه برای ${receiver} ارسال شد.`
+        );
+
+
+        await refreshTx();
+
+
+      } catch (e) {
+
+        console.error(
+          "SEND COINS ERROR:",
+          e
+        );
+
+
+        showMessage(
+          "❌ خطایی هنگام انتقال رخ داد.",
+          true
+        );
+
+      } finally {
+
+        sendBtn.disabled =
+          false;
+
+        sendBtn.textContent =
+          "💸 ارسال درخواست";
+
+      }
+
+    }
+  );
+
+
+  // ==========================================================
+  // درخواست‌های دریافتی
+  // ==========================================================
+
+  listenIncomingTransfers(
+    name,
+    list => {
+
+      renderIncoming(
+        list
+      );
+
+    }
+  );
+
+
+  // ==========================================================
+  // نمایش درخواست‌ها
+  // ==========================================================
+
+  function renderIncoming(
+    list
+  ) {
+
+    if (
+      !list ||
+      list.length === 0
+    ) {
+
+      incomingList.innerHTML = `
+        <p class="empty-transfer">
+          درخواست جدیدی نداری.
+        </p>
+      `;
+
+      return;
+
     }
 
-    async function refreshTx() {
-      const txs = await getTransactions(name, 20);
-      const txList = document.getElementById("txList");
-      const txEmpty = document.getElementById("txEmpty");
-      if (txs.length === 0) { txEmpty.style.display = "block"; txList.innerHTML = ""; return; }
-      txEmpty.style.display = "none";
-      txList.innerHTML = txs.map((t) => `
-        <div class="tx-row">
-          <span>${t.note}</span>
-          <span class="${t.amount >= 0 ? "plus" : "minus"}">${t.amount >= 0 ? "+" : ""}${t.amount}</span>
-        </div>
-      `).join("");
+
+    incomingList.innerHTML =
+      list.map(
+        transfer => {
+
+          const from =
+            escapeHtml(
+              transfer.from ||
+              "کاربر"
+            );
+
+
+          const amount =
+            Number(
+              transfer.amount || 0
+            );
+
+
+          const time =
+            formatTime(
+              transfer.at
+            );
+
+
+          return `
+
+            <div
+              class="incoming-row"
+              data-id="${escapeHtml(transfer.id)}"
+            >
+
+              <div class="incoming-top">
+
+                <span>
+                  💰
+                  <strong>${from}</strong>
+                  برایت
+                  <strong>${amount}</strong>
+                  سکه فرستاده
+                </span>
+
+                <span class="incoming-amount">
+                  🪙 ${amount}
+                </span>
+
+              </div>
+
+              <div class="incoming-time">
+                ${time}
+              </div>
+
+              <div class="incoming-actions">
+
+                <button
+                  class="btn btn-gold accept-transfer"
+                  data-id="${escapeHtml(transfer.id)}"
+                >
+                  ✅ قبول
+                </button>
+
+                <button
+                  class="btn btn-danger reject-transfer"
+                  data-id="${escapeHtml(transfer.id)}"
+                >
+                  ❌ رد
+                </button>
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      ).join("");
+
+
+    // --------------------------------------------------------
+    // Accept
+    // --------------------------------------------------------
+
+    incomingList
+      .querySelectorAll(
+        ".accept-transfer"
+      )
+      .forEach(
+        btn => {
+
+          btn.addEventListener(
+            "click",
+            async () => {
+
+              const id =
+                btn.dataset.id;
+
+
+              btn.disabled =
+                true;
+
+
+              try {
+
+                const result =
+                  await acceptTransfer(
+                    name,
+                    id
+                  );
+
+
+                if (
+                  !result.ok
+                ) {
+
+                  alert(
+                    getTransferError(
+                      result.reason
+                    )
+                  );
+
+                  btn.disabled =
+                    false;
+
+                  return;
+
+                }
+
+
+                await refreshTx();
+
+              } catch (e) {
+
+                console.error(
+                  "ACCEPT ERROR:",
+                  e
+                );
+
+                alert(
+                  "❌ قبول انتقال ناموفق بود."
+                );
+
+                btn.disabled =
+                  false;
+
+              }
+
+            }
+          );
+
+        }
+      );
+
+
+    // --------------------------------------------------------
+    // Reject
+    // --------------------------------------------------------
+
+    incomingList
+      .querySelectorAll(
+        ".reject-transfer"
+      )
+      .forEach(
+        btn => {
+
+          btn.addEventListener(
+            "click",
+            async () => {
+
+              const id =
+                btn.dataset.id;
+
+
+              btn.disabled =
+                true;
+
+
+              try {
+
+                const result =
+                  await rejectTransfer(
+                    name,
+                    id
+                  );
+
+
+                if (
+                  !result.ok
+                ) {
+
+                  alert(
+                    getTransferError(
+                      result.reason
+                    )
+                  );
+
+                  btn.disabled =
+                    false;
+
+                  return;
+
+                }
+
+
+              } catch (e) {
+
+                console.error(
+                  "REJECT ERROR:",
+                  e
+                );
+
+                alert(
+                  "❌ رد انتقال ناموفق بود."
+                );
+
+                btn.disabled =
+                  false;
+
+              }
+
+            }
+          );
+
+        }
+      );
+
+  }
+
+
+  // ==========================================================
+  // مأموریت‌ها
+  // ==========================================================
+
+  function renderMissions(
+    p
+  ) {
+
+    const claimed =
+      p.claimedMissions ||
+      [];
+
+
+    const list =
+      document.getElementById(
+        "missionList"
+      );
+
+
+    list.innerHTML =
+      "";
+
+
+    MISSIONS.forEach(
+      m => {
+
+        const progressVal =
+          Number(
+            p[m.statKey] || 0
+          );
+
+
+        const pct =
+          Math.min(
+            100,
+            Math.round(
+              (
+                progressVal /
+                m.target
+              ) *
+              100
+            )
+          );
+
+
+        const done =
+          progressVal >=
+          m.target;
+
+
+        const isClaimed =
+          claimed.includes(
+            m.id
+          );
+
+
+        const row =
+          document.createElement(
+            "div"
+          );
+
+
+        row.className =
+          "mission-row";
+
+
+        row.innerHTML = `
+
+          <div class="top">
+
+            <span class="txt">
+              ${escapeHtml(m.label)}
+            </span>
+
+            <span class="reward">
+              🪙 +${m.reward}
+            </span>
+
+          </div>
+
+          <div class="progress-bar">
+
+            <div
+              class="progress-fill"
+              style="width:${pct}%"
+            ></div>
+
+          </div>
+
+        `;
+
+
+        const btn =
+          document.createElement(
+            "button"
+          );
+
+
+        if (
+          isClaimed
+        ) {
+
+          btn.textContent =
+            "دریافت شد";
+
+          btn.disabled =
+            true;
+
+          btn.className =
+            "btn-ghost";
+
+        }
+
+        else if (
+          done
+        ) {
+
+          btn.textContent =
+            "دریافت پاداش";
+
+          btn.className =
+            "btn-gold";
+
+
+          btn.addEventListener(
+            "click",
+            async () => {
+
+              btn.disabled =
+                true;
+
+
+              try {
+
+                const result =
+                  await claimMission(
+                    name,
+                    m.id
+                  );
+
+
+                if (
+                  !result.ok
+                ) {
+
+                  alert(
+                    "❌ دریافت پاداش انجام نشد."
+                  );
+
+                  btn.disabled =
+                    false;
+
+                }
+
+              } catch (e) {
+
+                console.error(
+                  "MISSION ERROR:",
+                  e
+                );
+
+                btn.disabled =
+                  false;
+
+              }
+
+            }
+          );
+
+        }
+
+        else {
+
+          btn.textContent =
+            `${progressVal} از ${m.target}`;
+
+          btn.disabled =
+            true;
+
+          btn.className =
+            "btn-ghost";
+
+        }
+
+
+        row.appendChild(
+          btn
+        );
+
+
+        list.appendChild(
+          row
+        );
+
+      }
+    );
+
+  }
+
+
+  // ==========================================================
+  // تراکنش‌ها
+  // ==========================================================
+
+  async function refreshTx() {
+
+    try {
+
+      const txs =
+        await getTransactions(
+          name,
+          30
+        );
+
+
+      const txList =
+        document.getElementById(
+          "txList"
+        );
+
+
+      const txEmpty =
+        document.getElementById(
+          "txEmpty"
+        );
+
+
+      if (
+        txs.length === 0
+      ) {
+
+        txEmpty.style.display =
+          "block";
+
+        txList.innerHTML =
+          "";
+
+        return;
+
+      }
+
+
+      txEmpty.style.display =
+        "none";
+
+
+      txList.innerHTML =
+        txs.map(
+          t => {
+
+            const amount =
+              Number(
+                t.amount || 0
+              );
+
+
+            return `
+
+              <div class="tx-row">
+
+                <span>
+                  ${escapeHtml(
+                    t.note ||
+                    "تراکنش"
+                  )}
+                </span>
+
+                <span
+                  class="${
+                    amount >= 0
+                      ? "plus"
+                      : "minus"
+                  }"
+                >
+                  ${
+                    amount >= 0
+                      ? "+"
+                      : ""
+                  }${amount}
+                </span>
+
+              </div>
+
+            `;
+
+          }
+        ).join("");
+
+
+    } catch (e) {
+
+      console.error(
+        "TRANSACTION LOAD ERROR:",
+        e
+      );
+
     }
-  });
+
+  }
+
+
+  // ==========================================================
+  // پیام انتقال
+  // ==========================================================
+
+  function showMessage(
+    text,
+    error = false
+  ) {
+
+    transferMessage.textContent =
+      text;
+
+
+    transferMessage.style.color =
+      error
+        ? "#ff6678"
+        : "#48e28a";
+
+  }
+
+
+  // ==========================================================
+  // خطای انتقال
+  // ==========================================================
+
+  function getTransferError(
+    reason
+  ) {
+
+    const messages = {
+
+      "invalid":
+        "❌ درخواست نامعتبر است.",
+
+      "not-found":
+        "❌ این درخواست دیگر وجود ندارد.",
+
+      "already-processed":
+        "⚠️ این درخواست قبلاً پردازش شده است.",
+
+      "invalid-amount":
+        "❌ مقدار انتقال نامعتبر است.",
+
+      "credit-failed":
+        "❌ اضافه کردن سکه ناموفق بود.",
+
+      "status-update-failed":
+        "❌ تغییر وضعیت انتقال ناموفق بود."
+
+    };
+
+
+    return (
+      messages[reason] ||
+      "❌ عملیات انتقال انجام نشد."
+    );
+
+  }
+
+
+  // ==========================================================
+  // ابزارها
+  // ==========================================================
+
+  function formatTime(
+    timestamp
+  ) {
+
+    if (!timestamp) {
+      return "زمان نامشخص";
+    }
+
+
+    try {
+
+      return new Intl.DateTimeFormat(
+        "fa-IR",
+        {
+
+          year:
+            "numeric",
+
+          month:
+            "2-digit",
+
+          day:
+            "2-digit",
+
+          hour:
+            "2-digit",
+
+          minute:
+            "2-digit"
+
+        }
+      ).format(
+        new Date(timestamp)
+      );
+
+    } catch {
+
+      return "";
+
+    }
+
+  }
+
+
+  function escapeHtml(
+    value
+  ) {
+
+    return String(
+      value ?? ""
+    )
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      )
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+      .replace(
+        /'/g,
+        "&#039;"
+      );
+
+  }
+
+});
 </script>
+
 </body>
-</html>
+  </html>
