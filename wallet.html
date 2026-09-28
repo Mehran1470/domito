@@ -126,6 +126,40 @@
     font-size: 12px;
     opacity: .65;
   }
+
+  .outgoing-row {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  .outgoing-row:last-child {
+    border-bottom: none;
+  }
+
+  .outgoing-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .outgoing-status {
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: .7;
+  }
+
+  .status-pending {
+    color: #ffd166;
+  }
+
+  .status-accepted {
+    color: #48e28a;
+  }
+
+  .status-refunded {
+    color: #48e28a;
+  }
 </style>
 </head>
 
@@ -133,9 +167,7 @@
 
 <div class="wrap">
 
-  <!-- ====================================================== -->
   <!-- Header -->
-  <!-- ====================================================== -->
 
   <div class="brand">
     <div class="brand-mark">🪙</div>
@@ -143,9 +175,7 @@
   </div>
 
 
-  <!-- ====================================================== -->
   <!-- Login required -->
-  <!-- ====================================================== -->
 
   <div class="card" id="noNameCard" style="display:none">
 
@@ -163,19 +193,14 @@
   </div>
 
 
-  <!-- ====================================================== -->
   <!-- Wallet -->
-  <!-- ====================================================== -->
 
   <div
     id="walletContent"
     style="display:none"
   >
 
-
-    <!-- ==================================================== -->
     <!-- Balance -->
-    <!-- ==================================================== -->
 
     <div class="wallet-hero">
 
@@ -205,13 +230,9 @@
     </div>
 
 
-    <!-- ==================================================== -->
     <!-- Transfer -->
-    <!-- ==================================================== -->
 
-    <div
-      class="card transfer-box"
-    >
+    <div class="card transfer-box">
 
       <h2>
         💸 انتقال سکه
@@ -221,7 +242,6 @@
         سکه بعد از ارسال تا زمان قبول یا رد درخواست،
         برای شما رزرو می‌شود.
       </p>
-
 
       <div class="transfer-form">
 
@@ -250,7 +270,6 @@
 
       </div>
 
-
       <div
         id="transferMessage"
         class="transfer-message"
@@ -259,9 +278,7 @@
     </div>
 
 
-    <!-- ==================================================== -->
     <!-- Incoming -->
-    <!-- ==================================================== -->
 
     <div class="card">
 
@@ -280,9 +297,26 @@
     </div>
 
 
-    <!-- ==================================================== -->
+    <!-- Outgoing -->
+
+    <div class="card">
+
+      <h2>
+        📤 انتقال‌های من
+      </h2>
+
+      <div id="outgoingList">
+
+        <p class="empty-transfer">
+          انتقالی وجود ندارد.
+        </p>
+
+      </div>
+
+    </div>
+
+
     <!-- Missions -->
-    <!-- ==================================================== -->
 
     <div class="card">
 
@@ -295,9 +329,7 @@
     </div>
 
 
-    <!-- ==================================================== -->
     <!-- Transactions -->
-    <!-- ==================================================== -->
 
     <div class="card">
 
@@ -317,13 +349,10 @@
 
     </div>
 
-
   </div>
 
 
-  <!-- ====================================================== -->
   <!-- Back -->
-  <!-- ====================================================== -->
 
   <a
     href="profile.html"
@@ -361,7 +390,7 @@ import {
 
   rejectTransfer,
 
-  startTransferWatcher,
+  processOutgoingTransfers,
 
   listenOutgoingTransfers
 
@@ -389,8 +418,7 @@ waitForUser().then(async user => {
 
     document
       .getElementById("noNameCard")
-      .style.display =
-        "block";
+      .style.display = "block";
 
     return;
 
@@ -399,8 +427,7 @@ waitForUser().then(async user => {
 
   document
     .getElementById("walletContent")
-    .style.display =
-      "block";
+    .style.display = "block";
 
 
   // ==========================================================
@@ -447,14 +474,30 @@ waitForUser().then(async user => {
       "incomingList"
     );
 
+  const outgoingList =
+    document.getElementById(
+      "outgoingList"
+    );
+
 
   // ==========================================================
-  // بررسی انتقال‌های ردشده
+  // پردازش انتقال‌های قبلی
   // ==========================================================
 
-  startTransferWatcher(
-    name
-  );
+  try {
+
+    await processOutgoingTransfers(
+      name
+    );
+
+  } catch (e) {
+
+    console.warn(
+      "OUTGOING PROCESS ERROR:",
+      e
+    );
+
+  }
 
 
   // ==========================================================
@@ -486,7 +529,7 @@ waitForUser().then(async user => {
 
 
       // ------------------------------------------------------
-      // محاسبه پول در انتظار
+      // انتقال‌های در انتظار
       // ------------------------------------------------------
 
       let pending =
@@ -532,12 +575,18 @@ waitForUser().then(async user => {
 
 
       // ------------------------------------------------------
-      // نمایش
+      // نمایش موجودی
       // ------------------------------------------------------
 
       balanceNum.textContent =
         coins;
 
+
+      /*
+       * چون هنگام ارسال، سکه همان لحظه
+       * از موجودی کم شده، موجودی فعلی
+       * همان مقدار قابل استفاده است.
+       */
 
       const available =
         Math.max(
@@ -665,12 +714,12 @@ waitForUser().then(async user => {
               "❌ پروفایل شما پیدا نشد.",
 
             "insufficient":
-              "❌ موجودی قابل استفاده کافی نیست.",
+              "❌ موجودی کافی نیست.",
 
             "transfer-create-failed":
               "❌ ساخت درخواست انتقال ناموفق بود.",
 
-            "id-generation-failed":
+            "transfer-id-failed":
               "❌ ساخت شناسه انتقال ناموفق بود."
 
           };
@@ -697,6 +746,11 @@ waitForUser().then(async user => {
 
         showMessage(
           `✅ درخواست انتقال ${amount} سکه برای ${receiver} ارسال شد.`
+        );
+
+
+        await processOutgoingTransfers(
+          name
         );
 
 
@@ -747,7 +801,44 @@ waitForUser().then(async user => {
 
 
   // ==========================================================
-  // نمایش درخواست‌ها
+  // انتقال‌های خروجی
+  // ==========================================================
+
+  listenOutgoingTransfers(
+    name,
+    async list => {
+
+      renderOutgoing(
+        list
+      );
+
+
+      /*
+       * اگر گیرنده قبلاً انتقال را قبول یا رد کرده
+       * باشد، وضعیت را پردازش می‌کنیم.
+       */
+
+      try {
+
+        await processOutgoingTransfers(
+          name
+        );
+
+      } catch (e) {
+
+        console.warn(
+          "OUTGOING WATCH ERROR:",
+          e
+        );
+
+      }
+
+    }
+  );
+
+
+  // ==========================================================
+  // نمایش درخواست‌های دریافتی
   // ==========================================================
 
   function renderIncoming(
@@ -793,11 +884,17 @@ waitForUser().then(async user => {
             );
 
 
+          const id =
+            escapeHtml(
+              transfer.id
+            );
+
+
           return `
 
             <div
               class="incoming-row"
-              data-id="${escapeHtml(transfer.id)}"
+              data-id="${id}"
             >
 
               <div class="incoming-top">
@@ -824,14 +921,14 @@ waitForUser().then(async user => {
 
                 <button
                   class="btn btn-gold accept-transfer"
-                  data-id="${escapeHtml(transfer.id)}"
+                  data-id="${id}"
                 >
                   ✅ قبول
                 </button>
 
                 <button
                   class="btn btn-danger reject-transfer"
-                  data-id="${escapeHtml(transfer.id)}"
+                  data-id="${id}"
                 >
                   ❌ رد
                 </button>
@@ -897,6 +994,7 @@ waitForUser().then(async user => {
 
 
                 await refreshTx();
+
 
               } catch (e) {
 
@@ -997,6 +1095,115 @@ waitForUser().then(async user => {
 
 
   // ==========================================================
+  // نمایش انتقال‌های خروجی
+  // ==========================================================
+
+  function renderOutgoing(
+    list
+  ) {
+
+    if (
+      !list ||
+      list.length === 0
+    ) {
+
+      outgoingList.innerHTML = `
+        <p class="empty-transfer">
+          انتقالی وجود ندارد.
+        </p>
+      `;
+
+      return;
+
+    }
+
+
+    outgoingList.innerHTML =
+      list.map(
+        transfer => {
+
+          const to =
+            escapeHtml(
+              transfer.to ||
+              "کاربر"
+            );
+
+
+          const amount =
+            Number(
+              transfer.amount || 0
+            );
+
+
+          let statusText =
+            "⏳ در انتظار قبول";
+
+          let statusClass =
+            "status-pending";
+
+
+          if (
+            transfer.status ===
+            "accepted"
+          ) {
+
+            statusText =
+              "✅ انتقال انجام شد";
+
+            statusClass =
+              "status-accepted";
+
+          }
+
+
+          if (
+            transfer.status ===
+            "refunded"
+          ) {
+
+            statusText =
+              "↩️ سکه‌ها برگشت خورد";
+
+            statusClass =
+              "status-refunded";
+
+          }
+
+
+          return `
+
+            <div class="outgoing-row">
+
+              <div class="outgoing-top">
+
+                <span>
+                  به
+                  <strong>${to}</strong>
+                </span>
+
+                <span>
+                  🪙 ${amount}
+                </span>
+
+              </div>
+
+              <div
+                class="outgoing-status ${statusClass}"
+              >
+                ${statusText}
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      ).join("");
+
+  }
+
+
+  // ==========================================================
   // مأموریت‌ها
   // ==========================================================
 
@@ -1067,7 +1274,9 @@ waitForUser().then(async user => {
           <div class="top">
 
             <span class="txt">
-              ${escapeHtml(m.label)}
+              ${escapeHtml(
+                m.label
+              )}
             </span>
 
             <span class="reward">
