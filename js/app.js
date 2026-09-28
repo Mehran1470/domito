@@ -1,4 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
 import {
   getAuth,
@@ -22,16 +24,23 @@ import {
   onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-import { firebaseConfig } from "./firebase-config.js";
+import {
+  firebaseConfig
+} from "./firebase-config.js";
+
 
 // ============================================================
 // Firebase
 // ============================================================
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const app =
+  initializeApp(firebaseConfig);
 
-export const db = getDatabase(app);
+const auth =
+  getAuth(app);
+
+export const db =
+  getDatabase(app);
 
 export {
   ref,
@@ -46,84 +55,139 @@ export {
   push
 };
 
+
 // ============================================================
 // احراز هویت
 // ============================================================
 
 function usernameToEmail(username) {
-  return `${String(username || "").trim().toLowerCase()}@domito.local`;
+
+  return `${String(username || "")
+    .trim()
+    .toLowerCase()}@domito.local`;
+
 }
 
 export function getSavedName() {
-  return localStorage.getItem("domito_name") || "";
+
+  return (
+    localStorage.getItem(
+      "domito_name"
+    ) || ""
+  );
+
 }
 
 export function saveName(name) {
+
   localStorage.setItem(
     "domito_name",
     String(name || "").trim()
   );
+
 }
+
 
 // ============================================================
 // پروفایل
 // ============================================================
 
 function blankProfile() {
+
   return {
+
     wins: 0,
+
     losses: 0,
+
     gamesPlayed: 0,
+
     byGame: {},
+
     coins: 0,
+
     purchased: [],
+
     equippedTheme: "default",
+
     claimedMissions: [],
+
     friends: {},
+
     friendRequests: {},
+
     lastLogin: 0
+
   };
+
 }
 
-export function profileRef(name, path = "") {
-  const safe = encodeURIComponent(
-    String(name || "")
-  );
+
+export function profileRef(
+  name,
+  path = ""
+) {
+
+  const safe =
+    encodeURIComponent(
+      String(name || "")
+    );
 
   return ref(
     db,
     `profiles/${safe}${path ? "/" + path : ""}`
   );
+
 }
 
-async function ensureProfile(username) {
-  const pRef = profileRef(username);
-  const snap = await get(pRef);
+
+async function ensureProfile(
+  username
+) {
+
+  const pRef =
+    profileRef(username);
+
+  const snap =
+    await get(pRef);
 
   if (!snap.exists()) {
+
     await set(
       pRef,
       blankProfile()
     );
+
   }
+
 }
+
+
+// ============================================================
+// لینک مالک
+// ============================================================
 
 export async function ensureOwnerLinks(
   username,
   uid
 ) {
-  const ownerRef = ref(
-    db,
-    `profiles/${encodeURIComponent(username)}/ownerUid`
-  );
 
-  const snap = await get(ownerRef);
+  const ownerRef =
+    ref(
+      db,
+      `profiles/${encodeURIComponent(username)}/ownerUid`
+    );
+
+  const snap =
+    await get(ownerRef);
 
   if (!snap.exists()) {
+
     await set(
       ownerRef,
       uid
     );
+
   }
 
   await set(
@@ -134,24 +198,34 @@ export async function ensureOwnerLinks(
     username
   );
 
-  await ensureProfile(username);
+  await ensureProfile(
+    username
+  );
+
 }
 
+
 // ============================================================
-// ثبت آخرین ورود
+// آخرین ورود
 // ============================================================
 
-async function updateLastLogin(username) {
-  username = String(
-    username || ""
-  ).trim();
+async function updateLastLogin(
+  username
+) {
+
+  username =
+    String(
+      username || ""
+    ).trim();
 
   if (!username) {
     return false;
   }
 
   try {
-    const now = Date.now();
+
+    const now =
+      Date.now();
 
     await update(
       profileRef(username),
@@ -160,157 +234,166 @@ async function updateLastLogin(username) {
       }
     );
 
-    console.log(
-      "✅ LAST LOGIN UPDATED:",
-      username,
-      now
-    );
-
     return true;
 
   } catch (e) {
+
     console.error(
-      "❌ LAST LOGIN ERROR:",
+      "LAST LOGIN ERROR:",
       e
     );
 
     return false;
+
   }
+
 }
+
 
 // ============================================================
 // Presence
 // ============================================================
 
-let presenceConnectionRef = null;
-let presenceConnectionName = "";
-let presenceConnectedUnsubscribe = null;
+let presenceConnectionRef =
+  null;
 
-// ------------------------------------------------------------
-// مسیر Presence
-// ------------------------------------------------------------
+let presenceConnectionName =
+  "";
 
-function presenceRootRef(name) {
+let presenceConnectedUnsubscribe =
+  null;
+
+
+function presenceRootRef(
+  name
+) {
+
   return ref(
     db,
     `profiles/${encodeURIComponent(name)}/presence`
   );
+
 }
 
-function presenceConnectionsRef(name) {
+
+function presenceConnectionsRef(
+  name
+) {
+
   return ref(
     db,
     `profiles/${encodeURIComponent(name)}/presence/connections`
   );
+
 }
 
-// ------------------------------------------------------------
-// پاک کردن اتصال قبلی
-// ------------------------------------------------------------
 
 async function cleanupPresenceConnection() {
 
-  if (presenceConnectedUnsubscribe) {
+  if (
+    presenceConnectedUnsubscribe
+  ) {
+
     try {
+
       presenceConnectedUnsubscribe();
+
     } catch {}
 
-    presenceConnectedUnsubscribe = null;
+    presenceConnectedUnsubscribe =
+      null;
+
   }
 
-  if (presenceConnectionRef) {
+  if (
+    presenceConnectionRef
+  ) {
 
     try {
+
       await remove(
         presenceConnectionRef
       );
+
     } catch (e) {
+
       console.warn(
-        "Presence connection cleanup error:",
+        "Presence cleanup error:",
         e
       );
+
     }
 
-    presenceConnectionRef = null;
-    presenceConnectionName = "";
+    presenceConnectionRef =
+      null;
+
+    presenceConnectionName =
+      "";
+
   }
+
 }
 
-// ------------------------------------------------------------
-// ثبت Presence
-// ------------------------------------------------------------
 
 export async function setPresence(
   name,
   online
 ) {
-  name = String(
-    name || ""
-  ).trim();
+
+  name =
+    String(
+      name || ""
+    ).trim();
 
   if (!name) {
-    console.warn(
-      "⚠️ Presence: username خالی است"
-    );
     return;
   }
 
   const pRef =
     presenceRootRef(name);
 
-  // ==========================================================
-  // OFFLINE
-  // ==========================================================
 
   if (!online) {
 
     await cleanupPresenceConnection();
 
     try {
+
       await update(
         pRef,
         {
           online: false,
-          lastSeen: serverTimestamp()
+          lastSeen:
+            serverTimestamp()
         }
       );
 
-      console.log(
-        "🔴 OFFLINE:",
-        name
-      );
-
     } catch (e) {
+
       console.error(
-        "❌ OFFLINE ERROR:",
+        "OFFLINE ERROR:",
         e
       );
+
     }
 
     return;
+
   }
 
-  // ==========================================================
-  // اگر همین کاربر همین اتصال را دارد
-  // ==========================================================
 
   if (
     presenceConnectionRef &&
     presenceConnectionName === name
   ) {
-    console.log(
-      "🟢 Presence already active:",
-      name
-    );
 
     return;
+
   }
+
 
   await cleanupPresenceConnection();
 
-  // ==========================================================
-  // Firebase Connection Status
-  // ==========================================================
 
   const connectedRef =
     ref(
@@ -318,16 +401,14 @@ export async function setPresence(
       ".info/connected"
     );
 
-  let started = false;
+  let started =
+    false;
+
 
   const startConnection =
-    async (connected) => {
+    async connected => {
 
       if (!connected) {
-        console.log(
-          "🟡 Firebase هنوز متصل نیست:",
-          name
-        );
         return;
       }
 
@@ -339,13 +420,11 @@ export async function setPresence(
 
       try {
 
-        // ----------------------------------------------------
-        // ساخت connection
-        // ----------------------------------------------------
-
         const connection =
           push(
-            presenceConnectionsRef(name)
+            presenceConnectionsRef(
+              name
+            )
           );
 
         presenceConnectionRef =
@@ -354,83 +433,77 @@ export async function setPresence(
         presenceConnectionName =
           name;
 
-        // ----------------------------------------------------
-        // اگر اینترنت قطع شد
-        // ----------------------------------------------------
 
         await onDisconnect(
           connection
         ).remove();
 
+
         await onDisconnect(
           pRef
         ).update({
+
           online: false,
+
           lastSeen:
             serverTimestamp()
+
         });
 
-        // ----------------------------------------------------
-        // ثبت connection
-        // ----------------------------------------------------
 
         await set(
           connection,
           {
+
             online: true,
+
             connectedAt:
               serverTimestamp()
+
           }
         );
 
-        // ----------------------------------------------------
-        // ثبت online
-        // ----------------------------------------------------
 
         await update(
           pRef,
           {
+
             online: true,
+
             lastSeen:
               serverTimestamp()
-          }
-        );
 
-        console.log(
-          "🟢 ONLINE:",
-          name
+          }
         );
 
       } catch (e) {
 
         console.error(
-          "❌ PRESENCE CONNECTION ERROR:",
+          "PRESENCE ERROR:",
           e
         );
 
         started = false;
+
       }
+
     };
 
-  // ----------------------------------------------------------
-  // گوش دادن به وضعیت اتصال Firebase
-  // ----------------------------------------------------------
 
   presenceConnectedUnsubscribe =
     onValue(
       connectedRef,
       async snap => {
 
-        const connected =
-          snap.val() === true;
-
         await startConnection(
-          connected
+          snap.val() === true
         );
 
       }
     );
+
 }
+
 
 // ============================================================
 // ثبت نام
@@ -440,18 +513,23 @@ export async function registerUser(
   username,
   password
 ) {
-  username = String(
-    username || ""
-  ).trim();
+
+  username =
+    String(
+      username || ""
+    ).trim();
 
   if (
     !username ||
     !password
   ) {
+
     throw new Error(
       "invalid-credentials"
     );
+
   }
+
 
   const cred =
     await createUserWithEmailAndPassword(
@@ -460,45 +538,57 @@ export async function registerUser(
       password
     );
 
+
   saveName(username);
+
 
   await ensureOwnerLinks(
     username,
     cred.user.uid
   );
 
+
   await updateLastLogin(
     username
   );
+
 
   await setPresence(
     username,
     true
   );
 
+
   return cred.user;
+
 }
 
+
 // ============================================================
-// ورود دستی
+// ورود
 // ============================================================
 
 export async function loginUser(
   username,
   password
 ) {
-  username = String(
-    username || ""
-  ).trim();
+
+  username =
+    String(
+      username || ""
+    ).trim();
 
   if (
     !username ||
     !password
   ) {
+
     throw new Error(
       "invalid-credentials"
     );
+
   }
+
 
   const cred =
     await signInWithEmailAndPassword(
@@ -507,31 +597,41 @@ export async function loginUser(
       password
     );
 
+
   saveName(username);
+
 
   await ensureOwnerLinks(
     username,
     cred.user.uid
   );
 
+
   await updateLastLogin(
     username
   );
+
 
   await setPresence(
     username,
     true
   );
 
+
   return cred.user;
+
 }
+
 
 // ============================================================
 // خروج
 // ============================================================
 
 export async function logoutUser() {
-  const name = getSavedName();
+
+  const name =
+    getSavedName();
+
 
   if (name) {
 
@@ -548,8 +648,11 @@ export async function logoutUser() {
         "Presence logout error:",
         e
       );
+
     }
+
   }
+
 
   localStorage.removeItem(
     "domito_name"
@@ -559,19 +662,24 @@ export async function logoutUser() {
     "domito_room"
   );
 
+
   await signOut(auth);
+
 }
 
+
 // ============================================================
-// وضعیت کاربر + Auto Login
+// Auto Login
 // ============================================================
 
 export function waitForUser() {
 
   return new Promise(
-    (resolve) => {
+    resolve => {
 
-      let finished = false;
+      let finished =
+        false;
+
 
       const unsubscribe =
         onAuthStateChanged(
@@ -584,31 +692,32 @@ export function waitForUser() {
 
             finished = true;
 
+
             try {
+
               unsubscribe();
+
             } catch {}
 
-            // ------------------------------------------------
-            // لاگین نیست
-            // ------------------------------------------------
 
             if (!user) {
+
               resolve(null);
+
               return;
+
             }
 
-            // ------------------------------------------------
-            // پیدا کردن نام
-            // ------------------------------------------------
 
             let username =
               getSavedName();
+
 
             if (!username) {
 
               try {
 
-                const nameSnap =
+                const snap =
                   await get(
                     ref(
                       db,
@@ -616,38 +725,37 @@ export function waitForUser() {
                     )
                   );
 
+
                 if (
-                  nameSnap.exists()
+                  snap.exists()
                 ) {
 
                   username =
                     String(
-                      nameSnap.val() || ""
+                      snap.val() || ""
                     ).trim();
+
 
                   if (username) {
                     saveName(username);
                   }
+
                 }
 
               } catch (e) {
 
                 console.warn(
-                  "Auto login username lookup error:",
+                  "USERNAME LOOKUP ERROR:",
                   e
                 );
+
               }
+
             }
 
-            // ------------------------------------------------
-            // صفحه را معطل نکن
-            // ------------------------------------------------
 
             resolve(user);
 
-            // ------------------------------------------------
-            // عملیات پس‌زمینه
-            // ------------------------------------------------
 
             if (username) {
 
@@ -665,10 +773,12 @@ export function waitForUser() {
                     } catch (e) {
 
                       console.warn(
-                        "Owner links sync error:",
+                        "OWNER LINK ERROR:",
                         e
                       );
+
                     }
+
 
                     try {
 
@@ -680,46 +790,41 @@ export function waitForUser() {
                     } catch (e) {
 
                       console.warn(
-                        "Presence sync error:",
+                        "PRESENCE SYNC ERROR:",
                         e
                       );
+
                     }
-
-                    console.log(
-                      "✅ AUTO LOGIN SYNC OK:",
-                      username
-                    );
-
-                  }
-                )
-                .catch(
-                  e => {
-
-                    console.warn(
-                      "❌ Auto login sync error:",
-                      e
-                    );
 
                   }
                 );
+
             }
+
           }
         );
+
     }
   );
+
 }
 
+
 export function currentUid() {
+
   return auth.currentUser
     ? auth.currentUser.uid
     : null;
+
 }
+
 
 // ============================================================
 // اتاق‌ها
 // ============================================================
 
 function randomRoomCode() {
+
   const chars =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -730,75 +835,105 @@ function randomRoomCode() {
     i < 5;
     i++
   ) {
+
     code +=
       chars[
         Math.floor(
           Math.random() *
-            chars.length
+          chars.length
         )
       ];
+
   }
 
   return code;
+
 }
 
+
 export function getSavedRoom() {
+
   return (
     localStorage.getItem(
       "domito_room"
     ) || ""
   );
+
 }
 
-export function saveRoom(code) {
+
+export function saveRoom(
+  code
+) {
+
   localStorage.setItem(
     "domito_room",
     String(code || "")
       .trim()
       .toUpperCase()
   );
+
 }
 
+
 export function clearRoom() {
+
   localStorage.removeItem(
     "domito_room"
   );
+
 }
+
 
 export function roomRef(
   code,
   path = ""
 ) {
-  code = String(
-    code || ""
-  )
-    .trim()
-    .toUpperCase();
+
+  code =
+    String(
+      code || ""
+    )
+      .trim()
+      .toUpperCase();
+
 
   return ref(
     db,
     `rooms/${code}${path ? "/" + path : ""}`
   );
+
 }
+
 
 // ============================================================
 // ساخت اتاق
 // ============================================================
 
 export async function createRoom() {
-  const uid = currentUid();
-  const name = getSavedName();
+
+  const uid =
+    currentUid();
+
+  const name =
+    getSavedName();
+
 
   if (
     !uid ||
     !name
   ) {
+
     throw new Error(
       "not-authenticated"
     );
+
   }
 
-  let code = null;
+
+  let code =
+    null;
+
 
   for (
     let i = 0;
@@ -809,6 +944,7 @@ export async function createRoom() {
     const candidate =
       randomRoomCode();
 
+
     const snap =
       await get(
         roomRef(
@@ -817,17 +953,27 @@ export async function createRoom() {
         )
       );
 
+
     if (!snap.exists()) {
-      code = candidate;
+
+      code =
+        candidate;
+
       break;
+
     }
+
   }
 
+
   if (!code) {
+
     throw new Error(
       "room-code-generation-failed"
     );
+
   }
+
 
   await set(
     roomRef(
@@ -835,20 +981,30 @@ export async function createRoom() {
       "meta"
     ),
     {
+
       createdAt:
         serverTimestamp(),
-      ownerUid: uid,
-      ownerName: name
+
+      ownerUid:
+        uid,
+
+      ownerName:
+        name
+
     }
   );
 
+
   saveRoom(code);
 
+
   return code;
+
 }
 
+
 // ============================================================
-// اطلاعات صاحب اتاق
+// اطلاعات اتاق
 // ============================================================
 
 export async function getRoomMeta(
@@ -859,6 +1015,7 @@ export async function getRoomMeta(
     return null;
   }
 
+
   const snap =
     await get(
       roomRef(
@@ -867,16 +1024,21 @@ export async function getRoomMeta(
       )
     );
 
+
   return snap.exists()
     ? snap.val()
     : null;
+
 }
+
 
 export async function isRoomOwner(
   code = getSavedRoom()
 ) {
 
-  const uid = currentUid();
+  const uid =
+    currentUid();
+
 
   if (
     !uid ||
@@ -885,14 +1047,18 @@ export async function isRoomOwner(
     return false;
   }
 
+
   const meta =
     await getRoomMeta(code);
+
 
   return !!(
     meta &&
     meta.ownerUid === uid
   );
+
 }
+
 
 // ============================================================
 // ورود به اتاق
@@ -902,18 +1068,23 @@ export async function joinRoomByCode(
   rawCode
 ) {
 
-  const code = String(
-    rawCode || ""
-  )
-    .trim()
-    .toUpperCase();
+  const code =
+    String(
+      rawCode || ""
+    )
+      .trim()
+      .toUpperCase();
+
 
   if (!code) {
+
     return {
       ok: false,
       reason: "invalid-code"
     };
+
   }
+
 
   const metaSnap =
     await get(
@@ -923,14 +1094,20 @@ export async function joinRoomByCode(
       )
     );
 
+
   if (!metaSnap.exists()) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
-  const uid = currentUid();
+
+  const uid =
+    currentUid();
+
 
   if (uid) {
 
@@ -942,24 +1119,32 @@ export async function joinRoomByCode(
         )
       );
 
+
     if (kickedSnap.exists()) {
+
       return {
         ok: false,
         reason: "kicked"
       };
+
     }
+
   }
 
+
   saveRoom(code);
+
 
   return {
     ok: true,
     code
   };
+
 }
 
+
 // ============================================================
-// بررسی Kick
+// Kick
 // ============================================================
 
 export async function checkKicked(
@@ -974,6 +1159,7 @@ export async function checkKicked(
     return false;
   }
 
+
   const snap =
     await get(
       roomRef(
@@ -982,27 +1168,31 @@ export async function checkKicked(
       )
     );
 
+
   return snap.exists();
+
 }
 
-// ============================================================
-// شنیدن وضعیت Kick
-// ============================================================
 
 export function listenKickStatus(
   code = getSavedRoom(),
   callback
 ) {
 
-  const uid = currentUid();
+  const uid =
+    currentUid();
+
 
   if (
     !code ||
     !uid ||
     typeof callback !== "function"
   ) {
+
     return () => {};
+
   }
+
 
   return onValue(
     roomRef(
@@ -1019,61 +1209,57 @@ export function listenKickStatus(
 
     }
   );
+
 }
 
-// ============================================================
-// Kick کردن عضو
-// ============================================================
 
 export async function kickMember(
   targetUid
 ) {
 
-  const code = getSavedRoom();
-  const uid = currentUid();
+  const code =
+    getSavedRoom();
 
-  targetUid = String(
-    targetUid || ""
-  ).trim();
+  const uid =
+    currentUid();
+
+
+  targetUid =
+    String(
+      targetUid || ""
+    ).trim();
+
 
   if (!code) {
-    throw new Error(
-      "no-room"
-    );
+    throw new Error("no-room");
   }
 
   if (!uid) {
-    throw new Error(
-      "not-authenticated"
-    );
+    throw new Error("not-authenticated");
   }
 
   if (!targetUid) {
-    throw new Error(
-      "invalid-target"
-    );
+    throw new Error("invalid-target");
   }
 
   if (targetUid === uid) {
-    throw new Error(
-      "cannot-kick-self"
-    );
+    throw new Error("cannot-kick-self");
   }
+
 
   const meta =
     await getRoomMeta(code);
 
+
   if (!meta) {
-    throw new Error(
-      "room-not-found"
-    );
+    throw new Error("room-not-found");
   }
 
+
   if (meta.ownerUid !== uid) {
-    throw new Error(
-      "not-room-owner"
-    );
+    throw new Error("not-room-owner");
   }
+
 
   const targetSnap =
     await get(
@@ -1083,11 +1269,11 @@ export async function kickMember(
       )
     );
 
+
   if (!targetSnap.exists()) {
-    throw new Error(
-      "player-not-found"
-    );
+    throw new Error("player-not-found");
   }
+
 
   await set(
     roomRef(
@@ -1095,13 +1281,19 @@ export async function kickMember(
       `kicked/${targetUid}`
     ),
     {
+
       by: uid,
+
       byName:
         meta.ownerName ||
         getSavedName(),
-      at: serverTimestamp()
+
+      at:
+        serverTimestamp()
+
     }
   );
+
 
   await remove(
     roomRef(
@@ -1110,12 +1302,14 @@ export async function kickMember(
     )
   );
 
+
   await remove(
     roomRef(
       code,
       `votes/${targetUid}`
     )
   );
+
 
   await remove(
     roomRef(
@@ -1124,65 +1318,69 @@ export async function kickMember(
     )
   );
 
+
   return {
     ok: true,
     uid: targetUid
   };
+
 }
 
+
 // ============================================================
-// ورود بازیکن به لابی
+// Lobby
 // ============================================================
 
 export async function joinLobby(
   name
 ) {
 
-  const code = getSavedRoom();
-  const uid = currentUid();
+  const code =
+    getSavedRoom();
 
-  name = String(
-    name || getSavedName()
-  ).trim();
+  const uid =
+    currentUid();
+
+
+  name =
+    String(
+      name || getSavedName()
+    ).trim();
+
 
   if (!code) {
-    throw new Error(
-      "no-room"
-    );
+    throw new Error("no-room");
   }
 
   if (!uid) {
-    throw new Error(
-      "not-authenticated"
-    );
+    throw new Error("not-authenticated");
   }
 
   if (!name) {
-    throw new Error(
-      "invalid-name"
-    );
+    throw new Error("invalid-name");
   }
 
-  const kicked =
+
+  if (
     await checkKicked(
       code,
       uid
-    );
+    )
+  ) {
 
-  if (kicked) {
-    throw new Error(
-      "kicked"
-    );
+    throw new Error("kicked");
+
   }
+
 
   const meta =
     await getRoomMeta(code);
 
+
   if (!meta) {
-    throw new Error(
-      "room-not-found"
-    );
+    throw new Error("room-not-found");
   }
+
 
   await set(
     roomRef(
@@ -1190,11 +1388,15 @@ export async function joinLobby(
       `players/${uid}`
     ),
     {
+
       name,
+
       joinedAt:
         serverTimestamp()
+
     }
   );
+
 
   await onDisconnect(
     roomRef(
@@ -1202,6 +1404,7 @@ export async function joinLobby(
       `players/${uid}`
     )
   ).remove();
+
 
   await onDisconnect(
     roomRef(
@@ -1210,6 +1413,7 @@ export async function joinLobby(
     )
   ).remove();
 
+
   await onDisconnect(
     roomRef(
       code,
@@ -1217,17 +1421,20 @@ export async function joinLobby(
     )
   ).remove();
 
+
   return uid;
+
 }
 
-// ============================================================
-// خروج از لابی
-// ============================================================
 
 export async function leaveLobby() {
 
-  const code = getSavedRoom();
-  const uid = currentUid();
+  const code =
+    getSavedRoom();
+
+  const uid =
+    currentUid();
+
 
   if (
     !code ||
@@ -1236,12 +1443,14 @@ export async function leaveLobby() {
     return;
   }
 
+
   await remove(
     roomRef(
       code,
       `players/${uid}`
     )
   );
+
 
   await remove(
     roomRef(
@@ -1250,13 +1459,16 @@ export async function leaveLobby() {
     )
   );
 
+
   await remove(
     roomRef(
       code,
       `results/${uid}`
     )
   );
+
 }
+
 
 // ============================================================
 // بازی‌ها
@@ -1290,8 +1502,8 @@ export const GAMES = [
 
   {
     id: "math",
-    name: "پرش از سکو ",
-    desc: "بپر برو بالا و برنده شو ",
+    name: "پرش از سکو",
+    desc: "بپر برو بالا و برنده شو",
     icon: "⬆️",
     soloThreshold: 40
   },
@@ -1346,6 +1558,7 @@ export const GAMES = [
 
 ];
 
+
 export function soloWon(
   gameId,
   score
@@ -1356,10 +1569,13 @@ export function soloWon(
       x => x.id === gameId
     );
 
+
   return game
     ? score >= game.soloThreshold
     : false;
+
 }
+
 
 // ============================================================
 // پروفایل عمومی
@@ -1374,12 +1590,16 @@ export async function getPublicProfile(
       profileRef(name)
     );
 
+
   if (!snap.exists()) {
     return null;
   }
 
+
   return snap.val();
+
 }
+
 
 export function listenProfile(
   name,
@@ -1389,12 +1609,16 @@ export function listenProfile(
   return onValue(
     profileRef(name),
     snap => {
+
       callback(
         snap.val()
       );
+
     }
   );
+
 }
+
 
 // ============================================================
 // نتیجه بازی
@@ -1407,19 +1631,19 @@ export async function submitResult(
   score
 ) {
 
-  const code = getSavedRoom();
+  const code =
+    getSavedRoom();
+
 
   if (!code) {
-    throw new Error(
-      "no-room"
-    );
+    throw new Error("no-room");
   }
 
+
   if (!uid) {
-    throw new Error(
-      "not-authenticated"
-    );
+    throw new Error("not-authenticated");
   }
+
 
   await set(
     roomRef(
@@ -1427,24 +1651,27 @@ export async function submitResult(
       `results/${uid}`
     ),
     {
+
       name,
       score,
       gameId
+
     }
   );
+
 }
 
-// ============================================================
-// ریست دور
-// ============================================================
 
 export async function resetSessionForNextRound() {
 
-  const code = getSavedRoom();
+  const code =
+    getSavedRoom();
+
 
   if (!code) {
     return;
   }
+
 
   await set(
     roomRef(
@@ -1454,6 +1681,7 @@ export async function resetSessionForNextRound() {
     null
   );
 
+
   await set(
     roomRef(
       code,
@@ -1462,6 +1690,7 @@ export async function resetSessionForNextRound() {
     null
   );
 
+
   await set(
     roomRef(
       code,
@@ -1469,10 +1698,12 @@ export async function resetSessionForNextRound() {
     ),
     null
   );
+
 }
 
+
 // ============================================================
-// تراکنش‌های سکه
+// تراکنش‌ها
 // ============================================================
 
 export async function logTransaction(
@@ -1490,13 +1721,23 @@ export async function logTransaction(
       `profiles/${encodeURIComponent(name)}/transactions`
     ),
     {
+
       type,
-      amount,
-      note,
-      at: Date.now()
+
+      amount:
+        Number(amount || 0),
+
+      note:
+        String(note || ""),
+
+      at:
+        Date.now()
+
     }
   );
+
 }
+
 
 export async function getTransactions(
   name,
@@ -1511,8 +1752,10 @@ export async function getTransactions(
       )
     );
 
+
   const val =
     snap.val() || {};
+
 
   const list =
     Object.values(val)
@@ -1522,18 +1765,25 @@ export async function getTransactions(
           (a.at || 0)
       );
 
+
   return list.slice(
     0,
     limitN
   );
+
 }
 
+
 // ============================================================
-// ثبت نتیجه دور و سکه
+// پاداش بازی
 // ============================================================
 
-const COIN_WIN = 15;
-const COIN_PLAY = 5;
+const COIN_WIN =
+  15;
+
+const COIN_PLAY =
+  5;
+
 
 export async function recordRoundResult(
   name,
@@ -1548,6 +1798,7 @@ export async function recordRoundResult(
       curr =
         curr ||
         blankProfile();
+
 
       curr.wins =
         curr.wins || 0;
@@ -1578,12 +1829,14 @@ export async function recordRoundResult(
         curr.friendRequests || {};
 
       curr.coins =
-        curr.coins || 0;
+        Number(curr.coins || 0);
 
       curr.lastLogin =
         curr.lastLogin || 0;
 
+
       curr.gamesPlayed++;
+
 
       if (won) {
 
@@ -1598,30 +1851,42 @@ export async function recordRoundResult(
 
         curr.coins +=
           COIN_PLAY;
+
       }
+
 
       const game =
         curr.byGame[gameId] || {
+
           wins: 0,
+
           plays: 0
+
         };
 
+
       game.plays++;
+
 
       if (won) {
         game.wins++;
       }
 
+
       curr.byGame[gameId] =
         game;
 
+
       return curr;
+
     }
   );
+
 
   await logTransaction(
     name,
     {
+
       type:
         won
           ? "win"
@@ -1636,9 +1901,12 @@ export async function recordRoundResult(
         won
           ? "برد در بازی"
           : "شرکت در بازی"
+
     }
   );
+
 }
+
 
 // ============================================================
 // فروشگاه
@@ -1748,8 +2016,9 @@ export const SHOP_ITEMS = [
 
 ];
 
+
 // ============================================================
-// خرید آیتم
+// خرید
 // ============================================================
 
 export async function buyItem(
@@ -1762,17 +2031,25 @@ export async function buyItem(
       i => i.id === itemId
     );
 
+
   if (!item) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
 
+
   let result = {
+
     ok: false,
+
     reason: "unknown"
+
   };
+
 
   await runTransaction(
     profileRef(name),
@@ -1782,11 +2059,16 @@ export async function buyItem(
         curr ||
         blankProfile();
 
+
       curr.purchased =
         curr.purchased || [];
 
+
       curr.coins =
-        curr.coins || 0;
+        Number(
+          curr.coins || 0
+        );
+
 
       if (
         curr.purchased.includes(
@@ -1795,12 +2077,18 @@ export async function buyItem(
       ) {
 
         result = {
+
           ok: false,
+
           reason: "owned"
+
         };
 
+
         return curr;
+
       }
+
 
       if (
         curr.coins <
@@ -1808,44 +2096,64 @@ export async function buyItem(
       ) {
 
         result = {
+
           ok: false,
+
           reason: "insufficient"
+
         };
 
+
         return curr;
+
       }
+
 
       curr.coins -=
         item.price;
+
 
       curr.purchased.push(
         itemId
       );
 
+
       result = {
         ok: true
       };
 
+
       return curr;
+
     }
   );
+
 
   if (result.ok) {
 
     await logTransaction(
       name,
       {
-        type: "purchase",
+
+        type:
+          "purchase",
+
         amount:
           -item.price,
+
         note:
           `خرید ${item.name}`
+
       }
     );
+
   }
 
+
   return result;
+
 }
+
 
 // ============================================================
 // انتخاب تم
@@ -1864,16 +2172,21 @@ export async function equipTheme(
         curr ||
         blankProfile();
 
+
       curr.equippedTheme =
         itemId;
 
+
       return curr;
+
     }
   );
+
 }
 
+
 // ============================================================
-// ماموریت‌ها
+// مأموریت‌ها
 // ============================================================
 
 export const MISSIONS = [
@@ -1904,6 +2217,7 @@ export const MISSIONS = [
 
 ];
 
+
 export async function claimMission(
   name,
   missionId
@@ -1914,16 +2228,21 @@ export async function claimMission(
       m => m.id === missionId
     );
 
+
   if (!mission) {
+
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
+
 
   let result = {
     ok: false
   };
+
 
   await runTransaction(
     profileRef(name),
@@ -1933,9 +2252,10 @@ export async function claimMission(
         curr ||
         blankProfile();
 
+
       curr.claimedMissions =
-        curr.claimedMissions ||
-        [];
+        curr.claimedMissions || [];
+
 
       if (
         curr.claimedMissions.includes(
@@ -1944,12 +2264,18 @@ export async function claimMission(
       ) {
 
         result = {
+
           ok: false,
+
           reason: "claimed"
+
         };
 
+
         return curr;
+
       }
+
 
       const currentValue =
         Number(
@@ -1958,53 +2284,1200 @@ export async function claimMission(
           ] || 0
         );
 
+
       if (
         currentValue <
         mission.target
       ) {
 
         result = {
+
           ok: false,
+
           reason: "incomplete"
+
         };
 
+
         return curr;
+
       }
 
+
       curr.coins =
-        (curr.coins || 0) +
+        Number(
+          curr.coins || 0
+        ) +
         mission.reward;
+
 
       curr.claimedMissions.push(
         missionId
       );
 
+
       result = {
+
         ok: true,
+
         reward:
           mission.reward
+
       };
 
+
       return curr;
+
     }
   );
+
 
   if (result.ok) {
 
     await logTransaction(
       name,
       {
-        type: "mission",
+
+        type:
+          "mission",
+
         amount:
           result.reward,
+
         note:
-          mission.label
+          `پاداش مأموریت: ${mission.label}`
+
       }
     );
+
   }
 
+
   return result;
+
 }
+
+
+// ============================================================
+// 💸 سیستم انتقال سکه
+// ============================================================
+
+function incomingTransfersRef(name) {
+
+  return ref(
+    db,
+    `profiles/${encodeURIComponent(name)}/incomingTransfers`
+  );
+
+}
+
+
+function singleIncomingTransferRef(
+  name,
+  id
+) {
+
+  return ref(
+    db,
+    `profiles/${encodeURIComponent(name)}/incomingTransfers/${id}`
+  );
+
+}
+
+
+function outgoingTransfersRef(name) {
+
+  return ref(
+    db,
+    `profiles/${encodeURIComponent(name)}/outgoingTransfers`
+  );
+
+}
+
+
+function singleOutgoingTransferRef(
+  name,
+  id
+) {
+
+  return ref(
+    db,
+    `profiles/${encodeURIComponent(name)}/outgoingTransfers/${id}`
+  );
+
+}
+
+
+// ============================================================
+// ارسال سکه
+// ============================================================
+
+export async function sendCoins(
+  senderName,
+  receiverName,
+  amount
+) {
+
+  senderName =
+    String(
+      senderName || ""
+    ).trim();
+
+  receiverName =
+    String(
+      receiverName || ""
+    ).trim();
+
+  amount =
+    Number(amount);
+
+
+  if (
+    !senderName ||
+    !receiverName
+  ) {
+
+    return {
+      ok: false,
+      reason: "invalid-name"
+    };
+
+  }
+
+
+  if (
+    senderName.toLowerCase() ===
+    receiverName.toLowerCase()
+  ) {
+
+    return {
+      ok: false,
+      reason: "self-transfer"
+    };
+
+  }
+
+
+  if (
+    !Number.isInteger(amount) ||
+    amount <= 0
+  ) {
+
+    return {
+      ok: false,
+      reason: "invalid-amount"
+    };
+
+  }
+
+
+  const receiverSnap =
+    await get(
+      profileRef(
+        receiverName
+      )
+    );
+
+
+  if (!receiverSnap.exists()) {
+
+    return {
+      ok: false,
+      reason: "receiver-not-found"
+    };
+
+  }
+
+
+  const senderSnap =
+    await get(
+      profileRef(
+        senderName
+      )
+    );
+
+
+  if (!senderSnap.exists()) {
+
+    return {
+      ok: false,
+      reason: "sender-not-found"
+    };
+
+  }
+
+
+  const transferRef =
+    push(
+      incomingTransfersRef(
+        receiverName
+      )
+    );
+
+
+  const transferId =
+    transferRef.key;
+
+
+  if (!transferId) {
+
+    return {
+      ok: false,
+      reason: "transfer-id-failed"
+    };
+
+  }
+
+
+  const deductResult =
+    await runTransaction(
+      profileRef(senderName),
+      profile => {
+
+        if (!profile) {
+          return profile;
+        }
+
+
+        profile.coins =
+          Number(
+            profile.coins || 0
+          );
+
+
+        if (
+          profile.coins <
+          amount
+        ) {
+
+          return;
+
+        }
+
+
+        profile.coins -=
+          amount;
+
+
+        return profile;
+
+      }
+    );
+
+
+  if (
+    !deductResult.committed
+  ) {
+
+    return {
+      ok: false,
+      reason: "insufficient"
+    };
+
+  }
+
+
+  try {
+
+    await set(
+      singleOutgoingTransferRef(
+        senderName,
+        transferId
+      ),
+      {
+
+        to:
+          receiverName,
+
+        amount:
+          amount,
+
+        transferId:
+          transferId,
+
+        at:
+          Date.now(),
+
+        status:
+          "pending"
+
+      }
+    );
+
+
+    await set(
+      transferRef,
+      {
+
+        from:
+          senderName,
+
+        amount:
+          amount,
+
+        at:
+          Date.now(),
+
+        status:
+          "pending"
+
+      }
+    );
+
+
+    await logTransaction(
+      senderName,
+      {
+
+        type:
+          "transfer-send",
+
+        amount:
+          -amount,
+
+        note:
+          `ارسال ${amount} سکه به ${receiverName}`
+
+      }
+    );
+
+
+    return {
+
+      ok: true,
+
+      transferId,
+
+      amount
+
+    };
+
+
+  } catch (e) {
+
+    console.error(
+      "TRANSFER CREATE ERROR:",
+      e
+    );
+
+
+    try {
+
+      await remove(
+        singleOutgoingTransferRef(
+          senderName,
+          transferId
+        )
+      );
+
+    } catch {}
+
+
+    try {
+
+      await remove(
+        transferRef
+      );
+
+    } catch {}
+
+
+    await runTransaction(
+      profileRef(senderName),
+      profile => {
+
+        if (!profile) {
+
+          profile =
+            blankProfile();
+
+        }
+
+
+        profile.coins =
+          Number(
+            profile.coins || 0
+          ) +
+          amount;
+
+
+        return profile;
+
+      }
+    );
+
+
+    return {
+
+      ok: false,
+
+      reason:
+        "transfer-create-failed"
+
+    };
+
+  }
+
+}
+
+
+// ============================================================
+// شنیدن انتقال‌های دریافتی
+// ============================================================
+
+export function listenIncomingTransfers(
+  name,
+  callback
+) {
+
+  return onValue(
+    incomingTransfersRef(name),
+    snap => {
+
+      const val =
+        snap.val() || {};
+
+
+      const list =
+        Object.entries(val)
+          .map(
+            ([id, value]) => ({
+
+              id,
+
+              ...(value || {})
+
+            })
+          )
+          .filter(
+            x =>
+              x.status === "pending"
+          )
+          .sort(
+            (a, b) =>
+              (b.at || 0) -
+              (a.at || 0)
+          );
+
+
+      callback(list);
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// شنیدن انتقال‌های خروجی
+// ============================================================
+
+export function listenOutgoingTransfers(
+  name,
+  callback
+) {
+
+  return onValue(
+    outgoingTransfersRef(name),
+    snap => {
+
+      const val =
+        snap.val() || {};
+
+
+      const list =
+        Object.entries(val)
+          .map(
+            ([id, value]) => ({
+
+              id,
+
+              ...(value || {})
+
+            })
+          )
+          .sort(
+            (a, b) =>
+              (b.at || 0) -
+              (a.at || 0)
+          );
+
+
+      callback(list);
+
+    }
+  );
+
+}
+
+
+// ============================================================
+// پردازش انتقال‌های خروجی
+// ============================================================
+
+export async function processOutgoingTransfers(
+  senderName
+) {
+
+  senderName =
+    String(
+      senderName || ""
+    ).trim();
+
+
+  if (!senderName) {
+    return;
+  }
+
+
+  const snap =
+    await get(
+      outgoingTransfersRef(
+        senderName
+      )
+    );
+
+
+  const val =
+    snap.val() || {};
+
+
+  const entries =
+    Object.entries(val);
+
+
+  for (
+    const [transferId, outgoing] of entries
+  ) {
+
+    if (!outgoing) {
+      continue;
+    }
+
+
+    if (
+      outgoing.status !==
+      "pending"
+    ) {
+
+      continue;
+
+    }
+
+
+    const receiverName =
+      String(
+        outgoing.to || ""
+      ).trim();
+
+
+    const amount =
+      Number(
+        outgoing.amount
+      );
+
+
+    if (
+      !receiverName ||
+      !Number.isInteger(amount) ||
+      amount <= 0
+    ) {
+
+      continue;
+
+    }
+
+
+    try {
+
+      const incomingSnap =
+        await get(
+          singleIncomingTransferRef(
+            receiverName,
+            transferId
+          )
+        );
+
+
+      if (!incomingSnap.exists()) {
+        continue;
+      }
+
+
+      const incoming =
+        incomingSnap.val() || {};
+
+
+      if (
+        incoming.status ===
+        "accepted"
+      ) {
+
+        await runTransaction(
+          singleOutgoingTransferRef(
+            senderName,
+            transferId
+          ),
+          current => {
+
+            if (!current) {
+              return current;
+            }
+
+
+            if (
+              current.status !==
+              "pending"
+            ) {
+
+              return current;
+
+            }
+
+
+            current.status =
+              "accepted";
+
+            current.acceptedAt =
+              incoming.acceptedAt ||
+              Date.now();
+
+
+            return current;
+
+          }
+        );
+
+
+        continue;
+
+      }
+
+
+      if (
+        incoming.status ===
+        "rejected"
+      ) {
+
+        const refundTransactionRef =
+          push(
+            ref(
+              db,
+              `profiles/${encodeURIComponent(senderName)}/transactions`
+            )
+          );
+
+
+        const refundTransactionId =
+          refundTransactionRef.key;
+
+
+        let refunded =
+          false;
+
+
+        await runTransaction(
+          profileRef(senderName),
+          profile => {
+
+            if (!profile) {
+              return profile;
+            }
+
+
+            profile.coins =
+              Number(
+                profile.coins || 0
+              );
+
+
+            profile.outgoingTransfers =
+              profile.outgoingTransfers ||
+              {};
+
+
+            const currentTransfer =
+              profile.outgoingTransfers[
+                transferId
+              ];
+
+
+            if (!currentTransfer) {
+              return profile;
+            }
+
+
+            if (
+              currentTransfer.status !==
+              "pending"
+            ) {
+
+              return profile;
+
+            }
+
+
+            profile.coins +=
+              amount;
+
+
+            currentTransfer.status =
+              "refunded";
+
+            currentTransfer.refundedAt =
+              Date.now();
+
+
+            profile.outgoingTransfers[
+              transferId
+            ] =
+              currentTransfer;
+
+
+            if (
+              refundTransactionId
+            ) {
+
+              profile.transactions =
+                profile.transactions ||
+                {};
+
+
+              profile.transactions[
+                refundTransactionId
+              ] = {
+
+                type:
+                  "transfer-return",
+
+                amount:
+                  amount,
+
+                note:
+                  `برگشت ${amount} سکه از ${receiverName}`,
+
+                at:
+                  Date.now()
+
+              };
+
+            }
+
+
+            refunded =
+              true;
+
+
+            return profile;
+
+          }
+        );
+
+
+        if (refunded) {
+
+          console.log(
+            `TRANSFER REFUNDED: ${amount} coins from ${receiverName}`
+          );
+
+        }
+
+      }
+
+    } catch (e) {
+
+      console.error(
+        "PROCESS OUTGOING TRANSFER ERROR:",
+        e
+      );
+
+    }
+
+  }
+
+}
+
+
+// ============================================================
+// دریافت انتقال
+// ============================================================
+
+export async function acceptTransfer(
+  receiverName,
+  transferId
+) {
+
+  receiverName =
+    String(
+      receiverName || ""
+    ).trim();
+
+
+  if (
+    !receiverName ||
+    !transferId
+  ) {
+
+    return {
+      ok: false,
+      reason: "invalid"
+    };
+
+  }
+
+
+  const claimResult =
+    await runTransaction(
+      singleIncomingTransferRef(
+        receiverName,
+        transferId
+      ),
+      current => {
+
+        if (!current) {
+          return;
+        }
+
+
+        if (
+          current.status !==
+          "pending"
+        ) {
+
+          return;
+
+        }
+
+
+        current.status =
+          "processing";
+
+        current.processingAt =
+          Date.now();
+
+
+        return current;
+
+      }
+    );
+
+
+  if (
+    !claimResult.committed
+  ) {
+
+    return {
+
+      ok: false,
+
+      reason:
+        "already-processed"
+
+    };
+
+  }
+
+
+  const transfer =
+    claimResult.snapshot.val() ||
+    {};
+
+
+  const amount =
+    Number(
+      transfer.amount
+    );
+
+
+  if (
+    !Number.isInteger(amount) ||
+    amount <= 0
+  ) {
+
+    await update(
+      singleIncomingTransferRef(
+        receiverName,
+        transferId
+      ),
+      {
+
+        status:
+          "pending",
+
+        processingAt:
+          null
+
+      }
+    );
+
+
+    return {
+
+      ok: false,
+
+      reason:
+        "invalid-amount"
+
+    };
+
+  }
+
+
+  try {
+
+    const creditResult =
+      await runTransaction(
+        profileRef(receiverName),
+        profile => {
+
+          if (!profile) {
+
+            profile =
+              blankProfile();
+
+          }
+
+
+          profile.coins =
+            Number(
+              profile.coins || 0
+            );
+
+
+          profile.coins +=
+            amount;
+
+
+          return profile;
+
+        }
+      );
+
+
+    if (
+      !creditResult.committed
+    ) {
+
+      throw new Error(
+        "credit-not-committed"
+      );
+
+    }
+
+
+  } catch (e) {
+
+    console.error(
+      "ACCEPT CREDIT ERROR:",
+      e
+    );
+
+
+    try {
+
+      await update(
+        singleIncomingTransferRef(
+          receiverName,
+          transferId
+        ),
+        {
+
+          status:
+            "pending",
+
+          processingAt:
+            null
+
+        }
+      );
+
+    } catch {}
+
+
+    return {
+
+      ok: false,
+
+      reason:
+        "credit-failed"
+
+    };
+
+  }
+
+
+  try {
+
+    await update(
+      singleIncomingTransferRef(
+        receiverName,
+        transferId
+      ),
+      {
+
+        status:
+          "accepted",
+
+        acceptedAt:
+          Date.now(),
+
+        processingAt:
+          null
+
+      }
+    );
+
+
+    await logTransaction(
+      receiverName,
+      {
+
+        type:
+          "transfer-receive",
+
+        amount:
+          amount,
+
+        note:
+          `دریافت ${amount} سکه از ${transfer.from}`
+
+      }
+    );
+
+
+    return {
+
+      ok: true,
+
+      amount
+
+    };
+
+
+  } catch (e) {
+
+    console.error(
+      "ACCEPT STATUS ERROR:",
+      e
+    );
+
+
+    return {
+
+      ok: false,
+
+      reason:
+        "status-update-failed"
+
+    };
+
+  }
+
+}
+
+
+// ============================================================
+// رد انتقال
+// ============================================================
+
+export async function rejectTransfer(
+  receiverName,
+  transferId
+) {
+
+  receiverName =
+    String(
+      receiverName || ""
+    ).trim();
+
+
+  if (
+    !receiverName ||
+    !transferId
+  ) {
+
+    return {
+
+      ok: false,
+
+      reason:
+        "invalid"
+
+    };
+
+  }
+
+
+  const result =
+    await runTransaction(
+      singleIncomingTransferRef(
+        receiverName,
+        transferId
+      ),
+      current => {
+
+        if (!current) {
+          return;
+        }
+
+
+        if (
+          current.status !==
+          "pending"
+        ) {
+
+          return;
+
+        }
+
+
+        current.status =
+          "rejected";
+
+        current.rejectedAt =
+          Date.now();
+
+
+        return current;
+
+      }
+    );
+
+
+  if (
+    !result.committed
+  ) {
+
+    return {
+
+      ok: false,
+
+      reason:
+        "already-processed"
+
+    };
+
+  }
+
+
+  const transfer =
+    result.snapshot.val() ||
+    {};
+
+
+  return {
+
+    ok: true,
+
+    amount:
+      Number(
+        transfer.amount || 0
+      )
+
+  };
+
+}
+
 
 // ============================================================
 // دوستان
@@ -2015,13 +3488,16 @@ export async function sendFriendRequest(
   targetName
 ) {
 
-  myName = String(
-    myName || ""
-  ).trim();
+  myName =
+    String(
+      myName || ""
+    ).trim();
 
-  targetName = String(
-    targetName || ""
-  ).trim();
+  targetName =
+    String(
+      targetName || ""
+    ).trim();
+
 
   if (
     !targetName ||
@@ -2032,7 +3508,9 @@ export async function sendFriendRequest(
       ok: false,
       reason: "invalid"
     };
+
   }
+
 
   const targetSnap =
     await get(
@@ -2041,16 +3519,20 @@ export async function sendFriendRequest(
       )
     );
 
+
   if (!targetSnap.exists()) {
 
     return {
       ok: false,
       reason: "not-found"
     };
+
   }
+
 
   const targetVal =
     targetSnap.val() || {};
+
 
   if (
     targetVal.friends &&
@@ -2062,7 +3544,9 @@ export async function sendFriendRequest(
       reason:
         "already-friends"
     };
+
   }
+
 
   if (
     targetVal.friendRequests &&
@@ -2074,7 +3558,9 @@ export async function sendFriendRequest(
       reason:
         "request-pending"
     };
+
   }
+
 
   await update(
     profileRef(
@@ -2082,32 +3568,36 @@ export async function sendFriendRequest(
       "friendRequests"
     ),
     {
+
       [myName]:
         Date.now()
+
     }
   );
+
 
   return {
     ok: true
   };
+
 }
 
-// ============================================================
-// وضعیت دوستی
-// ============================================================
 
 export async function getFriendStatus(
   myName,
   targetName
 ) {
 
-  myName = String(
-    myName || ""
-  ).trim();
+  myName =
+    String(
+      myName || ""
+    ).trim();
 
-  targetName = String(
-    targetName || ""
-  ).trim();
+  targetName =
+    String(
+      targetName || ""
+    ).trim();
+
 
   if (
     !myName ||
@@ -2115,22 +3605,34 @@ export async function getFriendStatus(
   ) {
 
     return {
+
       isFriend: false,
+
       requestPending: false,
+
       isSelf: false
+
     };
+
   }
+
 
   if (
     myName === targetName
   ) {
 
     return {
+
       isFriend: false,
+
       requestPending: false,
+
       isSelf: true
+
     };
+
   }
+
 
   const myProfileSnap =
     await get(
@@ -2139,6 +3641,7 @@ export async function getFriendStatus(
       )
     );
 
+
   const targetProfileSnap =
     await get(
       profileRef(
@@ -2146,38 +3649,39 @@ export async function getFriendStatus(
       )
     );
 
+
   const myProfile =
     myProfileSnap.val() || {};
+
 
   const targetProfile =
     targetProfileSnap.val() || {};
 
-  const isFriend =
-    !!(
-      myProfile.friends &&
-      myProfile.friends[
-        targetName
-      ]
-    );
-
-  const requestPending =
-    !!(
-      targetProfile.friendRequests &&
-      targetProfile.friendRequests[
-        myName
-      ]
-    );
 
   return {
-    isFriend,
-    requestPending,
+
+    isFriend:
+      !!(
+        myProfile.friends &&
+        myProfile.friends[
+          targetName
+        ]
+      ),
+
+    requestPending:
+      !!(
+        targetProfile.friendRequests &&
+        targetProfile.friendRequests[
+          myName
+        ]
+      ),
+
     isSelf: false
+
   };
+
 }
 
-// ============================================================
-// درخواست‌های دوستی
-// ============================================================
 
 export function listenFriendRequests(
   myName,
@@ -2194,12 +3698,16 @@ export function listenFriendRequests(
       const val =
         snap.val() || {};
 
+
       callback(
         Object.keys(val)
       );
+
     }
   );
+
 }
+
 
 export async function acceptFriendRequest(
   myName,
@@ -2212,9 +3720,11 @@ export async function acceptFriendRequest(
       "friends"
     ),
     {
-      [fromName]: true
+      [fromName]:
+        true
     }
   );
+
 
   await update(
     profileRef(
@@ -2222,9 +3732,11 @@ export async function acceptFriendRequest(
       "friends"
     ),
     {
-      [myName]: true
+      [myName]:
+        true
     }
   );
+
 
   await remove(
     profileRef(
@@ -2232,7 +3744,9 @@ export async function acceptFriendRequest(
       `friendRequests/${fromName}`
     )
   );
+
 }
+
 
 export async function rejectFriendRequest(
   myName,
@@ -2245,53 +3759,62 @@ export async function rejectFriendRequest(
       `friendRequests/${fromName}`
     )
   );
+
 }
 
-// ============================================================
-// حذف دوست
-// ============================================================
 
 export async function removeFriend(
   myName,
   friendName
 ) {
 
-  myName = String(
-    myName || ""
-  ).trim();
+  myName =
+    String(
+      myName || ""
+    ).trim();
 
-  friendName = String(
-    friendName || ""
-  ).trim();
+  friendName =
+    String(
+      friendName || ""
+    ).trim();
+
 
   if (
     !myName ||
     !friendName ||
     myName === friendName
   ) {
+
     return {
       ok: false,
       reason: "invalid"
     };
+
   }
+
 
   const myProfileSnap =
     await get(
       profileRef(myName)
     );
 
+
   const myProfile =
     myProfileSnap.val() || {};
+
 
   if (
     !myProfile.friends ||
     !myProfile.friends[friendName]
   ) {
+
     return {
       ok: false,
       reason: "not-friend"
     };
+
   }
+
 
   await remove(
     profileRef(
@@ -2300,6 +3823,7 @@ export async function removeFriend(
     )
   );
 
+
   await remove(
     profileRef(
       friendName,
@@ -2307,14 +3831,13 @@ export async function removeFriend(
     )
   );
 
+
   return {
     ok: true
   };
+
 }
 
-// ============================================================
-// لیست دوستان
-// ============================================================
 
 export function listenFriends(
   myName,
@@ -2322,7 +3845,9 @@ export function listenFriends(
 ) {
 
   let friendUnsubs = {};
+
   let latest = {};
+
 
   function emit(names) {
 
@@ -2330,14 +3855,21 @@ export function listenFriends(
       names.map(
         n =>
           latest[n] || {
+
             name: n,
+
             online: false,
+
             lastSeen: 0,
+
             lastLogin: 0
+
           }
       )
     );
+
   }
+
 
   const mainUnsub =
     onValue(
@@ -2350,8 +3882,10 @@ export function listenFriends(
         const val =
           snap.val() || {};
 
+
         const names =
           Object.keys(val);
+
 
         Object.keys(
           friendUnsubs
@@ -2365,10 +3899,14 @@ export function listenFriends(
               friendUnsubs[n]();
 
               delete friendUnsubs[n];
+
               delete latest[n];
+
             }
+
           }
         );
+
 
         names.forEach(
           name => {
@@ -2379,6 +3917,7 @@ export function listenFriends(
               return;
             }
 
+
             friendUnsubs[name] =
               onValue(
                 profileRef(name),
@@ -2387,37 +3926,40 @@ export function listenFriends(
                   const profile =
                     pSnap.val() || {};
 
+
                   const presence =
                     profile.presence ||
                     {};
 
+
                   const connections =
                     presence.connections ||
                     {};
+
 
                   const connectionList =
                     Object.values(
                       connections
                     );
 
-                  const hasOnlineConnection =
+
+                  let online =
                     connectionList.some(
                       x =>
                         x &&
                         x.online === true
                     );
 
-                  let online =
-                    hasOnlineConnection;
 
                   if (
-                    connectionList.length ===
-                    0
+                    connectionList.length === 0
                   ) {
 
                     online =
                       presence.online === true;
+
                   }
+
 
                   latest[name] = {
 
@@ -2436,21 +3978,29 @@ export function listenFriends(
                         profile.lastLogin ||
                         0
                       )
+
                   };
 
+
                   emit(names);
+
                 }
               );
+
           }
         );
 
+
         emit(names);
+
       }
     );
+
 
   return () => {
 
     mainUnsub();
+
 
     Object.values(
       friendUnsubs
@@ -2464,13 +4014,18 @@ export function listenFriends(
       }
     );
 
+
     friendUnsubs = {};
+
     latest = {};
+
   };
+
 }
 
+
 // ============================================================
-// دعوت دوستان به اتاق
+// دعوت دوستان
 // ============================================================
 
 export async function inviteFriendToRoom(
@@ -2485,16 +4040,20 @@ export async function inviteFriendToRoom(
       `profiles/${encodeURIComponent(friendName)}/invites`
     ),
     {
-      from: myName,
+
+      from:
+        myName,
+
       roomCode,
-      at: Date.now()
+
+      at:
+        Date.now()
+
     }
   );
+
 }
 
-// ============================================================
-// دریافت دعوت‌ها
-// ============================================================
 
 export function listenInvites(
   myName,
@@ -2511,12 +4070,16 @@ export function listenInvites(
       const val =
         snap.val() || {};
 
+
       const list =
         Object.entries(val)
           .map(
             ([id, value]) => ({
+
               id,
+
               ...value
+
             })
           )
           .sort(
@@ -2525,14 +4088,14 @@ export function listenInvites(
               (a.at || 0)
           );
 
+
       callback(list);
+
     }
   );
+
 }
 
-// ============================================================
-// حذف دعوت
-// ============================================================
 
 export async function dismissInvite(
   myName,
@@ -2545,7 +4108,9 @@ export async function dismissInvite(
       `profiles/${encodeURIComponent(myName)}/invites/${inviteId}`
     )
   );
+
 }
+
 
 // ============================================================
 // چت
@@ -2560,7 +4125,9 @@ export function chatRef(
     db,
     `rooms/${code}/chat${path ? "/" + path : ""}`
   );
+
 }
+
 
 export async function sendChatMessage(
   code,
@@ -2569,13 +4136,17 @@ export async function sendChatMessage(
 ) {
 
   const clean =
-    String(text || "")
+    String(
+      text || ""
+    )
       .slice(0, 200)
       .trim();
+
 
   if (!clean) {
     return;
   }
+
 
   const msgsRef =
     chatRef(
@@ -2583,14 +4154,21 @@ export async function sendChatMessage(
       "messages"
     );
 
+
   await push(
     msgsRef,
     {
+
       name,
+
       text: clean,
-      at: Date.now()
+
+      at:
+        Date.now()
+
     }
   );
+
 
   try {
 
@@ -2599,11 +4177,14 @@ export async function sendChatMessage(
         msgsRef
       );
 
+
     const val =
       snap.val() || {};
 
+
     const keys =
       Object.keys(val);
+
 
     if (
       keys.length > 60
@@ -2616,11 +4197,13 @@ export async function sendChatMessage(
             (val[b].at || 0)
         );
 
+
       const oldKeys =
         sorted.slice(
           0,
           keys.length - 60
         );
+
 
       for (
         const key of oldKeys
@@ -2632,17 +4215,22 @@ export async function sendChatMessage(
             `messages/${key}`
           )
         );
+
       }
+
     }
 
   } catch (e) {
 
     console.warn(
-      "Chat cleanup error:",
+      "CHAT CLEANUP ERROR:",
       e
     );
+
   }
+
 }
+
 
 export function listenChat(
   code,
@@ -2659,12 +4247,16 @@ export function listenChat(
       const val =
         snap.val() || {};
 
+
       const list =
         Object.entries(val)
           .map(
             ([id, value]) => ({
+
               id,
+
               ...value
+
             })
           )
           .sort(
@@ -2673,10 +4265,14 @@ export function listenChat(
               (b.at || 0)
           );
 
+
       callback(list);
+
     }
   );
+
 }
+
 
 // ============================================================
 // لیدربورد
@@ -2694,8 +4290,10 @@ export async function getLeaderboard(
       )
     );
 
+
   const val =
     snap.val() || {};
+
 
   const list =
     Object.entries(val)
@@ -2709,8 +4307,10 @@ export async function getLeaderboard(
 
           wins:
             profile.wins || 0
+
         })
       );
+
 
   list.sort(
     (a, b) =>
@@ -2718,8 +4318,10 @@ export async function getLeaderboard(
       a.wins
   );
 
+
   return list.slice(
     0,
     limitN
   );
+
     }
