@@ -12,50 +12,83 @@
   }
 
   .available-box {
-    margin-top: 10px;
-    font-size: 13px;
+    margin-top: 8px;
+    font-size: 12px;
   }
 
+  /* =====================================================
+     انتقال سکه — کارت یکپارچه و کوچک
+     ===================================================== */
+
   .transfer-box {
-    margin-top: 16px;
+    margin-top: 12px;
+  }
+
+  .transfer-box h2 {
+    margin-bottom: 6px;
+  }
+
+  .transfer-info {
+    font-size: 12px;
+    margin-top: 5px;
   }
 
   .transfer-form {
     display: grid;
-    gap: 10px;
-    margin-top: 14px;
+    grid-template-columns: 1fr 100px;
+    gap: 7px;
+    margin-top: 10px;
   }
 
   .transfer-form input {
     width: 100%;
     box-sizing: border-box;
+    min-height: 40px;
+    padding: 8px 10px;
   }
 
-  .transfer-info {
-    font-size: 13px;
-    margin-top: 8px;
+  .transfer-form button {
+    grid-column: 1 / -1;
+    min-height: 38px;
   }
 
   .transfer-message {
-    margin-top: 10px;
+    margin-top: 7px;
+    font-size: 12px;
+    min-height: 17px;
+  }
+
+  .transfer-section-title {
     font-size: 13px;
-    min-height: 20px;
+    font-weight: bold;
+    margin-top: 13px;
+    margin-bottom: 3px;
+    opacity: .9;
   }
 
-  .incoming-row {
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(255,255,255,.08);
+  .transfer-list {
+    max-height: 180px;
+    overflow-y: auto;
   }
 
-  .incoming-row:last-child {
+  .incoming-row,
+  .outgoing-row {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+
+  .incoming-row:last-child,
+  .outgoing-row:last-child {
     border-bottom: none;
   }
 
-  .incoming-top {
+  .incoming-top,
+  .outgoing-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    font-size: 12px;
   }
 
   .incoming-amount {
@@ -64,19 +97,21 @@
   }
 
   .incoming-time {
-    margin-top: 5px;
-    font-size: 12px;
-    opacity: .65;
+    margin-top: 3px;
+    font-size: 10px;
+    opacity: .55;
   }
 
   .incoming-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 6px;
+    margin-top: 6px;
   }
 
   .incoming-actions button {
     flex: 1;
+    min-height: 32px;
+    font-size: 11px;
   }
 
   .btn-danger {
@@ -85,17 +120,41 @@
   }
 
   .pending-box {
-    margin-top: 12px;
-    padding: 10px 12px;
-    border-radius: 12px;
+    margin-top: 8px;
+    padding: 7px 10px;
+    border-radius: 10px;
     background: rgba(255,255,255,.05);
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .empty-transfer {
-    opacity: .65;
-    font-size: 13px;
-    padding: 8px 0;
+    opacity: .55;
+    font-size: 11px;
+    padding: 5px 0;
+  }
+
+  .outgoing-status {
+    margin-top: 3px;
+    font-size: 10px;
+    opacity: .7;
+  }
+
+  .status-pending {
+    color: #ffd166;
+  }
+
+  .status-accepted {
+    color: #48e28a;
+  }
+
+  .status-refunded {
+    color: #48e28a;
+  }
+
+  .transfer-divider {
+    height: 1px;
+    background: rgba(255,255,255,.06);
+    margin: 10px 0;
   }
 
   .tx-row {
@@ -123,42 +182,8 @@
   }
 
   .muted-small {
-    font-size: 12px;
-    opacity: .65;
-  }
-
-  .outgoing-row {
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-
-  .outgoing-row:last-child {
-    border-bottom: none;
-  }
-
-  .outgoing-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .outgoing-status {
-    margin-top: 5px;
-    font-size: 12px;
-    opacity: .7;
-  }
-
-  .status-pending {
-    color: #ffd166;
-  }
-
-  .status-accepted {
-    color: #48e28a;
-  }
-
-  .status-refunded {
-    color: #48e28a;
+    font-size: 11px;
+    opacity: .6;
   }
 </style>
 </head>
@@ -167,40 +192,26 @@
 
 <div class="wrap">
 
-  <!-- Header -->
-
   <div class="brand">
     <div class="brand-mark">🪙</div>
     <h1>کیف‌پول</h1>
   </div>
 
 
-  <!-- Login required -->
-
   <div class="card" id="noNameCard" style="display:none">
-
     <p class="status-line">
       هنوز وارد نشدی.
     </p>
 
-    <a
-      href="index.html"
-      class="btn btn-full"
-    >
+    <a href="index.html" class="btn btn-full">
       ورود
     </a>
-
   </div>
 
 
-  <!-- Wallet -->
+  <div id="walletContent" style="display:none">
 
-  <div
-    id="walletContent"
-    style="display:none"
-  >
-
-    <!-- Balance -->
+    <!-- موجودی -->
 
     <div class="wallet-hero">
 
@@ -230,25 +241,27 @@
     </div>
 
 
-    <!-- Transfer -->
+    <!-- ==================================================
+         همه انتقال‌ها در یک کارت
+         ================================================== -->
 
     <div class="card transfer-box">
 
-      <h2>
-        💸 انتقال سکه
-      </h2>
+      <h2>💸 انتقال سکه</h2>
 
-      <p class="muted-small">
-        سکه بعد از ارسال تا زمان قبول یا رد درخواست،
-        برای شما رزرو می‌شود.
-      </p>
+      <div class="muted-small">
+        ارسال سکه به کاربران دومیتو
+      </div>
+
+
+      <!-- فرم -->
 
       <div class="transfer-form">
 
         <input
           id="receiverInput"
           type="text"
-          placeholder="نام کاربری گیرنده"
+          placeholder="نام کاربری"
           autocomplete="off"
         >
 
@@ -257,7 +270,7 @@
           type="number"
           min="1"
           step="1"
-          placeholder="مقدار سکه"
+          placeholder="سکه"
           inputmode="numeric"
         >
 
@@ -265,58 +278,56 @@
           id="sendBtn"
           class="btn btn-full"
         >
-          💸 ارسال درخواست
+          💸 ارسال
         </button>
 
       </div>
+
 
       <div
         id="transferMessage"
         class="transfer-message"
       ></div>
 
-    </div>
 
+      <!-- درخواست‌های دریافتی -->
 
-    <!-- Incoming -->
-
-    <div class="card">
-
-      <h2>
+      <div class="transfer-section-title">
         📥 درخواست‌های دریافتی
-      </h2>
+      </div>
 
-      <div id="incomingList">
-
+      <div
+        id="incomingList"
+        class="transfer-list"
+      >
         <p class="empty-transfer">
           درخواست جدیدی نداری.
         </p>
-
       </div>
 
-    </div>
+
+      <div class="transfer-divider"></div>
 
 
-    <!-- Outgoing -->
+      <!-- انتقال‌های من -->
 
-    <div class="card">
-
-      <h2>
+      <div class="transfer-section-title">
         📤 انتقال‌های من
-      </h2>
+      </div>
 
-      <div id="outgoingList">
-
+      <div
+        id="outgoingList"
+        class="transfer-list"
+      >
         <p class="empty-transfer">
           انتقالی وجود ندارد.
         </p>
-
       </div>
 
     </div>
 
 
-    <!-- Missions -->
+    <!-- ماموریت‌ها -->
 
     <div class="card">
 
@@ -329,7 +340,7 @@
     </div>
 
 
-    <!-- Transactions -->
+    <!-- تاریخچه -->
 
     <div class="card">
 
@@ -352,8 +363,6 @@
   </div>
 
 
-  <!-- Back -->
-
   <a
     href="profile.html"
     class="link-back"
@@ -369,254 +378,131 @@
 import {
 
   getSavedName,
-
   profileRef,
-
   onValue,
-
   getTransactions,
-
   MISSIONS,
-
   claimMission,
-
   waitForUser,
-
   sendCoins,
-
   listenIncomingTransfers,
-
   acceptTransfer,
-
   rejectTransfer,
-
   processOutgoingTransfers,
-
   listenOutgoingTransfers
 
 } from "./js/app.js";
 
 
-// ============================================================
-// شروع
-// ============================================================
-
 waitForUser().then(async user => {
 
-  const name =
-    getSavedName();
+  const name = getSavedName();
 
+  if (!user || !name) {
 
-  // ----------------------------------------------------------
-  // ورود لازم است
-  // ----------------------------------------------------------
-
-  if (
-    !user ||
-    !name
-  ) {
-
-    document
-      .getElementById("noNameCard")
-      .style.display = "block";
+    document.getElementById("noNameCard").style.display = "block";
 
     return;
 
   }
 
 
-  document
-    .getElementById("walletContent")
-    .style.display = "block";
+  document.getElementById("walletContent").style.display = "block";
 
-
-  // ==========================================================
-  // عناصر
-  // ==========================================================
 
   const balanceNum =
-    document.getElementById(
-      "balanceNum"
-    );
+    document.getElementById("balanceNum");
 
   const availableBox =
-    document.getElementById(
-      "availableBox"
-    );
+    document.getElementById("availableBox");
 
   const pendingBox =
-    document.getElementById(
-      "pendingBox"
-    );
+    document.getElementById("pendingBox");
 
   const receiverInput =
-    document.getElementById(
-      "receiverInput"
-    );
+    document.getElementById("receiverInput");
 
   const amountInput =
-    document.getElementById(
-      "amountInput"
-    );
+    document.getElementById("amountInput");
 
   const sendBtn =
-    document.getElementById(
-      "sendBtn"
-    );
+    document.getElementById("sendBtn");
 
   const transferMessage =
-    document.getElementById(
-      "transferMessage"
-    );
+    document.getElementById("transferMessage");
 
   const incomingList =
-    document.getElementById(
-      "incomingList"
-    );
+    document.getElementById("incomingList");
 
   const outgoingList =
-    document.getElementById(
-      "outgoingList"
-    );
+    document.getElementById("outgoingList");
 
-
-  // ==========================================================
-  // پردازش انتقال‌های قبلی
-  // ==========================================================
 
   try {
-
-    await processOutgoingTransfers(
-      name
-    );
-
+    await processOutgoingTransfers(name);
   } catch (e) {
-
-    console.warn(
-      "OUTGOING PROCESS ERROR:",
-      e
-    );
-
+    console.warn("OUTGOING PROCESS ERROR:", e);
   }
 
-
-  // ==========================================================
-  // پروفایل
-  // ==========================================================
 
   onValue(
     profileRef(name),
     snap => {
 
-      const p =
-        snap.val() || {
-
-          coins: 0,
-
-          gamesPlayed: 0,
-
-          wins: 0,
-
-          claimedMissions: []
-
-        };
+      const p = snap.val() || {
+        coins: 0,
+        gamesPlayed: 0,
+        wins: 0,
+        claimedMissions: []
+      };
 
 
-      const coins =
-        Number(
-          p.coins || 0
-        );
+      const coins = Number(p.coins || 0);
 
-
-      // ------------------------------------------------------
-      // انتقال‌های در انتظار
-      // ------------------------------------------------------
-
-      let pending =
-        0;
-
+      let pending = 0;
 
       const outgoing =
-        p.outgoingTransfers ||
-        {};
+        p.outgoingTransfers || {};
 
 
-      Object.values(
-        outgoing
-      ).forEach(
-        transfer => {
+      Object.values(outgoing).forEach(transfer => {
+
+        if (
+          transfer &&
+          transfer.status === "pending"
+        ) {
+
+          const amount =
+            Number(transfer.amount);
 
           if (
-            transfer &&
-            transfer.status ===
-              "pending"
+            Number.isInteger(amount) &&
+            amount > 0
           ) {
-
-            const amount =
-              Number(
-                transfer.amount
-              );
-
-
-            if (
-              Number.isInteger(amount) &&
-              amount > 0
-            ) {
-
-              pending +=
-                amount;
-
-            }
-
+            pending += amount;
           }
 
         }
-      );
+
+      });
 
 
-      // ------------------------------------------------------
-      // نمایش موجودی
-      // ------------------------------------------------------
-
-      balanceNum.textContent =
-        coins;
-
-
-      /*
-       * چون هنگام ارسال، سکه همان لحظه
-       * از موجودی کم شده، موجودی فعلی
-       * همان مقدار قابل استفاده است.
-       */
-
-      const available =
-        Math.max(
-          0,
-          coins
-        );
-
+      balanceNum.textContent = coins;
 
       availableBox.textContent =
-        `قابل استفاده: ${available} 🪙`;
-
+        `قابل استفاده: ${Math.max(0, coins)} 🪙`;
 
       pendingBox.textContent =
         `در انتظار انتقال: ${pending} 🪙`;
 
 
-      renderMissions(
-        p
-      );
-
+      renderMissions(p);
 
       refreshTx();
 
     }
   );
 
-
-  // ==========================================================
-  // ارسال سکه
-  // ==========================================================
 
   sendBtn.addEventListener(
     "click",
@@ -626,24 +512,17 @@ waitForUser().then(async user => {
         receiverInput.value.trim();
 
       const amount =
-        Number(
-          amountInput.value
-        );
+        Number(amountInput.value);
 
-
-      transferMessage.textContent =
-        "";
+      transferMessage.textContent = "";
 
 
       if (!receiver) {
-
         showMessage(
           "❌ نام کاربری گیرنده را وارد کن.",
           true
         );
-
         return;
-
       }
 
 
@@ -651,14 +530,11 @@ waitForUser().then(async user => {
         !Number.isInteger(amount) ||
         amount <= 0
       ) {
-
         showMessage(
           "❌ مقدار سکه معتبر نیست.",
           true
         );
-
         return;
-
       }
 
 
@@ -666,22 +542,16 @@ waitForUser().then(async user => {
         receiver.toLowerCase() ===
         name.toLowerCase()
       ) {
-
         showMessage(
           "❌ نمی‌توانی به خودت سکه انتقال بدهی.",
           true
         );
-
         return;
-
       }
 
 
-      sendBtn.disabled =
-        true;
-
-      sendBtn.textContent =
-        "⏳ در حال ارسال...";
+      sendBtn.disabled = true;
+      sendBtn.textContent = "⏳ ارسال...";
 
 
       try {
@@ -731,17 +601,13 @@ waitForUser().then(async user => {
             true
           );
 
-
           return;
 
         }
 
 
-        receiverInput.value =
-          "";
-
-        amountInput.value =
-          "";
+        receiverInput.value = "";
+        amountInput.value = "";
 
 
         showMessage(
@@ -749,21 +615,13 @@ waitForUser().then(async user => {
         );
 
 
-        await processOutgoingTransfers(
-          name
-        );
-
-
+        await processOutgoingTransfers(name);
         await refreshTx();
 
 
       } catch (e) {
 
-        console.error(
-          "SEND COINS ERROR:",
-          e
-        );
-
+        console.error("SEND COINS ERROR:", e);
 
         showMessage(
           "❌ خطایی هنگام انتقال رخ داد.",
@@ -772,11 +630,8 @@ waitForUser().then(async user => {
 
       } finally {
 
-        sendBtn.disabled =
-          false;
-
-        sendBtn.textContent =
-          "💸 ارسال درخواست";
+        sendBtn.disabled = false;
+        sendBtn.textContent = "💸 ارسال";
 
       }
 
@@ -784,71 +639,36 @@ waitForUser().then(async user => {
   );
 
 
-  // ==========================================================
-  // درخواست‌های دریافتی
-  // ==========================================================
-
   listenIncomingTransfers(
     name,
     list => {
-
-      renderIncoming(
-        list
-      );
-
+      renderIncoming(list);
     }
   );
 
-
-  // ==========================================================
-  // انتقال‌های خروجی
-  // ==========================================================
 
   listenOutgoingTransfers(
     name,
     async list => {
 
-      renderOutgoing(
-        list
-      );
-
-
-      /*
-       * اگر گیرنده قبلاً انتقال را قبول یا رد کرده
-       * باشد، وضعیت را پردازش می‌کنیم.
-       */
+      renderOutgoing(list);
 
       try {
-
-        await processOutgoingTransfers(
-          name
-        );
-
+        await processOutgoingTransfers(name);
       } catch (e) {
-
         console.warn(
           "OUTGOING WATCH ERROR:",
           e
         );
-
       }
 
     }
   );
 
 
-  // ==========================================================
-  // نمایش درخواست‌های دریافتی
-  // ==========================================================
+  function renderIncoming(list) {
 
-  function renderIncoming(
-    list
-  ) {
-
-    if (
-      !list ||
-      list.length === 0
-    ) {
+    if (!list || list.length === 0) {
 
       incomingList.innerHTML = `
         <p class="empty-transfer">
@@ -857,255 +677,194 @@ waitForUser().then(async user => {
       `;
 
       return;
-
     }
 
 
     incomingList.innerHTML =
-      list.map(
-        transfer => {
+      list.map(transfer => {
 
-          const from =
-            escapeHtml(
-              transfer.from ||
-              "کاربر"
-            );
+        const from =
+          escapeHtml(
+            transfer.from || "کاربر"
+          );
 
+        const amount =
+          Number(transfer.amount || 0);
 
-          const amount =
-            Number(
-              transfer.amount || 0
-            );
+        const time =
+          formatTime(transfer.at);
 
-
-          const time =
-            formatTime(
-              transfer.at
-            );
+        const id =
+          escapeHtml(transfer.id);
 
 
-          const id =
-            escapeHtml(
-              transfer.id
-            );
+        return `
 
+          <div
+            class="incoming-row"
+            data-id="${id}"
+          >
 
-          return `
+            <div class="incoming-top">
 
-            <div
-              class="incoming-row"
-              data-id="${id}"
-            >
+              <span>
+                💰
+                <strong>${from}</strong>
+                →
+                <strong>${amount}</strong>
+                سکه
+              </span>
 
-              <div class="incoming-top">
-
-                <span>
-                  💰
-                  <strong>${from}</strong>
-                  برایت
-                  <strong>${amount}</strong>
-                  سکه فرستاده
-                </span>
-
-                <span class="incoming-amount">
-                  🪙 ${amount}
-                </span>
-
-              </div>
-
-              <div class="incoming-time">
-                ${time}
-              </div>
-
-              <div class="incoming-actions">
-
-                <button
-                  class="btn btn-gold accept-transfer"
-                  data-id="${id}"
-                >
-                  ✅ قبول
-                </button>
-
-                <button
-                  class="btn btn-danger reject-transfer"
-                  data-id="${id}"
-                >
-                  ❌ رد
-                </button>
-
-              </div>
+              <span class="incoming-amount">
+                🪙 ${amount}
+              </span>
 
             </div>
 
-          `;
+            <div class="incoming-time">
+              ${time}
+            </div>
 
-        }
-      ).join("");
+            <div class="incoming-actions">
 
+              <button
+                class="btn btn-gold accept-transfer"
+                data-id="${id}"
+              >
+                ✅ قبول
+              </button>
 
-    // --------------------------------------------------------
-    // Accept
-    // --------------------------------------------------------
+              <button
+                class="btn btn-danger reject-transfer"
+                data-id="${id}"
+              >
+                ❌ رد
+              </button>
+
+            </div>
+
+          </div>
+
+        `;
+
+      }).join("");
+
 
     incomingList
-      .querySelectorAll(
-        ".accept-transfer"
-      )
-      .forEach(
-        btn => {
+      .querySelectorAll(".accept-transfer")
+      .forEach(btn => {
 
-          btn.addEventListener(
-            "click",
-            async () => {
+        btn.addEventListener(
+          "click",
+          async () => {
 
-              const id =
-                btn.dataset.id;
+            const id = btn.dataset.id;
 
+            btn.disabled = true;
 
-              btn.disabled =
-                true;
+            try {
 
-
-              try {
-
-                const result =
-                  await acceptTransfer(
-                    name,
-                    id
-                  );
-
-
-                if (
-                  !result.ok
-                ) {
-
-                  alert(
-                    getTransferError(
-                      result.reason
-                    )
-                  );
-
-                  btn.disabled =
-                    false;
-
-                  return;
-
-                }
-
-
-                await refreshTx();
-
-
-              } catch (e) {
-
-                console.error(
-                  "ACCEPT ERROR:",
-                  e
+              const result =
+                await acceptTransfer(
+                  name,
+                  id
                 );
+
+
+              if (!result.ok) {
 
                 alert(
-                  "❌ قبول انتقال ناموفق بود."
+                  getTransferError(
+                    result.reason
+                  )
                 );
 
-                btn.disabled =
-                  false;
+                btn.disabled = false;
+                return;
 
               }
 
+              await refreshTx();
+
+            } catch (e) {
+
+              console.error(
+                "ACCEPT ERROR:",
+                e
+              );
+
+              alert(
+                "❌ قبول انتقال ناموفق بود."
+              );
+
+              btn.disabled = false;
+
             }
-          );
 
-        }
-      );
+          }
+        );
 
+      });
 
-    // --------------------------------------------------------
-    // Reject
-    // --------------------------------------------------------
 
     incomingList
-      .querySelectorAll(
-        ".reject-transfer"
-      )
-      .forEach(
-        btn => {
+      .querySelectorAll(".reject-transfer")
+      .forEach(btn => {
 
-          btn.addEventListener(
-            "click",
-            async () => {
+        btn.addEventListener(
+          "click",
+          async () => {
 
-              const id =
-                btn.dataset.id;
+            const id = btn.dataset.id;
 
+            btn.disabled = true;
 
-              btn.disabled =
-                true;
+            try {
 
-
-              try {
-
-                const result =
-                  await rejectTransfer(
-                    name,
-                    id
-                  );
-
-
-                if (
-                  !result.ok
-                ) {
-
-                  alert(
-                    getTransferError(
-                      result.reason
-                    )
-                  );
-
-                  btn.disabled =
-                    false;
-
-                  return;
-
-                }
-
-
-              } catch (e) {
-
-                console.error(
-                  "REJECT ERROR:",
-                  e
+              const result =
+                await rejectTransfer(
+                  name,
+                  id
                 );
+
+
+              if (!result.ok) {
 
                 alert(
-                  "❌ رد انتقال ناموفق بود."
+                  getTransferError(
+                    result.reason
+                  )
                 );
 
-                btn.disabled =
-                  false;
-
+                btn.disabled = false;
               }
 
-            }
-          );
+            } catch (e) {
 
-        }
-      );
+              console.error(
+                "REJECT ERROR:",
+                e
+              );
+
+              alert(
+                "❌ رد انتقال ناموفق بود."
+              );
+
+              btn.disabled = false;
+
+            }
+
+          }
+        );
+
+      });
 
   }
 
 
-  // ==========================================================
-  // نمایش انتقال‌های خروجی
-  // ==========================================================
+  function renderOutgoing(list) {
 
-  function renderOutgoing(
-    list
-  ) {
-
-    if (
-      !list ||
-      list.length === 0
-    ) {
+    if (!list || list.length === 0) {
 
       outgoingList.innerHTML = `
         <p class="empty-transfer">
@@ -1114,300 +873,247 @@ waitForUser().then(async user => {
       `;
 
       return;
-
     }
 
 
     outgoingList.innerHTML =
-      list.map(
-        transfer => {
+      list.map(transfer => {
 
-          const to =
-            escapeHtml(
-              transfer.to ||
-              "کاربر"
-            );
+        const to =
+          escapeHtml(
+            transfer.to || "کاربر"
+          );
 
-
-          const amount =
-            Number(
-              transfer.amount || 0
-            );
+        const amount =
+          Number(
+            transfer.amount || 0
+          );
 
 
-          let statusText =
-            "⏳ در انتظار قبول";
+        let statusText =
+          "⏳ در انتظار قبول";
 
-          let statusClass =
-            "status-pending";
-
-
-          if (
-            transfer.status ===
-            "accepted"
-          ) {
-
-            statusText =
-              "✅ انتقال انجام شد";
-
-            statusClass =
-              "status-accepted";
-
-          }
+        let statusClass =
+          "status-pending";
 
 
-          if (
-            transfer.status ===
-            "refunded"
-          ) {
+        if (
+          transfer.status ===
+          "accepted"
+        ) {
 
-            statusText =
-              "↩️ سکه‌ها برگشت خورد";
+          statusText =
+            "✅ انتقال انجام شد";
 
-            statusClass =
-              "status-refunded";
+          statusClass =
+            "status-accepted";
 
-          }
+        }
 
 
-          return `
+        if (
+          transfer.status ===
+          "refunded"
+        ) {
 
-            <div class="outgoing-row">
+          statusText =
+            "↩️ سکه‌ها برگشت خورد";
 
-              <div class="outgoing-top">
+          statusClass =
+            "status-refunded";
 
-                <span>
-                  به
-                  <strong>${to}</strong>
-                </span>
+        }
 
-                <span>
-                  🪙 ${amount}
-                </span>
 
-              </div>
+        return `
 
-              <div
-                class="outgoing-status ${statusClass}"
-              >
-                ${statusText}
-              </div>
+          <div class="outgoing-row">
+
+            <div class="outgoing-top">
+
+              <span>
+                به
+                <strong>${to}</strong>
+              </span>
+
+              <span>
+                🪙 ${amount}
+              </span>
 
             </div>
 
-          `;
+            <div
+              class="outgoing-status ${statusClass}"
+            >
+              ${statusText}
+            </div>
 
-        }
-      ).join("");
+          </div>
+
+        `;
+
+      }).join("");
 
   }
 
 
-  // ==========================================================
-  // مأموریت‌ها
-  // ==========================================================
-
-  function renderMissions(
-    p
-  ) {
+  function renderMissions(p) {
 
     const claimed =
-      p.claimedMissions ||
-      [];
-
+      p.claimedMissions || [];
 
     const list =
       document.getElementById(
         "missionList"
       );
 
-
-    list.innerHTML =
-      "";
+    list.innerHTML = "";
 
 
-    MISSIONS.forEach(
-      m => {
+    MISSIONS.forEach(m => {
 
-        const progressVal =
-          Number(
-            p[m.statKey] || 0
-          );
+      const progressVal =
+        Number(p[m.statKey] || 0);
 
+      const pct =
+        Math.min(
+          100,
+          Math.round(
+            (progressVal / m.target) * 100
+          )
+        );
 
-        const pct =
-          Math.min(
-            100,
-            Math.round(
-              (
-                progressVal /
-                m.target
-              ) *
-              100
-            )
-          );
+      const done =
+        progressVal >= m.target;
+
+      const isClaimed =
+        claimed.includes(m.id);
 
 
-        const done =
-          progressVal >=
-          m.target;
+      const row =
+        document.createElement("div");
+
+      row.className =
+        "mission-row";
 
 
-        const isClaimed =
-          claimed.includes(
-            m.id
-          );
+      row.innerHTML = `
+
+        <div class="top">
+
+          <span class="txt">
+            ${escapeHtml(m.label)}
+          </span>
+
+          <span class="reward">
+            🪙 +${m.reward}
+          </span>
+
+        </div>
+
+        <div class="progress-bar">
+
+          <div
+            class="progress-fill"
+            style="width:${pct}%"
+          ></div>
+
+        </div>
+
+      `;
 
 
-        const row =
-          document.createElement(
-            "div"
-          );
+      const btn =
+        document.createElement(
+          "button"
+        );
 
 
-        row.className =
-          "mission-row";
+      if (isClaimed) {
+
+        btn.textContent =
+          "دریافت شد";
+
+        btn.disabled =
+          true;
+
+        btn.className =
+          "btn-ghost";
+
+      }
+
+      else if (done) {
+
+        btn.textContent =
+          "دریافت پاداش";
+
+        btn.className =
+          "btn-gold";
 
 
-        row.innerHTML = `
+        btn.addEventListener(
+          "click",
+          async () => {
 
-          <div class="top">
+            btn.disabled = true;
 
-            <span class="txt">
-              ${escapeHtml(
-                m.label
-              )}
-            </span>
+            try {
 
-            <span class="reward">
-              🪙 +${m.reward}
-            </span>
-
-          </div>
-
-          <div class="progress-bar">
-
-            <div
-              class="progress-fill"
-              style="width:${pct}%"
-            ></div>
-
-          </div>
-
-        `;
-
-
-        const btn =
-          document.createElement(
-            "button"
-          );
-
-
-        if (
-          isClaimed
-        ) {
-
-          btn.textContent =
-            "دریافت شد";
-
-          btn.disabled =
-            true;
-
-          btn.className =
-            "btn-ghost";
-
-        }
-
-        else if (
-          done
-        ) {
-
-          btn.textContent =
-            "دریافت پاداش";
-
-          btn.className =
-            "btn-gold";
-
-
-          btn.addEventListener(
-            "click",
-            async () => {
-
-              btn.disabled =
-                true;
-
-
-              try {
-
-                const result =
-                  await claimMission(
-                    name,
-                    m.id
-                  );
-
-
-                if (
-                  !result.ok
-                ) {
-
-                  alert(
-                    "❌ دریافت پاداش انجام نشد."
-                  );
-
-                  btn.disabled =
-                    false;
-
-                }
-
-              } catch (e) {
-
-                console.error(
-                  "MISSION ERROR:",
-                  e
+              const result =
+                await claimMission(
+                  name,
+                  m.id
                 );
 
-                btn.disabled =
-                  false;
+
+              if (!result.ok) {
+
+                alert(
+                  "❌ دریافت پاداش انجام نشد."
+                );
+
+                btn.disabled = false;
 
               }
 
+            } catch (e) {
+
+              console.error(
+                "MISSION ERROR:",
+                e
+              );
+
+              btn.disabled = false;
+
             }
-          );
 
-        }
-
-        else {
-
-          btn.textContent =
-            `${progressVal} از ${m.target}`;
-
-          btn.disabled =
-            true;
-
-          btn.className =
-            "btn-ghost";
-
-        }
-
-
-        row.appendChild(
-          btn
-        );
-
-
-        list.appendChild(
-          row
+          }
         );
 
       }
-    );
+
+      else {
+
+        btn.textContent =
+          `${progressVal} از ${m.target}`;
+
+        btn.disabled =
+          true;
+
+        btn.className =
+          "btn-ghost";
+
+      }
+
+
+      row.appendChild(btn);
+
+      list.appendChild(row);
+
+    });
 
   }
 
-
-  // ==========================================================
-  // تراکنش‌ها
-  // ==========================================================
 
   async function refreshTx() {
 
@@ -1425,16 +1131,13 @@ waitForUser().then(async user => {
           "txList"
         );
 
-
       const txEmpty =
         document.getElementById(
           "txEmpty"
         );
 
 
-      if (
-        txs.length === 0
-      ) {
+      if (txs.length === 0) {
 
         txEmpty.style.display =
           "block";
@@ -1452,46 +1155,42 @@ waitForUser().then(async user => {
 
 
       txList.innerHTML =
-        txs.map(
-          t => {
+        txs.map(t => {
 
-            const amount =
-              Number(
-                t.amount || 0
-              );
+          const amount =
+            Number(t.amount || 0);
 
 
-            return `
+          return `
 
-              <div class="tx-row">
+            <div class="tx-row">
 
-                <span>
-                  ${escapeHtml(
-                    t.note ||
-                    "تراکنش"
-                  )}
-                </span>
+              <span>
+                ${escapeHtml(
+                  t.note || "تراکنش"
+                )}
+              </span>
 
-                <span
-                  class="${
-                    amount >= 0
-                      ? "plus"
-                      : "minus"
-                  }"
-                >
-                  ${
-                    amount >= 0
-                      ? "+"
-                      : ""
-                  }${amount}
-                </span>
+              <span
+                class="${
+                  amount >= 0
+                    ? "plus"
+                    : "minus"
+                }"
+              >
+                ${
+                  amount >= 0
+                    ? "+"
+                    : ""
+                }${amount}
 
-              </div>
+              </span>
 
-            `;
+            </div>
 
-          }
-        ).join("");
+          `;
+
+        }).join("");
 
 
     } catch (e) {
@@ -1506,10 +1205,6 @@ waitForUser().then(async user => {
   }
 
 
-  // ==========================================================
-  // پیام انتقال
-  // ==========================================================
-
   function showMessage(
     text,
     error = false
@@ -1517,7 +1212,6 @@ waitForUser().then(async user => {
 
     transferMessage.textContent =
       text;
-
 
     transferMessage.style.color =
       error
@@ -1527,13 +1221,7 @@ waitForUser().then(async user => {
   }
 
 
-  // ==========================================================
-  // خطای انتقال
-  // ==========================================================
-
-  function getTransferError(
-    reason
-  ) {
+  function getTransferError(reason) {
 
     const messages = {
 
@@ -1566,13 +1254,7 @@ waitForUser().then(async user => {
   }
 
 
-  // ==========================================================
-  // ابزارها
-  // ==========================================================
-
-  function formatTime(
-    timestamp
-  ) {
+  function formatTime(timestamp) {
 
     if (!timestamp) {
       return "زمان نامشخص";
@@ -1584,22 +1266,11 @@ waitForUser().then(async user => {
       return new Intl.DateTimeFormat(
         "fa-IR",
         {
-
-          year:
-            "numeric",
-
-          month:
-            "2-digit",
-
-          day:
-            "2-digit",
-
-          hour:
-            "2-digit",
-
-          minute:
-            "2-digit"
-
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
         }
       ).format(
         new Date(timestamp)
@@ -1614,38 +1285,20 @@ waitForUser().then(async user => {
   }
 
 
-  function escapeHtml(
-    value
-  ) {
+  function escapeHtml(value) {
 
-    return String(
-      value ?? ""
-    )
-      .replace(
-        /&/g,
-        "&amp;"
-      )
-      .replace(
-        /</g,
-        "&lt;"
-      )
-      .replace(
-        />/g,
-        "&gt;"
-      )
-      .replace(
-        /"/g,
-        "&quot;"
-      )
-      .replace(
-        /'/g,
-        "&#039;"
-      );
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 
   }
 
 });
+
 </script>
 
 </body>
-  </html>
+</html>
