@@ -2,166 +2,928 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>حروف به‌هم‌ریخته | دومیتو</title>
-<link rel="stylesheet" href="../css/style.css">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1a0b0d">
+<title>Tile Jumper | پرش کاشی‌ها</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;overflow:hidden;background:#12080a;color:#fff;
+  font-family:Tahoma,Arial,sans-serif;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+canvas{display:block;width:100vw;height:100dvh}
+button{
+  font-family:inherit;color:#fff;cursor:pointer;touch-action:manipulation;
+  border:1px solid #ffffff30;border-radius:16px;padding:14px 20px;
+  background:#2a1a2e;font-size:15px;font-weight:bold;
+}
+button:active{transform:scale(.96)}
+.primary{color:#1a0b0d;background:linear-gradient(135deg,#ffffff,#ffd0d0);border:0;box-shadow:0 0 25px #ffffff30}
+.big{font-size:17px;padding:16px 20px}
+
+#hud{
+  position:fixed;top:max(14px,env(safe-area-inset-top));left:14px;right:14px;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  direction:ltr;pointer-events:none;
+}
+#hud>*{flex:0 0 auto}
+#leftSlot{width:60px;height:60px}
+#pause{
+  pointer-events:auto;width:58px;height:58px;padding:0;border-radius:50%;
+  font-size:22px;line-height:1;display:none;
+  background:radial-gradient(circle at 35% 28%,#5cc8ff,#1565d8);
+  border:3px solid #d6edff;box-shadow:0 4px 14px #0007;
+}
+#center{flex:1;text-align:center;direction:rtl;margin-top:-2px}
+#songName{font-size:15px;opacity:.92;text-shadow:0 2px 6px #0008}
+#score{font-size:68px;line-height:1.05;font-weight:300;text-shadow:0 3px 12px #0009}
+#bestRow{display:flex;gap:7px;justify-content:center;align-items:center;font-size:26px;direction:ltr}
+#bestRow svg{width:34px;height:26px}
+#gemBox{display:flex;align-items:center;gap:6px;direction:ltr;font-size:30px;min-width:92px;justify-content:flex-end;margin-top:6px;text-shadow:0 2px 8px #0009}
+#gemBox svg{width:40px;height:36px}
+
+#next{
+  position:fixed;left:16px;top:68%;width:66px;height:66px;padding:0;border-radius:50%;
+  background:#0006;border:2px solid #ffffff66;font-size:14px;
+}
+#tapHint{
+  position:fixed;left:0;right:0;bottom:max(36px,env(safe-area-inset-bottom));
+  text-align:center;pointer-events:none;font-size:13px;color:#ffe9e9;text-shadow:0 2px 6px #000;
+}
+#tapHint .hand{display:block;font-size:56px;animation:tap 1.1s ease-in-out infinite;filter:drop-shadow(0 0 10px #fff9)}
+@keyframes tap{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(.92)}}
+
+.screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:22px;
+  background:linear-gradient(180deg,#05020855,#050208cc);
+}
+.card{
+  width:min(380px,100%);padding:28px 22px;text-align:center;
+  background:linear-gradient(145deg,#2a1520f2,#150b14f2);
+  border:1px solid #ffb8b830;border-radius:27px;box-shadow:0 25px 90px #000a;
+}
+.logo{font-size:52px;filter:drop-shadow(0 0 18px #ff6b7a88)}
+h1{margin:8px 0 2px;font-size:30px}
+.sub{color:#e3c8cf;font-size:14px}
+.subtitle{color:#e3c8cf;line-height:1.95;font-size:14px}
+.buttons{display:grid;gap:10px;margin-top:22px}
+#message{font-size:14px;color:#ffd66b;min-height:20px;margin-top:14px}
+.statsRow{display:flex;justify-content:center;gap:22px;margin:16px 0 4px;direction:ltr;font-size:20px;align-items:center}
+.statsRow span{display:flex;align-items:center;gap:7px}
+.statsRow svg{width:28px;height:26px}
+.note{margin-top:16px;color:#bda3ac;font-size:12px;line-height:1.8}
+#songs .card{max-height:calc(100dvh - 44px);display:flex;flex-direction:column}
+#songList{display:grid;gap:10px;margin:16px 0;overflow-y:auto;touch-action:pan-y;padding:2px}
+.songCard{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:right;padding:14px 16px;
+  background:#ffffff0d;
+}
+.songCard .sw{width:34px;height:34px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 14px #fff3}
+.songCard .sn{font-size:17px;flex:1}
+.songCard .sm{font-size:12px;color:#d6bcc4;font-weight:normal}
+.hidden{display:none!important}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="brand"><div class="brand-mark">🔤</div><h1>حروف به‌هم‌ریخته</h1></div>
-    <div class="card" id="playArea">
-      <h2 id="qCounter">سوال ۱ از ۵</h2>
-      <p class="muted" style="margin:-8px 0 6px;">این حروف به‌هم‌ریخته کدوم کلمه‌ست؟</p>
-      <p id="qText" style="font-size:26px; font-weight:900; text-align:center; letter-spacing:4px; margin:10px 0 20px;"></p>
-      <div id="options"></div>
-    </div>
-    <div class="card" id="waitArea" style="display:none">
-      <h2>نتیجه تو ثبت شد</h2>
-      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
-    </div>
-    <div class="card" id="scoreArea" style="display:none">
-      <h2 id="scoreAreaTitle">نتیجه این دور</h2>
-      <div class="score-board" id="scoreBoard"></div>
-      <div class="solo-result" id="soloResult" style="display:none"></div>
-      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="leftSlot"><button id="pause" aria-label="توقف">Ⅱ</button></div>
+  <div id="center">
+    <div id="songName">رویای سرخ</div>
+    <div id="score">۰</div>
+    <div id="bestRow">
+      <svg viewBox="0 0 34 26" aria-hidden="true"><path d="M3 22 L1 6 L9 13 L17 2 L25 13 L33 6 L31 22 Z" fill="none" stroke="#ffd66b" stroke-width="2.2" stroke-linejoin="round"/><circle cx="1" cy="6" r="1.8" fill="#ffd66b"/><circle cx="17" cy="2" r="1.8" fill="#ffd66b"/><circle cx="33" cy="6" r="1.8" fill="#ffd66b"/></svg>
+      <span id="best">۰</span>
     </div>
   </div>
+  <div id="gemBox">
+    <span id="gemTotal">۰</span>
+    <svg viewBox="0 0 40 36" aria-hidden="true"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9cf1ff"/><stop offset="1" stop-color="#1f8bff"/></linearGradient></defs><path d="M10 2 H30 L39 13 L20 34 L1 13 Z" fill="url(#gg)" stroke="#ffe9a8" stroke-width="2" stroke-linejoin="round"/><path d="M1 13 H39 M10 2 L15 13 L20 34 L25 13 L30 2" fill="none" stroke="#ffffff99" stroke-width="1.3"/></svg>
+  </div>
+</div>
+
+<button id="next" class="hidden" aria-label="آهنگ بعدی">بعدی</button>
+<div id="tapHint" class="hidden"><span class="hand">👆</span>لمس کن و انگشتت را بکش</div>
+
+<!-- منوی خانه -->
+<div id="menu" class="screen">
+  <div class="card">
+    <div class="logo">💠</div>
+    <h1>Tile Jumper</h1>
+    <div class="sub">پرش کاشی‌ها</div>
+    <div class="statsRow">
+      <span><svg viewBox="0 0 40 36" aria-hidden="true"><path d="M10 2 H30 L39 13 L20 34 L1 13 Z" fill="url(#gg)" stroke="#ffe9a8" stroke-width="2" stroke-linejoin="round"/></svg><b id="menuGems">۰</b></span>
+      <span>🏆 <b id="menuBest">۰</b></span>
+    </div>
+    <div class="buttons">
+      <button class="primary big" id="btnEndless">▶ بازی بی‌پایان</button>
+      <button class="big" id="btnSongs">🎵 انتخاب آهنگ</button>
+      <button id="btnSoundM">🔊 صدا روشن</button>
+    </div>
+    <div class="note">در حالت بی‌پایان هرچه جلوتر بروی، سریع‌تر و سخت‌تر می‌شود.<br>در حالت آهنگ، یک آهنگ مشخص را تا آخر بازی می‌کنی.</div>
+    <div class="note" id="domitoNote"></div>
+  </div>
+</div>
+
+<!-- انتخاب آهنگ -->
+<div id="songs" class="screen hidden">
+  <div class="card">
+    <h1>🎵 انتخاب آهنگ</h1>
+    <div id="songList"></div>
+    <button id="btnBack">↩ برگشت به خانه</button>
+  </div>
+</div>
+
+<!-- توقف / پایان بازی -->
+<div id="overlay" class="screen hidden">
+  <div class="card">
+    <div class="logo">💠</div>
+    <h1 id="title">Tile Jumper</h1>
+    <div class="subtitle" id="description"></div>
+    <div class="buttons">
+      <button class="primary" id="resume">دوباره بازی کن</button>
+      <button id="nextSong">آهنگ بعدی</button>
+      <button id="homeBtn">🏠 خانه</button>
+      <button id="sound">🔊 صدا روشن</button>
+    </div>
+    <div id="message"></div>
+    <div class="note" id="coinMsg"></div>
+  </div>
+</div>
 
 <script type="module">
-  import {
-    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
-    submitResult, resetSessionForNextRound, recordRoundResult, soloWon
-  } from "../js/app.js";
-  import { mountChat } from "../js/chat.js";
+(() => {
+'use strict';
 
-  const isSolo = new URLSearchParams(location.search).has("solo");
-  const code = getSavedRoom();
-  const R = (p) => roomRef(code, p);
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const $ = id => document.getElementById(id);
 
-  const WORD_POOL = [
-    "دومینو", "بازی", "کامپیوتر", "کتابخانه", "دوستی", "خورشید", "دریا", "کوهستان",
-    "پرنده", "موسیقی", "شکلات", "هواپیما", "جنگل", "رنگین‌کمان", "ستاره", "باران",
-    "دانشگاه", "روزنامه", "تلفن", "قهوه",
-  ];
+// ---------- ثابت‌ها ----------
+const SPACING = 2.6;     // فاصله‌ی مرکز کاشی‌ها در طول مسیر
+const F = 4;             // دید دوربین
+const TILE_LEN = 1.5;    // طول کاشی در جهت مسیر
+const ROAD = 1.25;       // نیم‌عرض جاده
+const HOP = .5;          // ارتفاع پرش (بر حسب واحد)
+const GRID = 2.6;
+const KEYSPD = 3.4;
+const LEVEL_TILES = 24;  // هر چند کاشی یک مرحله (حالت بی‌پایان)
 
-  function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
-  function scrambleWord(word) {
-    const letters = word.split(""); let attempts = 0, scrambled;
-    do { scrambled = shuffle([...letters]).join(""); attempts++; } while (scrambled === word && attempts < 10);
-    return scrambled;
+// چهار آهنگ؛ هر فرود یک نت از ملودی می‌نوازد و ضرب و بیس همراهش می‌آید
+const SONGS = [
+  { name: 'رویای سرخ',   bpm: 128, hue: 355, wave: 'triangle',
+    notes: [69,72,76,72, 74,72,69,67, 69,72,76,79, 76,74,72,74, 76,79,81,79, 76,74,72,69, 67,69,72,74, 72,69,67,64] },
+  { name: 'شب نیلی',      bpm: 108, hue: 215, wave: 'sine',
+    notes: [62,65,69,72, 69,65,62,65, 67,70,74,77, 74,70,67,70, 69,72,76,79, 76,72,69,72, 65,69,72,76, 72,69,65,62] },
+  { name: 'طلوع طلایی',  bpm: 138, hue: 38,  wave: 'triangle',
+    notes: [72,76,79,84, 79,76,72,76, 74,77,81,86, 81,77,74,77, 76,79,83,88, 83,79,76,79, 71,74,79,83, 79,74,71,67] },
+  { name: 'نئون بنفش',    bpm: 120, hue: 285, wave: 'square',
+    notes: [64,67,71,74, 71,67,64,67, 66,69,73,76, 73,69,66,69, 67,71,74,79, 74,71,67,71, 62,66,69,74, 69,66,62,59] }
+];
+
+// ---------- وضعیت ----------
+let W = innerWidth, H = innerHeight, DPR = 1, unit = 200, horizonY = 0, baseY = 0;
+let state = 'menu';      // menu | songs | ready | playing | paused | over
+let mode = 'endless';    // endless | song
+let soundOn = true, audio = null, out = null, noiseBuf = null, lastTime = 0, elapsed = 0;
+let songIdx = 0, song = SONGS[0], hue = SONGS[0].hue, level = 1;
+let score = 0, runGems = 0, totalGems = 0, best = 0, distance = 0, streak = 0, record = false;
+let ballX = 0, targetX = 0, camX = 0;
+let tiles = [], nextIdx = 0, pat = { type: 'straight', left: 0, dir: 1 };
+let falling = false, fallT = 0, fallV = 0, fallDrop = 0, shake = 0;
+let particles = [], popups = [], rings = [];
+let drag = null;
+const keys = { l: false, r: false };
+const cache = {};
+
+// ---------- ذخیره‌سازی ----------
+const store = {
+  get(k) { try { return Number(localStorage.getItem(k)) || 0; } catch (e) { return 0; } },
+  set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+};
+totalGems = store.get('tj2_gems');
+soundOn = store.get('tj2_mute') !== 1;
+
+const fa = n => Math.floor(n).toLocaleString('fa-IR');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd = () => Math.random();
+const vib = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+const isDemo = () => state === 'menu' || state === 'songs';
+const show = (id, on) => $(id).classList[on ? 'remove' : 'add']('hidden');
+
+function setText(id, v) {
+  if (cache[id] === v) return;
+  cache[id] = v;
+  $(id).textContent = typeof v === 'number' ? fa(v) : v;
+}
+const label = () => mode === 'endless' ? `بی‌پایان · مرحله ${fa(level)}` : song.name;
+function updateHUD() {
+  setText('score', score);
+  setText('best', Math.max(best, score));
+  setText('gemTotal', totalGems);
+  setText('songName', label());
+}
+
+// ---------- اندازه ----------
+function resize() {
+  W = innerWidth; H = innerHeight;
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  unit = Math.min(W * .5, H * .25);
+  horizonY = H * .41;
+  baseY = H * .74;
+}
+addEventListener('resize', resize);
+resize();
+
+// ---------- موتور صدا ----------
+function audioContext() {
+  if (!soundOn) return null;
+  try {
+    if (!audio) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audio = new AC();
+      // کمپرسور تا وقتی چند صدا با هم می‌آیند، صدا نپرد
+      const comp = audio.createDynamicsCompressor();
+      comp.threshold.value = -16; comp.ratio.value = 6; comp.attack.value = .003; comp.release.value = .2;
+      const master = audio.createGain(); master.gain.value = .95;
+      comp.connect(master); master.connect(audio.destination);
+      out = comp;
+      noiseBuf = audio.createBuffer(1, Math.floor(audio.sampleRate * .4), audio.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (audio.state === 'suspended') audio.resume();
+    return audio;
+  } catch (e) { return null; }
+}
+const audioRunning = () => !!(audio && soundOn && audio.state === 'running');
+
+function beep(freq, dur = .2, type = 'sine', vol = .06) {
+  const a = audioContext(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, a.currentTime + dur);
+    o.connect(g); g.connect(out);
+    o.start(); o.stop(a.currentTime + dur + .02);
+  } catch (e) {}
+}
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function note(m, dur = .3, type = song.wave, vol = .06) { beep(mtof(m), dur, type, vol); }
+
+function kick() {
+  const a = audioContext(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain();
+    o.frequency.setValueAtTime(150, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(40, a.currentTime + .12);
+    g.gain.setValueAtTime(.16, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, a.currentTime + .16);
+    o.connect(g); g.connect(out);
+    o.start(); o.stop(a.currentTime + .18);
+  } catch (e) {}
+}
+function noiseHit(freq, type, dur, vol) {
+  const a = audioContext(); if (!a || !noiseBuf) return;
+  try {
+    const s = a.createBufferSource(); s.buffer = noiseBuf;
+    const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+    const g = a.createGain();
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, a.currentTime + dur);
+    s.connect(f); f.connect(g); g.connect(out);
+    s.start(); s.stop(a.currentTime + dur + .02);
+  } catch (e) {}
+}
+const hat = () => noiseHit(7500, 'highpass', .05, .05);
+const clap = () => noiseHit(1800, 'bandpass', .13, .16);
+function pad(m, dur = 2.2) {
+  const a = audioContext(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.value = mtof(m);
+    g.gain.setValueAtTime(.0001, a.currentTime);
+    g.gain.linearRampToValueAtTime(.03, a.currentTime + .4);
+    g.gain.exponentialRampToValueAtTime(.001, a.currentTime + dur);
+    o.connect(g); g.connect(out);
+    o.start(); o.stop(a.currentTime + dur + .05);
+  } catch (e) {}
+}
+
+// هر فرود = یک ضرب: نت ملودی + ضرب + بیس (+ کلپ روی ضرب‌های فرد، پد هر ۸ ضرب)
+function landSound(k, perfect) {
+  const len = song.notes.length;
+  const n = song.notes[k % len];
+  note(n, .32);
+  kick();
+  if (k % 2 === 1) clap();
+  const root = song.notes[(k - (k % 8)) % len] - 24;
+  note(k % 2 === 0 ? root : root + 7, .4, 'sine', .1);
+  if (k % 8 === 0) { const r = song.notes[k % len] - 12; pad(r); pad(r + 7); pad(r + 12); }
+  if (perfect) setTimeout(() => note(n + 12, .2, 'sine', .03), 60);
+}
+const gemSound = () => { beep(1320, .1, 'triangle', .05); setTimeout(() => beep(1760, .14, 'triangle', .04), 70); };
+const failSound = () => { beep(160, .5, 'sawtooth', .05); noiseHit(300, 'lowpass', .35, .12); };
+const uiClick = () => beep(760, .05, 'square', .03);
+const levelSound = () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, .16, 'triangle', .05), i * 90));
+const overJingle = () => [64, 60, 57, 52].forEach((m, i) => setTimeout(() => beep(mtof(m), .3, 'triangle', .05), i * 150));
+const startSound = () => { beep(440, .08, 'triangle', .05); setTimeout(() => beep(660, .12, 'triangle', .05), 80); };
+function playPreview(s) {
+  [0, 2, 4, 2].forEach((n, i) => setTimeout(() => beep(mtof(s.notes[n]), .22, s.wave, .06), i * 110));
+}
+
+// ---------- ساخت کاشی‌ها ----------
+const hardMode = () => mode === 'endless';
+const tileHalf = i => hardMode() ? Math.max(.30, .56 - i * .0022) : Math.max(.34, .55 - i * .0016);
+const stepMax = i => hardMode() ? Math.min(1.6, .5 + i * .009) : Math.min(1.5, .55 + i * .007);
+
+function genTile() {
+  const i = nextIdx++;
+  const half = tileHalf(i);
+  const lim = ROAD - half - .02;
+  let x = 0;
+  if (i >= 4) {
+    const prev = tiles[tiles.length - 1].x;
+    if (pat.left <= 0) {
+      const r = rnd();
+      pat.type = r < .25 ? 'straight' : r < .5 ? 'sweep' : r < .75 ? 'zigzag' : 'random';
+      pat.left = 4 + Math.floor(rnd() * 6);
+      pat.dir = rnd() < .5 ? -1 : 1;
+    }
+    pat.left--;
+    const sm = stepMax(i);
+    let d;
+    if (pat.type === 'straight') d = (rnd() - .5) * .3;
+    else if (pat.type === 'sweep') {
+      d = pat.dir * sm * .65;
+      if (Math.abs(prev + d) > lim) { pat.dir *= -1; d = pat.dir * sm * .65; }
+    } else if (pat.type === 'zigzag') { pat.dir *= -1; d = pat.dir * sm * .85; }
+    else d = (rnd() * 2 - 1) * sm;
+    x = clamp(prev + d, -lim, lim);
   }
-  function generateQuestions(n) {
-    const chosen = shuffle([...WORD_POOL]).slice(0, n);
-    return chosen.map((word) => {
-      const distractors = shuffle(WORD_POOL.filter((w) => w !== word)).slice(0, 3);
-      const options = shuffle([word, ...distractors]);
-      return { scrambled: scrambleWord(word), options, correct: options.indexOf(word) };
-    });
+  tiles.push({ i, x, half, gem: i >= 6 && rnd() < .16, hitT: -9 });
+}
+function tileAt(k) { return tiles.length ? tiles[k - tiles[0].i] || null : null; }
+function topUp() {
+  const k = Math.floor(distance / SPACING);
+  while (nextIdx < k + 22) genTile();
+  while (tiles.length && tiles[0].i < k - 3) tiles.shift();
+}
+
+// تمپو: در حالت بی‌پایان هرچه جلوتر می‌روی تندتر می‌شود
+function curBpm() {
+  if (isDemo()) return 112;
+  if (mode === 'endless') return clamp(100 + Math.floor(distance / SPACING) * .4, 100, 156);
+  return song.bpm;
+}
+
+// ---------- مدیریت صفحه‌ها ----------
+const bestKey = () => mode === 'endless' ? 'tj2_best_endless' : 'tj2_best_' + songIdx;
+function loadBest() { best = store.get(bestKey()); }
+function setSong(i) {
+  songIdx = (i + SONGS.length) % SONGS.length;
+  song = SONGS[songIdx];
+  loadBest();
+}
+
+function resetRun() {
+  tiles = []; nextIdx = 0; pat = { type: 'straight', left: 0, dir: 1 };
+  distance = 0; score = 0; runGems = 0; streak = 0; record = false; level = 1;
+  if (mode === 'endless') song = SONGS[0];
+  ballX = 0; targetX = 0; camX = 0;
+  falling = false; fallT = 0; fallV = 0; fallDrop = 0; shake = 0;
+  particles = []; popups = []; rings = [];
+  topUp();
+  updateHUD();
+}
+
+function hideAll() {
+  ['menu', 'songs', 'overlay', 'next', 'tapHint', 'hud'].forEach(id => show(id, false));
+  $('pause').style.display = 'none';
+}
+
+function showMenu() {
+  hideAll();
+  state = 'menu'; mode = 'endless'; song = SONGS[0]; loadBest();
+  resetRun();
+  $('menuGems').textContent = fa(totalGems);
+  $('menuBest').textContent = fa(store.get('tj2_best_endless'));
+  show('menu', true);
+}
+
+function buildSongs() {
+  const box = $('songList');
+  box.innerHTML = '';
+  SONGS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'songCard';
+    b.innerHTML = `<span class="sw" style="background:hsl(${s.hue},70%,58%)"></span><span class="sn">${s.name}</span><span class="sm">${fa(s.bpm)} ضرب • 🏆 ${fa(store.get('tj2_best_' + i))}</span>`;
+    b.addEventListener('click', () => { playPreview(s); startSong(i); });
+    box.appendChild(b);
+  });
+}
+function showSongs() {
+  buildSongs();
+  state = 'songs';
+  show('menu', false); show('songs', true);
+}
+
+function showReady() {
+  hideAll();
+  state = 'ready';
+  show('hud', true);
+  show('next', mode === 'song');
+  show('tapHint', true);
+}
+
+function startEndless() {
+  mode = 'endless'; song = SONGS[0]; songIdx = 0; loadBest();
+  resetRun(); showReady();
+}
+function startSong(i) {
+  mode = 'song'; setSong(i);
+  resetRun(); showReady();
+}
+function nextSong() {
+  setSong(songIdx + 1);
+  resetRun(); showReady();
+  playPreview(song);
+}
+
+function startRun() {
+  audioContext();
+  state = 'playing';
+  show('overlay', false); show('next', false); show('tapHint', false);
+  $('pause').style.display = 'block';
+  $('pause').textContent = 'Ⅱ';
+  lastTime = performance.now();
+  startSound();
+}
+
+function showOverlay(title, desc, resumeLabel, msg) {
+  $('title').textContent = title;
+  $('description').innerHTML = desc;
+  $('resume').textContent = resumeLabel;
+  $('message').textContent = msg;
+  $('coinMsg').textContent = '';
+  show('nextSong', mode === 'song');
+  show('overlay', true);
+}
+
+function gameOver() {
+  if (state === 'over') return;
+  state = 'over';
+  if (score > best) { best = score; record = true; store.set(bestKey(), best); }
+  store.set('tj2_gems', totalGems);
+  updateHUD();
+  $('pause').style.display = 'none';
+  overJingle();
+  showOverlay('افتادی!',
+    `${label()}<br>امتیاز: <b>${fa(score)}</b><br>رکورد: <b>${fa(best)}</b><br>الماس این دور: <b>${fa(runGems)}</b>`,
+    'دوباره بازی کن',
+    record ? '🏆 رکورد جدید!' : 'یک بار دیگه امتحان کن! ✨');
+  reportResult(score);
+}
+
+function togglePause() {
+  if (state === 'playing') {
+    state = 'paused';
+    showOverlay('متوقف شد', `${label()}<br>امتیاز: <b>${fa(score)}</b>`, 'ادامه', '');
+  } else if (state === 'paused') {
+    state = 'playing';
+    show('overlay', false);
+    lastTime = performance.now();
+  }
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  store.set('tj2_mute', soundOn ? 0 : 1);
+  const t = soundOn ? '🔊 صدا روشن' : '🔇 صدا خاموش';
+  $('sound').textContent = t; $('btnSoundM').textContent = t;
+  if (soundOn) beep(600, .08);
+}
+
+// ---------- منطق فرود ----------
+function landing(k) {
+  const t = tileAt(k);
+  if (!t) return;
+  const demo = isDemo();
+  const dx = Math.abs(ballX - t.x);
+  const sx = W / 2 + (t.x - camX) * unit;
+  if (dx <= t.half + .1) {
+    const perfect = dx < t.half * .4;
+    t.hitT = elapsed;
+    rings.push({ x: sx, y: baseY, t: 0, max: .5, w: unit * (perfect ? .7 : .5), c: perfect ? '#ffd66b' : '#ffffff' });
+    if (!demo || audioRunning()) landSound(k, perfect);
+    if (demo) return;
+    score += perfect ? 2 : 1;
+    streak = perfect ? streak + 1 : 0;
+    popups.push({ x: W / 2 + (ballX - camX) * unit, y: baseY - unit * 1.15, txt: perfect ? '+۲' : '+۱', color: perfect ? '#ffd66b' : '#ffffff', t: .8 });
+    if (perfect && streak >= 4 && streak % 4 === 0) {
+      popups.push({ x: W / 2, y: H * .30, txt: `عالی! ×${fa(streak)}`, color: '#ffd66b', t: 1.1, big: true });
+    }
+    if (t.gem) {
+      t.gem = false; runGems++; totalGems++;
+      store.set('tj2_gems', totalGems);
+      gemSound(); vib(15);
+      for (let i = 0; i < 14; i++) {
+        const a = rnd() * Math.PI * 2, v = 60 + rnd() * 140;
+        particles.push({ x: sx, y: baseY - unit * .6, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: .6, max: .6, size: 3, color: '#7fe9ff', g: 300 });
+      }
+    }
+    if (!record && best > 0 && score > best) {
+      record = true;
+      popups.push({ x: W / 2, y: H * .26, txt: '🏆 رکورد جدید!', color: '#ffd66b', t: 1.4, big: true });
+    }
+  } else {
+    falling = true; fallT = 0; fallV = 0; fallDrop = 0;
+    if (!demo) { failSound(); vib(70); shake = 10; }
+  }
+}
+
+function update(dt) {
+  elapsed += dt;
+  const demo = isDemo();
+  const sp = SPACING / (60 / curBpm());
+
+  if (!demo) {
+    if (keys.l) targetX -= KEYSPD * dt;
+    if (keys.r) targetX += KEYSPD * dt;
+    targetX = clamp(targetX, -(ROAD - .15), ROAD - .15);
+  } else {
+    // منو: توپ خودش روی کاشی‌ها می‌پرد
+    const nt = tileAt(Math.floor(distance / SPACING) + 1);
+    if (nt) targetX = nt.x;
+  }
+  ballX += (targetX - ballX) * Math.min(1, dt * 16);
+  camX += (ballX * .55 - camX) * Math.min(1, dt * 8);
+
+  const prevDist = distance;
+  const prevK = Math.floor(distance / SPACING);
+  if (!falling) {
+    distance += sp * dt;
+  } else {
+    fallT += dt; fallV += 2600 * dt; fallDrop += fallV * dt;
+    distance += sp * dt * Math.max(0, 1 - fallT * 1.5);
+  }
+  const k = Math.floor(distance / SPACING);
+
+  // های‌هت روی نیمه‌ی هر ضرب
+  const pPrev = (prevDist / SPACING) % 1, pNow = (distance / SPACING) % 1;
+  if (!falling && pPrev < .5 && pNow >= .5 && (!demo || audioRunning())) hat();
+
+  if (!falling && k > prevK) landing(k);
+
+  // مرحله‌ی بعد در حالت بی‌پایان: آهنگ و رنگ عوض می‌شود
+  if (mode === 'endless' && state === 'playing' && !falling) {
+    const lv = Math.floor(k / LEVEL_TILES) + 1;
+    if (lv > level) {
+      level = lv;
+      song = SONGS[(lv - 1) % SONGS.length];
+      popups.push({ x: W / 2, y: H * .34, txt: `مرحله ${fa(lv)}`, color: '#ffffff', t: 1.5, big: true });
+      levelSound();
+    }
   }
 
-  const questions = generateQuestions(5);
-  let idx = 0, correctCount = 0, myUid, myName, players = {};
-
-  const qCounter = document.getElementById("qCounter");
-  const qText = document.getElementById("qText");
-  const optionsEl = document.getElementById("options");
-
-  function renderQuestion() {
-    const q = questions[idx];
-    qCounter.textContent = `سوال ${idx + 1} از ${questions.length}`;
-    qText.textContent = q.scrambled;
-    optionsEl.innerHTML = "";
-    q.options.forEach((opt, i) => {
-      const btn = document.createElement("button");
-      btn.className = "quiz-option";
-      btn.textContent = opt;
-      btn.addEventListener("click", () => answer(i));
-      optionsEl.appendChild(btn);
-    });
+  topUp();
+  if (demo && k > 60) { resetRun(); return; }
+  if (falling && fallT > .85) {
+    if (demo) { resetRun(); return; }
+    gameOver(); return;
   }
+  if (shake > 0) shake = Math.max(0, shake - dt * 30);
+  if (!demo) updateHUD();
+}
 
-  function answer(i) {
-    const q = questions[idx];
-    const buttons = optionsEl.querySelectorAll(".quiz-option");
-    buttons.forEach((b) => (b.disabled = true));
-    buttons[q.correct].classList.add("correct");
-    if (i !== q.correct) buttons[i].classList.add("wrong");
-    if (i === q.correct) correctCount++;
-    setTimeout(() => {
-      idx++;
-      if (idx < questions.length) { buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); }); renderQuestion(); }
-      else finish();
-    }, 700);
+// ---------- پرسپکتیو ----------
+const sOf = z => F / (F + z);
+const yOf = s => horizonY + (baseY - horizonY) * s;
+const xOf = (x, s) => W / 2 + (x - camX) * unit * s;
+
+// ---------- رسم ----------
+const STARS = Array.from({ length: 36 }, (_, i) => ({ x: (i * 211.7) % 1000 / 1000, y: (i * 97.3) % 1000 / 1000, v: 4 + (i % 5) * 3 }));
+
+function beatPulse() {
+  if (falling || (state !== 'playing' && !isDemo())) return 0;
+  const p = (distance / SPACING) % 1;
+  return Math.max(0, 1 - p * 4);
+}
+
+function drawBackground() {
+  const pulse = beatPulse();
+  const g = ctx.createLinearGradient(0, 0, 0, horizonY);
+  g.addColorStop(0, `hsl(${hue},48%,${20 + pulse * 3}%)`);
+  g.addColorStop(1, `hsl(${hue},55%,${35 + pulse * 5}%)`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, horizonY + 1);
+
+  for (const s of STARS) {
+    const x = (s.x * W + elapsed * s.v) % W, y = s.y * horizonY * .95;
+    ctx.globalAlpha = .35 + .35 * Math.sin(elapsed * 1.4 + s.x * 20);
+    ctx.fillStyle = `hsl(${hue},100%,80%)`;
+    ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill();
   }
+  ctx.globalAlpha = 1;
 
-  async function finish() {
-    const score = correctCount * 10;
-    if (isSolo) { await finishSolo(score); return; }
-    document.getElementById("playArea").style.display = "none";
-    document.getElementById("waitArea").style.display = "block";
-    await submitResult("scramble", myUid, myName, score);
+  ctx.fillStyle = `hsl(${hue},48%,9%)`;
+  ctx.beginPath(); ctx.moveTo(0, horizonY + 1);
+  const sh = camX * unit * .06;
+  for (let x = 0; x <= W + 16; x += 16) {
+    const hh = H * .02 + Math.abs(Math.sin((x + sh) * .0062)) * H * .09 + Math.abs(Math.sin((x + sh) * .017 + 2)) * H * .045;
+    ctx.lineTo(x, horizonY + 1 - hh);
   }
+  ctx.lineTo(W, horizonY + 1); ctx.closePath(); ctx.fill();
 
-  async function finishSolo(score) {
-    document.getElementById("playArea").style.display = "none";
-    const won = soloWon("scramble", score);
-    await recordRoundResult(myName, "scramble", { won });
-    const scoreArea = document.getElementById("scoreArea");
-    scoreArea.style.display = "block";
-    document.getElementById("scoreAreaTitle").style.display = "none";
-    document.getElementById("scoreBoard").style.display = "none";
-    document.getElementById("nextStatus").style.display = "none";
-    const soloResult = document.getElementById("soloResult");
-    soloResult.style.display = "block";
-    soloResult.innerHTML = `
-      <div class="big-emoji">${won ? "🎉" : "😅"}</div>
-      <h2>${won ? "آفرین، بردی!" : "این‌بار نشد"}</h2>
-      <div class="score-big">${score} امتیاز</div>
-      <button onclick="location.reload()" class="btn-full">دوباره بازی کن</button>
-      <a href="../index.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">بازگشت به خانه</a>
-    `;
+  const fg = ctx.createLinearGradient(0, horizonY, 0, H);
+  fg.addColorStop(0, `hsl(${hue},55%,26%)`);
+  fg.addColorStop(.35, `hsl(${hue},45%,10%)`);
+  fg.addColorStop(1, `hsl(${hue},40%,6%)`);
+  ctx.fillStyle = fg; ctx.fillRect(0, horizonY, W, H - horizonY);
+
+  const hg = ctx.createLinearGradient(0, horizonY - H * .03, 0, horizonY + H * .035);
+  hg.addColorStop(0, `hsla(${hue},100%,80%,0)`);
+  hg.addColorStop(.5, `hsla(${hue},100%,80%,${.35 + pulse * .2})`);
+  hg.addColorStop(1, `hsla(${hue},100%,80%,0)`);
+  ctx.fillStyle = hg; ctx.fillRect(0, horizonY - H * .03, W, H * .065);
+
+  const sF = sOf(70), sN = sOf(-2.4);
+  ctx.lineWidth = 1;
+  const off = distance % GRID;
+  for (let n = 0; n < 32; n++) {
+    const z = (n - 1) * GRID - off;
+    if (z < -2.2) continue;
+    const s = sOf(z), y = yOf(s);
+    ctx.strokeStyle = `hsla(${hue},80%,65%,${Math.max(0, .2 * (1 - z / 75))})`;
+    ctx.beginPath(); ctx.moveTo(xOf(-7, s), y); ctx.lineTo(xOf(7, s), y); ctx.stroke();
   }
-
-  async function init() {
-    const user = await waitForUser();
-    myName = getSavedName();
-    if (!user || !myName) { window.location.href = "../index.html"; return; }
-    myUid = currentUid();
-
-    if (isSolo) { renderQuestion(); return; }
-
-    if (!code) { window.location.href = "../index.html"; return; }
-    mountChat(myName, code);
-    onValue(R("players"), (snap) => { players = snap.val() || {}; });
-    renderQuestion();
-
-    let handled = false;
-    onValue(R("results"), async (snap) => {
-      const results = snap.val() || {};
-      const totalPlayers = Object.keys(players).length;
-      const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
-      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
-      handled = true;
-
-      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
-      const won = results[myUid]?.score === maxScore;
-      await recordRoundResult(myName, "scramble", { won });
-
-      document.getElementById("waitArea").style.display = "none";
-      document.getElementById("scoreArea").style.display = "block";
-      const board = document.getElementById("scoreBoard");
-      board.innerHTML = "";
-      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
-        const row = document.createElement("div");
-        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
-        board.appendChild(row);
-      });
-      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
-    });
+  ctx.strokeStyle = `hsla(${hue},80%,65%,.14)`;
+  ctx.beginPath();
+  for (const x of [-5, -3.75, -2.5, -.62, 0, .62, 2.5, 3.75, 5]) {
+    ctx.moveTo(xOf(x, sF), yOf(sF)); ctx.lineTo(xOf(x, sN), yOf(sN));
   }
-  init();
+  ctx.stroke();
+
+  ctx.save();
+  ctx.strokeStyle = `hsl(${hue},90%,${74 + pulse * 10}%)`;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = `hsl(${hue},100%,70%)`; ctx.shadowBlur = 10 + pulse * 10;
+  ctx.beginPath();
+  for (const x of [-ROAD, ROAD]) { ctx.moveTo(xOf(x, sF), yOf(sF)); ctx.lineTo(xOf(x, sN), yOf(sN)); }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTile(t) {
+  const zc = t.i * SPACING - distance;
+  const zn = Math.max(zc - TILE_LEN / 2, -2.5), zf = zc + TILE_LEN / 2;
+  if (zf < -1.95 || zn > 70) return;
+  const sn = sOf(zn), sf = sOf(zf);
+  const f = Math.max(0, 1 - (elapsed - t.hitT) * 3.2);
+  const dip = f * unit * .05 * sn;
+  const yn = yOf(sn) + dip, yf = yOf(sf) + dip;
+  const a = Math.max(.05, Math.min(1, 1.25 - zn / 60));
+  const xnl = xOf(t.x - t.half, sn), xnr = xOf(t.x + t.half, sn);
+  const xfl = xOf(t.x - t.half, sf), xfr = xOf(t.x + t.half, sf);
+  const thick = unit * .09 * sn;
+
+  ctx.globalAlpha = a;
+  ctx.fillStyle = `hsl(${hue},68%,${44 + f * 10}%)`;
+  ctx.fillRect(xnl, yn, xnr - xnl, thick);
+  ctx.fillStyle = `hsl(${hue},72%,${60 + f * 14}%)`;
+  ctx.beginPath();
+  ctx.moveTo(xnl, yn); ctx.lineTo(xnr, yn); ctx.lineTo(xfr, yf); ctx.lineTo(xfl, yf);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.92)';
+  ctx.lineWidth = Math.max(.7, 2.6 * sn);
+  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(xnl, yn + thick); ctx.lineTo(xnr, yn + thick); ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  if (t.gem && zc > -1.4) {
+    const sc = sOf(zc);
+    const bob = Math.sin(elapsed * 4 + t.i) * unit * .03;
+    const gx = xOf(t.x, sc), gy = yOf(sc) - (unit * .62 + bob) * sc;
+    const r = unit * .15 * sc;
+    if (r > 1.5) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(gx, gy);
+      ctx.shadowColor = '#7fe9ff'; ctx.shadowBlur = 14 * sc;
+      const gg = ctx.createLinearGradient(-r, -r, r, r);
+      gg.addColorStop(0, '#b6f6ff'); gg.addColorStop(1, '#2a8dff');
+      ctx.fillStyle = gg; ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * .12);
+      ctx.beginPath();
+      ctx.moveTo(-r * .55, -r); ctx.lineTo(r * .55, -r); ctx.lineTo(r, -r * .25); ctx.lineTo(0, r); ctx.lineTo(-r, -r * .25);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+function hopOffset() {
+  if (falling) return -fallDrop;
+  if (state === 'ready') return Math.abs(Math.sin(elapsed * 5)) * unit * .08;
+  const p = (distance / SPACING) % 1;
+  return 4 * p * (1 - p) * HOP * unit;
+}
+
+function drawBall() {
+  const r = unit * .2;
+  const off = hopOffset();
+  const moving = (state === 'playing' || isDemo()) && !falling;
+  const p = moving ? (distance / SPACING) % 1 : (state === 'ready' ? 0 : .5);
+  const sq = state === 'ready'
+    ? Math.max(0, 1 - Math.abs(Math.sin(elapsed * 5)) * 12)
+    : Math.max(0, 1 - Math.min(p, 1 - p) * 9);
+  const rx = r * (1 + .2 * sq), ry = r * (1 - .2 * sq);
+  const x = W / 2 + (ballX - camX) * unit;
+  const y = baseY - ry - off;
+  if (!falling) {
+    ctx.globalAlpha = Math.max(.08, .35 - off / (unit * 1.3));
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(x, baseY + 2, r * (1.1 - off / (unit * 2)), r * .3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  const fade = falling ? Math.max(0, 1 - fallT / .85) : 1;
+  ctx.globalAlpha = fade;
+  ctx.save();
+  ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 26;
+  const g = ctx.createRadialGradient(x - rx * .3, y - ry * .35, 1, x, y, r * 1.1);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(.7, '#fff6f6'); g.addColorStop(1, '#ffd9dc');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function drawFx(dt) {
+  for (const p of particles) {
+    if (dt > 0) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.life -= dt; }
+    ctx.globalAlpha = Math.max(0, p.life / p.max);
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+  }
+  for (const r of rings) {
+    if (dt > 0) r.t += dt;
+    const u = Math.min(1, r.t / r.max);
+    ctx.globalAlpha = 1 - u;
+    ctx.strokeStyle = r.c; ctx.lineWidth = 3 * (1 - u) + 1;
+    ctx.beginPath(); ctx.ellipse(r.x, r.y, r.w * (.4 + .9 * u), r.w * (.4 + .9 * u) * .26, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.textAlign = 'center';
+  for (const p of popups) {
+    if (dt > 0) { p.t -= dt; p.y -= 40 * dt; }
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.t * 2));
+    ctx.font = p.big ? 'bold 30px Tahoma,Arial' : 'bold 20px Tahoma,Arial';
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = '#0008'; ctx.shadowBlur = 6;
+    ctx.fillText(p.txt, p.x, p.y);
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+  if (dt > 0) {
+    particles = particles.filter(p => p.life > 0);
+    rings = rings.filter(r => r.t < r.max);
+    popups = popups.filter(p => p.t > 0);
+  }
+}
+
+function render(dt) {
+  ctx.save();
+  if (shake > 0) ctx.translate((rnd() - .5) * shake, (rnd() - .5) * shake);
+  drawBackground();
+  for (let i = tiles.length - 1; i >= 0; i--) drawTile(tiles[i]);
+  drawBall();
+  drawFx(dt);
+  ctx.restore();
+}
+
+function frame(now) {
+  const dt = Math.min(.035, Math.max(0, (now - lastTime) / 1000 || 0));
+  lastTime = now;
+  const dh = ((song.hue - hue + 540) % 360) - 180;
+  hue = (hue + dh * Math.min(1, dt * 4) + 360) % 360;
+  let rdt = 0;
+  if (state === 'playing' || isDemo()) { update(dt); rdt = dt; }
+  else if (state === 'ready') { elapsed += dt; rdt = dt; }
+  render(rdt);
+  requestAnimationFrame(frame);
+}
+
+// ---------- ورودی ----------
+canvas.addEventListener('pointerdown', e => {
+  if (state === 'ready') startRun();
+  if (state !== 'playing') return;
+  drag = { x: e.clientX, tx: targetX };
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag || state !== 'playing') return;
+  targetX = clamp(drag.tx + (e.clientX - drag.x) / unit * 1.25, -(ROAD - .15), ROAD - .15);
+});
+const endDrag = () => { drag = null; };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+addEventListener('pointerdown', () => { audioContext(); }, { passive: true });
+document.addEventListener('click', e => {
+  if (e.target && e.target.closest && e.target.closest('button')) uiClick();
+});
+
+addEventListener('keydown', e => {
+  const k = e.key;
+  if (['ArrowLeft', 'ArrowRight', ' '].includes(k)) e.preventDefault();
+  if (k === 'Escape' || k === 'p') { togglePause(); return; }
+  if (k === 'ArrowLeft' || k === 'a') keys.l = true;
+  if (k === 'ArrowRight' || k === 'd') keys.r = true;
+  if ((k === ' ' || k === 'Enter') && state === 'ready') startRun();
+  else if ((k === ' ' || k === 'Enter') && state === 'menu') startEndless();
+  if (k === 'n' && state === 'ready' && mode === 'song') nextSong();
+});
+addEventListener('keyup', e => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a') keys.l = false;
+  if (k === 'ArrowRight' || k === 'd') keys.r = false;
+});
+
+$('pause').addEventListener('click', togglePause);
+$('next').addEventListener('click', nextSong);
+$('nextSong').addEventListener('click', nextSong);
+$('homeBtn').addEventListener('click', showMenu);
+$('btnEndless').addEventListener('click', startEndless);
+$('btnSongs').addEventListener('click', showSongs);
+$('btnBack').addEventListener('click', showMenu);
+$('resume').addEventListener('click', () => {
+  if (state === 'paused') togglePause();
+  else { resetRun(); startRun(); }
+});
+$('sound').addEventListener('click', toggleSound);
+$('btnSoundM').addEventListener('click', toggleSound);
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'playing') togglePause(); });
+addEventListener('blur', () => { if (state === 'playing') togglePause(); });
+
+// ---------- اتصال به دومیتو ----------
+// اگر فایل خارج از دومیتو باز شود (یا آفلاین باشد)، بازی بدون ثبت نتیجه کار می‌کند.
+const GAME_ID = 'tilejumper';  // باید با id داخل GAMES در js/app.js یکی باشد
+const MIN_SCORE = 5;           // کمترین امتیاز برای ثبت سکه (۰ = همیشه ثبت شود)
+let D = null, playerName = '', playerUid = null, loggedIn = false;
+
+function updateMenuNote() {
+  const el = $('domitoNote');
+  if (loggedIn) el.textContent = `سلام ${playerName}! نتیجه و سکه‌هایت در دومیتو ثبت می‌شود.`;
+  else if (D) el.textContent = 'برای ثبت سکه و نتیجه، ابتدا وارد دومیتو شو.';
+  else el.textContent = '';
+}
+
+const domitoReady = (async () => {
+  try {
+    D = await import('../js/app.js');
+    await D.waitForUser();
+    playerName = D.getSavedName() || '';
+    playerUid = D.currentUid() || null;
+    loggedIn = !!(playerName && playerUid);
+  } catch (e) {
+    console.warn('Domito not available:', e);
+    D = null; loggedIn = false;
+  }
+  updateMenuNote();
+})();
+
+async function reportResult(finalScore) {
+  const say = t => { if (state === 'over') $('coinMsg').textContent = t; };
+  say('⏳ در حال ثبت نتیجه…');
+  try {
+    await Promise.race([domitoReady, new Promise(r => setTimeout(r, 5000))]);
+    if (!D) { say(''); return; }
+    if (!loggedIn) { say('برای ثبت سکه، وارد دومیتو شو.'); return; }
+    if (finalScore < MIN_SCORE) { say(`برای گرفتن سکه حداقل ${fa(MIN_SCORE)} امتیاز لازم است.`); return; }
+    // بازی بی‌پایان است؛ همیشه «پایان عادی» (۵ سکه) ثبت می‌شود، نه برد.
+    await D.recordRoundResult(playerName, GAME_ID, { won: false });
+    if (D.getSavedRoom() && playerUid) await D.submitResult(GAME_ID, playerUid, playerName, finalScore);
+    say('✅ نتیجه در دومیتو ثبت شد · ۵ سکه');
+  } catch (e) {
+    console.error('Domito result error:', e);
+    say('ثبت نتیجه انجام نشد؛ اتصال دومیتو را بررسی کن.');
+  }
+}
+
+// ---------- شروع ----------
+{
+  const t = soundOn ? '🔊 صدا روشن' : '🔇 صدا خاموش';
+  $('sound').textContent = t; $('btnSoundM').textContent = t;
+}
+showMenu();
+requestAnimationFrame(now => { lastTime = now; frame(now); });
+})();
 </script>
 </body>
 </html>
