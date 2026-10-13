@@ -1510,9 +1510,9 @@ export const GAMES = [
 
   {
     id: "scramble",
-    name: "حروف به‌هم‌ریخته",
-    desc: "کلمه‌ی درست رو از بین گزینه‌ها پیدا کن",
-    icon: "🔤",
+    name: "ریتم کاشی",
+    desc: "با هر پرش، یه نت!",
+    icon: "🏐",
     soloThreshold: 30
   },
 
