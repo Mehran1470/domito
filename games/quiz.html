@@ -1,172 +1,578 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>کوییز | دومیتو</title>
-<link rel="stylesheet" href="../css/style.css">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Tile Jumper | دومیتو</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{color-scheme:dark}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#070b19;color:#fff;font-family:Tahoma,Arial,sans-serif;touch-action:none}
+body{display:flex;justify-content:center;align-items:center}
+#app{position:relative;width:100%;max-width:480px;height:100dvh;max-height:950px;overflow:hidden;background:radial-gradient(ellipse at 50% 0%,#20285a 0%,#0b1026 45%,#050812 100%)}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hud{position:absolute;z-index:2;top:9px;left:9px;right:9px;display:flex;gap:6px;transition:all .2s}
+.stat{flex:1;min-width:0;padding:8px 4px;text-align:center;border:1px solid #ffffff1c;border-radius:13px;background:#10182bbd;backdrop-filter:blur(8px)}
+.stat strong{display:block;font-size:17px;line-height:1.4}
+.stat span{display:block;font-size:10px;opacity:.7;margin-top:2px}
+#app.playing .hud{top:5px;left:6px;right:6px;gap:4px}
+#app.playing .stat{padding:3px 2px;border-radius:8px;background:#10182b8a}
+#app.playing .stat strong{font-size:12px;line-height:1.2}
+#app.playing .stat span{font-size:8px;margin-top:1px}
+#songTag{position:absolute;top:59px;left:10px;z-index:2;font-size:10px;padding:5px 8px;border-radius:20px;background:#10182b99;border:1px solid #ffffff19}
+#app.playing #songTag{top:42px;font-size:8px;padding:3px 6px;opacity:.7}
+#overlay{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:18px;background:#030713a8;backdrop-filter:blur(7px)}
+.panel{width:100%;max-width:350px;max-height:92%;overflow:auto;text-align:center;padding:22px 18px;border-radius:25px;background:linear-gradient(150deg,#182344f5,#101529f5);border:1px solid #ffffff20;box-shadow:0 20px 70px #0008}
+h1{font-size:27px;margin:0 0 7px}
+p{font-size:12px;line-height:1.9;opacity:.78;margin:7px 0 13px}
+.songs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:13px 0}
+.song{font-family:inherit;color:#fff;background:#ffffff0b;border:1px solid #ffffff20;border-radius:12px;padding:10px 5px;font-size:11px}
+.song.selected{border-color:#73a6ff;background:#477bff32;box-shadow:0 0 18px #477bff22}
+button{font-family:inherit;cursor:pointer;color:#fff;border:0;border-radius:13px;padding:12px 14px;font-size:13px;font-weight:bold;background:linear-gradient(120deg,#3b82f6,#8b5cf6);width:100%;margin-top:7px}
+button:active{transform:scale(.98)}
+button.secondary{background:#ffffff10;border:1px solid #ffffff19}
+.hidden{display:none!important}
+#hint{position:absolute;z-index:2;bottom:12px;left:0;right:0;text-align:center;font-size:10px;opacity:.6;pointer-events:none}
+#app.playing #hint{font-size:8px;bottom:6px;opacity:.42}
+#toast{position:absolute;z-index:8;left:12px;right:12px;bottom:30px;text-align:center;font-size:11px;color:#dce7ff;pointer-events:none}
+@media(max-height:650px){
+ .panel{padding:15px 14px}
+ h1{font-size:22px}
+ p{font-size:11px;margin:5px 0}
+ .songs{margin:8px 0}
+ .song{padding:7px 4px}
+ button{padding:9px;font-size:12px}
+}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="brand"><div class="brand-mark">❓</div><h1>کوییز اطلاعات عمومی</h1></div>
-    <div class="card" id="playArea">
-      <h2 id="qCounter">سوال ۱ از ۵</h2>
-      <p id="qText" style="font-size:16px; margin-bottom:16px;"></p>
-      <div id="options"></div>
-    </div>
-    <div class="card" id="waitArea" style="display:none">
-      <h2>نتیجه تو ثبت شد</h2>
-      <p class="status-line" id="waitStatus">در انتظار بقیه بازیکن‌ها...</p>
-    </div>
-    <div class="card" id="scoreArea" style="display:none">
-      <h2 id="scoreAreaTitle">نتیجه این دور</h2>
-      <div class="score-board" id="scoreBoard"></div>
-      <div class="solo-result" id="soloResult" style="display:none"></div>
-      <p class="status-line" id="nextStatus">به زودی برمی‌گردیم به سالن...</p>
-    </div>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <div class="stat"><strong id="score">۰</strong><span>امتیاز</span></div>
+    <div class="stat"><strong id="best">۰</strong><span>رکورد</span></div>
+    <div class="stat"><strong id="gems">۰</strong><span>الماس</span></div>
   </div>
 
+  <div id="songTag">🎵 رویای سرخ</div>
+  <div id="hint">برای پرش لمس کن · برای پرش بلندتر دوباره لمس کن</div>
+  <div id="toast"></div>
+
+  <div id="overlay">
+    <div class="panel">
+      <h1 id="title">🟪 Tile Jumper</h1>
+      <p id="description">بپر، روی سکوها فرود بیا و تا جایی که می‌توانی ادامه بده! این بازی پایان مرحله‌ای ندارد.</p>
+
+      <div class="songs" id="songs">
+        <button class="song selected" data-song="0">🔴 رویای سرخ</button>
+        <button class="song" data-song="1">🌌 شب نیلی</button>
+        <button class="song" data-song="2">🌅 طلوع طلایی</button>
+        <button class="song" data-song="3">🟣 نئون بنفش</button>
+      </div>
+
+      <button id="mainBtn">شروع بازی</button>
+      <button id="restartBtn" class="secondary hidden">شروع دوباره</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
-  import {
-    roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
-    submitResult, resetSessionForNextRound, recordRoundResult, soloWon
-  } from "../js/app.js";
-  import { mountChat } from "../js/chat.js";
+import {
+  waitForUser,
+  getSavedName,
+  getSavedRoom,
+  currentUid,
+  submitResult,
+  recordRoundResult
+} from "../js/app.js";
 
-  const isSolo = new URLSearchParams(location.search).has("solo");
-  const code = getSavedRoom();
-  const R = (p) => roomRef(code, p);
+const GAME_ID = "reaction";
 
-  const QUESTION_POOL = [
-    { q: "بزرگترین کشور جهان از نظر مساحت کدومه؟", options: ["چین", "روسیه", "کانادا", "آمریکا"], correct: 1 },
-    { q: "آب از چند اتم تشکیل شده؟", options: ["۲", "۳", "۴", "۵"], correct: 1 },
-    { q: "سریع‌ترین حیوان خشکی کدومه؟", options: ["شیر", "یوزپلنگ", "اسب", "گورخر"], correct: 1 },
-    { q: "پایتخت استرالیا کدومه؟", options: ["سیدنی", "ملبورن", "کانبرا", "بریزبن"], correct: 2 },
-    { q: "قلب انسان چند حفره داره؟", options: ["۲", "۳", "۴", "۵"], correct: 2 },
-    { q: "نزدیک‌ترین سیاره به خورشید؟", options: ["زهره", "زمین", "مریخ", "عطارد"], correct: 3 },
-    { q: "طولانی‌ترین رودخانه جهان؟", options: ["نیل", "آمازون", "یانگ‌تسه", "میسیسیپی"], correct: 0 },
-    { q: "چند تا استخوان توی بدن بالغ انسانه؟", options: ["186", "206", "226", "246"], correct: 1 },
-    { q: "بزرگترین اقیانوس جهان؟", options: ["اطلس", "هند", "آرام", "منجمد شمالی"], correct: 2 },
-    { q: "کدوم سیاره حلقه‌های معروف داره؟", options: ["مشتری", "زحل", "مریخ", "نپتون"], correct: 1 },
-    { q: "واحد پول ژاپن چیه؟", options: ["وون", "یوان", "ین", "روپیه"], correct: 2 },
-    { q: "بلندترین کوه جهان؟", options: ["کی‌تو", "اورست", "کلیمانجارو", "دنالی"], correct: 1 },
-    { q: "کدوم حیوان بزرگترین پستاندار جهانه؟", options: ["فیل آفریقایی", "نهنگ آبی", "کوسه نهنگی", "زرافه"], correct: 1 },
-    { q: "پایتخت کانادا؟", options: ["تورنتو", "مونترال", "اتاوا", "ونکوور"], correct: 2 },
-    { q: "چند قاره در جهان وجود داره؟", options: ["۵", "۶", "۷", "۸"], correct: 2 },
-    { q: "سریع‌ترین پرنده در پرواز شیرجه‌ای؟", options: ["عقاب طلایی", "شاهین دره‌ای", "کرکس", "جغد"], correct: 1 },
-    { q: "کدوم عنصر فراوان‌ترین عنصر در جو زمینه؟", options: ["اکسیژن", "کربن", "نیتروژن", "هیدروژن"], correct: 2 },
-    { q: "معروف‌ترین برج کج جهان کجاست؟", options: ["پاریس", "پیزا", "لندن", "رم"], correct: 1 },
-    { q: "بزرگترین صحرای جهان (غیر قطبی)؟", options: ["صحرای آفریقا", "کویر گبی", "کویر لوت", "کالاهاری"], correct: 0 },
-    { q: "کدوم کشور بیشترین جمعیت جهان رو داره؟", options: ["چین", "هند", "آمریکا", "اندونزی"], correct: 1 },
-    { q: "چند رنگ در رنگین‌کمان دیده می‌شه؟", options: ["۵", "۶", "۷", "۸"], correct: 2 },
-    { q: "ماه چند روز طول می‌کشه دور زمین بچرخه؟", options: ["۱۴ روز", "۲۱ روز", "۲۷ روز", "۴۵ روز"], correct: 2 },
-  ];
+const app = document.getElementById("app");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const titleEl = document.getElementById("title");
+const descriptionEl = document.getElementById("description");
+const mainBtn = document.getElementById("mainBtn");
+const restartBtn = document.getElementById("restartBtn");
+const scoreEl = document.getElementById("score");
+const bestEl = document.getElementById("best");
+const gemsEl = document.getElementById("gems");
+const songTag = document.getElementById("songTag");
+const toast = document.getElementById("toast");
 
-  function pickQuestions(n) { return [...QUESTION_POOL].sort(() => Math.random() - 0.5).slice(0, n); }
+const SONGS = [
+  {name:"رویای سرخ", color:"#ff477e", glow:"#ff477e"},
+  {name:"شب نیلی", color:"#7c83ff", glow:"#6677ff"},
+  {name:"طلوع طلایی", color:"#ffc857", glow:"#ff9e43"},
+  {name:"نئون بنفش", color:"#d66bff", glow:"#a855f7"}
+];
 
-  const questions = pickQuestions(5);
-  let idx = 0, correctCount = 0, myUid, myName, players = {};
+let selectedSong = 0;
+let W = 0, H = 0, dpr = 1;
+let running = false;
+let paused = false;
+let ended = false;
+let resultSent = false;
+let initialized = false;
+let playerName = "";
+let playerUid = null;
+let audioCtx = null;
+let score = 0;
+let best = Number(localStorage.getItem("tj2_best_endless") || 0);
+let gems = Number(localStorage.getItem("tj2_gems") || 0);
+let lastTime = 0;
+let animationId = 0;
+let platforms = [];
+let particles = [];
+let cameraY = 0;
+let nextPlatformY = 0;
+let inputHeld = false;
+let jumpBoost = 0;
 
-  const qCounter = document.getElementById("qCounter");
-  const qText = document.getElementById("qText");
-  const optionsEl = document.getElementById("options");
+const player = {
+  x:0, y:0, vx:0, vy:0,
+  size:25, grounded:false, rotation:0
+};
 
-  function renderQuestion() {
-    const q = questions[idx];
-    qCounter.textContent = `سوال ${idx + 1} از ${questions.length}`;
-    qText.textContent = q.q;
-    optionsEl.innerHTML = "";
-    q.options.forEach((opt, i) => {
-      const btn = document.createElement("button");
-      btn.className = "quiz-option";
-      btn.textContent = opt;
-      btn.addEventListener("click", () => answer(i));
-      optionsEl.appendChild(btn);
+function resize(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = app.clientWidth;
+  H = app.clientHeight;
+  canvas.width = Math.round(W*dpr);
+  canvas.height = Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+function fmt(n){
+  return Math.max(0,Math.floor(n)).toLocaleString("fa-IR");
+}
+function updateHud(){
+  scoreEl.textContent = fmt(score);
+  bestEl.textContent = fmt(best);
+  gemsEl.textContent = fmt(gems);
+}
+updateHud();
+
+function sound(freq=500,duration=.07){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === "suspended") audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq,audioCtx.currentTime);
+    gain.gain.setValueAtTime(.035,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime+duration);
+  }catch{}
+}
+
+function chooseSong(index){
+  selectedSong = index;
+  document.querySelectorAll(".song").forEach((el,i)=>{
+    el.classList.toggle("selected",i===index);
+  });
+  songTag.textContent = "🎵 " + SONGS[index].name;
+  if(audioCtx) sound(330 + index*110,.08);
+}
+document.querySelectorAll(".song").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    if(running) return;
+    chooseSong(Number(btn.dataset.song));
+  });
+});
+
+function rand(min,max){ return min + Math.random()*(max-min); }
+
+function addPlatform(x,y,width){
+  platforms.push({
+    x,y,w:width,h:10,
+    hue:SONGS[selectedSong].color,
+    moving:Math.random()<.28,
+    phase:Math.random()*Math.PI*2,
+    baseX:x,
+    range:rand(15,55)
+  });
+}
+
+function resetRun(){
+  score = 0;
+  cameraY = 0;
+  particles = [];
+  platforms = [];
+  player.size = Math.max(21,Math.min(28,W*.065));
+  player.x = W/2-player.size/2;
+  player.y = H*.65;
+  player.vx = 0;
+  player.vy = -540;
+  player.rotation = 0;
+  player.grounded = false;
+  jumpBoost = 0;
+
+  addPlatform(W*.35,H*.78,W*.3);
+  addPlatform(W*.16,H*.65,W*.25);
+  addPlatform(W*.56,H*.53,W*.23);
+  addPlatform(W*.29,H*.40,W*.24);
+  addPlatform(W*.62,H*.28,W*.22);
+  nextPlatformY = H*.20;
+  updateHud();
+}
+
+function startRun(){
+  if(!initialized){
+    toast.textContent = "در حال اتصال به دومیتو…";
+    return;
+  }
+  resultSent = false;
+  ended = false;
+  paused = false;
+  running = true;
+  app.classList.add("playing");
+  overlay.classList.add("hidden");
+  toast.textContent = "";
+  resetRun();
+  lastTime = performance.now();
+  cancelAnimationFrame(animationId);
+  animationId = requestAnimationFrame(frame);
+  sound(650,.08);
+}
+
+function showMenu(){
+  running = false;
+  paused = false;
+  app.classList.remove("playing");
+  overlay.classList.remove("hidden");
+  titleEl.textContent = "🟪 Tile Jumper";
+  descriptionEl.textContent = "بپر، روی سکوها فرود بیا و تا جایی که می‌توانی ادامه بده! این بازی پایان مرحله‌ای ندارد.";
+  mainBtn.textContent = "شروع بازی";
+  restartBtn.classList.add("hidden");
+  document.getElementById("songs").classList.remove("hidden");
+}
+
+function createParticles(x,y,color,count=10){
+  for(let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2;
+    const s = rand(40,190);
+    particles.push({
+      x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:rand(.25,.7),max:.7,size:rand(2,4),color
     });
   }
+}
 
-  function answer(i) {
-    const q = questions[idx];
-    const buttons = optionsEl.querySelectorAll(".quiz-option");
-    buttons.forEach((b) => (b.disabled = true));
-    buttons[q.correct].classList.add("correct");
-    if (i !== q.correct) buttons[i].classList.add("wrong");
-    if (i === q.correct) correctCount++;
-    setTimeout(() => {
-      idx++;
-      if (idx < questions.length) { buttons.forEach((b) => { b.disabled = false; b.classList.remove("correct", "wrong"); }); renderQuestion(); }
-      else finish();
-    }, 700);
+async function finishRun(){
+  if(ended) return;
+  ended = true;
+  running = false;
+  paused = false;
+  app.classList.remove("playing");
+  cancelAnimationFrame(animationId);
+
+  if(score > best){
+    best = score;
+    localStorage.setItem("tj2_best_endless",String(best));
+  }
+  updateHud();
+
+  titleEl.textContent = "✨ بازی تمام شد!";
+  descriptionEl.textContent = `امتیاز نهایی: ${fmt(score)} · رکورد: ${fmt(best)}\nدر این بازی بی‌نهایت، پاداش برد وجود ندارد.`;
+  mainBtn.textContent = "بازگشت به منو";
+  restartBtn.textContent = "شروع دوباره";
+  restartBtn.classList.remove("hidden");
+  document.getElementById("songs").classList.add("hidden");
+  overlay.classList.remove("hidden");
+  sound(190,.22);
+
+  if(resultSent) return;
+  resultSent = true;
+
+  try{
+    // بازی بی‌نهایت است؛ همیشه باخت/پایان عادی محسوب می‌شود
+    // تا پاداش فقط ۵ سکه باشد و هرگز پاداش برد ۱۵ سکه‌ای نگیرد.
+    await recordRoundResult(playerName, GAME_ID, {won:false});
+
+    const roomCode = getSavedRoom();
+    if(roomCode && playerUid){
+      await submitResult(GAME_ID, playerUid, playerName, score);
+    }
+    toast.textContent = "نتیجه در دومیتو ثبت شد · ۵ سکه";
+  }catch(err){
+    console.error("Domito result error:",err);
+    toast.textContent = "ثبت نتیجه انجام نشد؛ اتصال دومیتو را بررسی کن.";
+  }
+}
+
+function jump(){
+  if(!running || paused) return;
+  if(player.grounded){
+    player.vy = -610;
+    player.grounded = false;
+    jumpBoost = .12;
+    sound(420 + Math.random()*150,.06);
+  }else if(player.vy < -80){
+    // لمس دوم در لحظه صعود، پرش را کمی بلندتر می‌کند
+    jumpBoost = .10;
+  }
+}
+
+function update(dt){
+  if(!running || paused) return;
+  dt = Math.min(dt,.032);
+
+  const gravity = 1450;
+  player.vy += gravity*dt;
+  if(jumpBoost>0 && inputHeld && player.vy<0){
+    player.vy -= 500*dt;
+    jumpBoost -= dt;
+  }else{
+    jumpBoost = Math.max(0,jumpBoost-dt);
   }
 
-  async function finish() {
-    const score = correctCount * 10;
-    if (isSolo) { await finishSolo(score); return; }
-    document.getElementById("playArea").style.display = "none";
-    document.getElementById("waitArea").style.display = "block";
-    await submitResult("quiz", myUid, myName, score);
+  player.x += player.vx*dt;
+  player.vx *= Math.pow(.08,dt);
+  player.y += player.vy*dt;
+  player.rotation += player.vx*dt*.025;
+
+  if(player.x < -player.size) player.x = W;
+  if(player.x > W) player.x = -player.size;
+
+  // ساخت سکوهای جدید در بالای صفحه
+  while(nextPlatformY > cameraY - H){
+    const width = rand(W*.17,W*.29);
+    const x = rand(4,Math.max(5,W-width-4));
+    addPlatform(x,nextPlatformY,width);
+    nextPlatformY -= rand(65,105);
   }
 
-  async function finishSolo(score) {
-    document.getElementById("playArea").style.display = "none";
-    const won = soloWon("quiz", score);
-    await recordRoundResult(myName, "quiz", { won });
-    const scoreArea = document.getElementById("scoreArea");
-    scoreArea.style.display = "block";
-    document.getElementById("scoreAreaTitle").style.display = "none";
-    document.getElementById("scoreBoard").style.display = "none";
-    document.getElementById("nextStatus").style.display = "none";
-    const soloResult = document.getElementById("soloResult");
-    soloResult.style.display = "block";
-    soloResult.innerHTML = `
-      <div class="big-emoji">${won ? "🎉" : "😅"}</div>
-      <h2>${won ? "آفرین، بردی!" : "این‌بار نشد"}</h2>
-      <div class="score-big">${score} امتیاز</div>
-      <button onclick="location.reload()" class="btn-full">دوباره بازی کن</button>
-      <a href="../index.html" class="btn-full btn-ghost" style="display:block; text-decoration:none; text-align:center; margin-top:10px;">بازگشت به خانه</a>
-    `;
+  for(const p of platforms){
+    if(p.moving){
+      p.x = p.baseX + Math.sin(performance.now()*.0015+p.phase)*p.range;
+      p.x = Math.max(0,Math.min(W-p.w,p.x));
+    }
   }
 
-  async function init() {
-    const user = await waitForUser();
-    myName = getSavedName();
-    if (!user || !myName) { window.location.href = "../index.html"; return; }
-    myUid = currentUid();
-
-    if (isSolo) { renderQuestion(); return; }
-
-    if (!code) { window.location.href = "../index.html"; return; }
-    mountChat(myName, code);
-    onValue(R("players"), (snap) => { players = snap.val() || {}; });
-    renderQuestion();
-
-    let handled = false;
-    onValue(R("results"), async (snap) => {
-      const results = snap.val() || {};
-      const totalPlayers = Object.keys(players).length;
-      const totalResults = Object.keys(results).length;
-      document.getElementById("waitStatus").textContent = `${totalResults} از ${totalPlayers} نفر تموم کردن`;
-      if (handled || totalPlayers === 0 || totalResults < totalPlayers) return;
-      handled = true;
-
-      const maxScore = Math.max(...Object.values(results).map((r) => r.score));
-      const won = results[myUid]?.score === maxScore;
-      await recordRoundResult(myName, "quiz", { won });
-
-      document.getElementById("waitArea").style.display = "none";
-      document.getElementById("scoreArea").style.display = "block";
-      const board = document.getElementById("scoreBoard");
-      board.innerHTML = "";
-      Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
-        const row = document.createElement("div");
-        row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
-        board.appendChild(row);
-      });
-      setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);
-    });
+  // فرود فقط هنگام سقوط و عبور از سطح سکو
+  player.grounded = false;
+  if(player.vy > 0){
+    for(const p of platforms){
+      const prevBottom = player.y + player.size - player.vy*dt;
+      const bottom = player.y + player.size;
+      const overlap = player.x+player.size*.82 > p.x &&
+                      player.x+player.size*.18 < p.x+p.w;
+      if(overlap && prevBottom <= p.y+4 && bottom >= p.y && player.y < p.y){
+        player.y = p.y-player.size;
+        player.vy = -610;
+        player.grounded = true;
+        createParticles(player.x+player.size/2,p.y,SONGS[selectedSong].color,5);
+        score += 1;
+        if(Math.random()<.18){
+          gems += 1;
+          localStorage.setItem("tj2_gems",String(gems));
+        }
+        updateHud();
+        sound(550,.045);
+        break;
+      }
+    }
   }
-  init();
+
+  // دوربین به سمت بالا حرکت می‌کند
+  const target = H*.36;
+  if(player.y-cameraY < target){
+    cameraY = player.y-target;
+  }
+
+  platforms = platforms.filter(p=>p.y-cameraY < H+40);
+  if(player.y-cameraY > H+50){
+    finishRun();
+  }
+
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.vy+=300*dt;
+    p.life-=dt;
+    if(p.life<=0) particles.splice(i,1);
+  }
+}
+
+function drawBackground(){
+  const song = SONGS[selectedSong];
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#101a38");
+  g.addColorStop(.55,"#090f24");
+  g.addColorStop(1,"#050812");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.globalAlpha=.12;
+  ctx.strokeStyle=song.color;
+  ctx.lineWidth=1;
+  const spacing=32;
+  const offset=(cameraY*.25)%spacing;
+  for(let x=0;x<W;x+=spacing){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  }
+  for(let y=-spacing;y<H+spacing;y+=spacing){
+    ctx.beginPath();ctx.moveTo(0,y+offset);ctx.lineTo(W,y+offset);ctx.stroke();
+  }
+  ctx.restore();
+
+  // ستاره‌های ظریف
+  ctx.fillStyle="#ffffff";
+  for(let i=0;i<32;i++){
+    const x=(i*97.3)%W;
+    const y=((i*131.7-cameraY*.18)%(H+20)+H+20)%(H+20);
+    ctx.globalAlpha=.2+(i%4)*.12;
+    ctx.fillRect(x,y,1.4,1.4);
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawPlatform(p){
+  const y=p.y-cameraY;
+  if(y < -20 || y > H+20) return;
+  const song=SONGS[selectedSong];
+  ctx.save();
+  ctx.shadowColor=song.glow;
+  ctx.shadowBlur=14;
+  const grad=ctx.createLinearGradient(p.x,y,p.x+p.w,y+12);
+  grad.addColorStop(0,"#ffffff");
+  grad.addColorStop(.18,song.color);
+  grad.addColorStop(1,song.glow);
+  ctx.fillStyle=grad;
+  ctx.beginPath();
+  ctx.roundRect(p.x,y,p.w,p.h,6);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPlayer(){
+  const s=player.size;
+  const y=player.y-cameraY;
+  const color=SONGS[selectedSong].color;
+  ctx.save();
+  ctx.translate(player.x+s/2,y+s/2);
+  ctx.rotate(player.rotation);
+  ctx.shadowColor=color;
+  ctx.shadowBlur=23;
+  const grad=ctx.createLinearGradient(-s/2,-s/2,s/2,s/2);
+  grad.addColorStop(0,"#ffffff");
+  grad.addColorStop(.25,color);
+  grad.addColorStop(1,SONGS[selectedSong].glow);
+  ctx.fillStyle=grad;
+  ctx.beginPath();
+  ctx.roundRect(-s/2,-s/2,s,s,6);
+  ctx.fill();
+  ctx.strokeStyle="#ffffffb0";
+  ctx.lineWidth=1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawParticles(){
+  for(const p of particles){
+    ctx.globalAlpha=Math.max(0,p.life/p.max);
+    ctx.fillStyle=p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y-cameraY,p.size,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function draw(){
+  drawBackground();
+  for(const p of platforms) drawPlatform(p);
+  drawParticles();
+  drawPlayer();
+}
+
+function frame(now){
+  if(!running || paused) return;
+  const dt=(now-lastTime)/1000;
+  lastTime=now;
+  update(dt);
+  draw();
+  if(running) animationId=requestAnimationFrame(frame);
+}
+
+function movePlayer(clientX){
+  if(!running || paused) return;
+  const rect=canvas.getBoundingClientRect();
+  const x=(clientX-rect.left)/rect.width*W;
+  player.vx=Math.max(-500,Math.min(500,(x-(player.x+player.size/2))*8));
+}
+
+canvas.addEventListener("pointerdown",e=>{
+  if(!running || paused) return;
+  inputHeld=true;
+  movePlayer(e.clientX);
+  jump();
+});
+canvas.addEventListener("pointermove",e=>{
+  if(!running || paused || !e.buttons) return;
+  movePlayer(e.clientX);
+});
+window.addEventListener("pointerup",()=>{inputHeld=false;});
+window.addEventListener("pointercancel",()=>{inputHeld=false;});
+
+mainBtn.addEventListener("click",()=>{
+  if(ended){
+    showMenu();
+    return;
+  }
+  startRun();
+});
+restartBtn.addEventListener("click",startRun);
+
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden && running){
+    paused=true;
+    toast.textContent="بازی متوقف شد";
+  }else if(!document.hidden && paused){
+    paused=false;
+    toast.textContent="";
+    lastTime=performance.now();
+    animationId=requestAnimationFrame(frame);
+  }
+});
+
+async function initDomito(){
+  try{
+    await waitForUser();
+    playerName = getSavedName() || "بازیکن";
+    playerUid = currentUid() || null;
+    initialized = !!playerName;
+    if(initialized){
+      descriptionEl.textContent =
+        `سلام ${playerName}! سکوها را بگیر و رکوردت را بالا ببر. بازی پایان مرحله‌ای ندارد؛ هر بار تمام شود ۵ سکه می‌گیری.`;
+    }
+  }catch(err){
+    console.error("Domito login error:",err);
+    playerName = getSavedName() || "بازیکن";
+    playerUid = currentUid() || null;
+    initialized = !!playerName;
+  }
+  if(initialized){
+    toast.textContent="";
+  }else{
+    toast.textContent="برای ثبت سکه و نتیجه، ابتدا وارد دومیتو شو.";
+  }
+}
+initDomito();
+showMenu();
 </script>
 </body>
 </html>
