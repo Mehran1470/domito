@@ -1,0 +1,493 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f111a">
+  <title>فروشگاه دومیتو</title>
+  <link rel="icon" type="image/png" href="./logo.png">
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d16;
+      --card: #151827;
+      --border: rgba(255,255,255,.09);
+      --text: #f6f7ff;
+      --muted: #a5aac0;
+      --gold: #ffd166;
+      --purple: #9b72ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at top, #242044 0, transparent 50%),
+        var(--bg);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+    }
+
+    .container {
+      width: min(1100px, 100%);
+      margin: auto;
+      padding: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .back, .balance {
+      padding: 11px 15px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: rgba(255,255,255,.055);
+    }
+
+    .balance {
+      color: var(--gold);
+      font-weight: 800;
+    }
+
+    .hero {
+      padding: 25px 18px;
+      border: 1px solid var(--border);
+      border-radius: 25px;
+      background: linear-gradient(135deg,
+        rgba(155,114,255,.19),
+        rgba(255,209,102,.07));
+      margin-bottom: 24px;
+    }
+
+    .hero h1 { margin: 0 0 8px; font-size: clamp(25px, 5vw, 38px); }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.9; }
+
+    .notice {
+      margin: 15px 0;
+      padding: 13px 15px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.055);
+      color: var(--muted);
+      line-height: 1.9;
+    }
+
+    .notice.error { color: #ffb6b6; }
+    .notice.success { color: #9af0c0; }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 25px 0 14px;
+    }
+
+    .section-head h2 { margin: 0; font-size: 20px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+      gap: 14px;
+    }
+
+    .item {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 21px;
+      background: rgba(21,24,39,.92);
+      transition: transform .18s, border-color .18s;
+    }
+
+    .item:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,.2);
+    }
+
+    .preview {
+      min-height: 140px;
+      padding: 18px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255,255,255,.23), transparent 40%),
+        linear-gradient(135deg, var(--c1), var(--c2));
+    }
+
+    .preview::before {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 15px;
+    }
+
+    .preview-icon {
+      position: relative;
+      font-size: 44px;
+      filter: drop-shadow(0 5px 12px rgba(0,0,0,.3));
+    }
+
+    .item-body { padding: 15px; }
+
+    .item h3 { margin: 0 0 7px; font-size: 17px; }
+
+    .item p {
+      margin: 0 0 13px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .item-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .price { color: var(--gold); font-weight: 800; }
+    .status { color: #9af0c0; font-size: 12px; }
+
+    .action {
+      width: 100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a17aff, #7751e8);
+    }
+
+    .action.equip {
+      background: linear-gradient(135deg, #ffd166, #e9a92f);
+      color: #241a08;
+    }
+
+    .action.active {
+      background: rgba(110,220,160,.13);
+      border: 1px solid rgba(110,220,160,.3);
+      color: #9af0c0;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 28px 15px;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 16px;
+    }
+
+    .footer {
+      text-align: center;
+      padding: 30px 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header class="topbar">
+      <a class="back" href="./index.html">← بازگشت به دومیتو</a>
+      <div class="balance">🪙 <span id="coins">—</span> سکه</div>
+    </header>
+
+    <section class="hero">
+      <h1>✨ فروشگاه دومیتو</h1>
+      <p>
+        ظاهر بازی‌ات را انتخاب کن، تم دلخواهت را بخر و آن را فعال کن.
+        خریدها با پروفایل فعلی دومیتو هماهنگ می‌شوند.
+      </p>
+      <p id="welcome" style="margin-top:10px"></p>
+    </section>
+
+    <div id="message" class="notice" role="status" aria-live="polite">
+      در حال بررسی حساب کاربری...
+    </div>
+
+    <section>
+      <div class="section-head">
+        <h2>🎨 تم‌های قابل خرید</h2>
+        <span id="itemCount" style="color:var(--muted);font-size:13px"></span>
+      </div>
+      <div id="shopGrid" class="grid"></div>
+    </section>
+
+    <div class="notice">
+      💡 خرید و انتخاب تم به حساب فعلی متصل است. اگر سکهٔ کافی نداشته باشی،
+      خرید انجام نمی‌شود. برای اطمینان، صفحه را هنگام انجام خرید نبند.
+    </div>
+
+    <footer class="footer">
+      Domito · فروشگاه تم‌ها
+    </footer>
+  </main>
+
+  <script type="module">
+    import {
+      waitForUser,
+      getSavedName,
+      profileRef,
+      onValue,
+      SHOP_ITEMS,
+      buyItem,
+      equipTheme
+    } from "./js/app.js";
+
+    const coinsEl = document.getElementById("coins");
+    const welcomeEl = document.getElementById("welcome");
+    const messageEl = document.getElementById("message");
+    const gridEl = document.getElementById("shopGrid");
+    const countEl = document.getElementById("itemCount");
+
+    let profile = null;
+    let currentName = "";
+    let busyItems = new Set();
+    let profileReady = false;
+
+    function showMessage(text, type = "") {
+      messageEl.textContent = text;
+      messageEl.className = "notice" + (type ? " " + type : "");
+    }
+
+    function setBusy(id, busy) {
+      if (busy) busyItems.add(id);
+      else busyItems.delete(id);
+      renderShop();
+    }
+
+    function renderShop() {
+      if (!profileReady || !profile) {
+        gridEl.innerHTML =
+          '<div class="empty">در حال دریافت اطلاعات حساب...</div>';
+        return;
+      }
+
+      const items = Array.isArray(SHOP_ITEMS) ? SHOP_ITEMS : [];
+      const purchased = Array.isArray(profile.purchased)
+        ? profile.purchased
+        : [];
+
+      const equipped = profile.equippedTheme || "default";
+
+      countEl.textContent = `${items.length} تم`;
+
+      if (!items.length) {
+        gridEl.innerHTML =
+          '<div class="empty">فعلاً تمی در فروشگاه ثبت نشده است.</div>';
+        return;
+      }
+
+      gridEl.replaceChildren();
+
+      for (const item of items) {
+        const owned = purchased.includes(item.id);
+        const active = equipped === item.id;
+        const busy = busyItems.has(item.id);
+
+        const card = document.createElement("article");
+        card.className = "item";
+
+        const preview = document.createElement("div");
+        preview.className = "preview";
+        preview.style.setProperty("--c1", item.colors?.[0] || "#7957e8");
+        preview.style.setProperty("--c2", item.colors?.[1] || "#151827");
+
+        const icon = document.createElement("span");
+        icon.className = "preview-icon";
+        icon.textContent = "🎨";
+        preview.appendChild(icon);
+
+        const body = document.createElement("div");
+        body.className = "item-body";
+
+        const title = document.createElement("h3");
+        title.textContent = item.name || "تم دومیتو";
+
+        const description = document.createElement("p");
+        description.textContent = "تم ظاهری برای شخصی‌سازی تجربهٔ دومیتو.";
+
+        const footer = document.createElement("div");
+        footer.className = "item-footer";
+
+        const price = document.createElement("span");
+        price.className = "price";
+        price.textContent = `🪙 ${Number(item.price) || 0}`;
+
+        const status = document.createElement("span");
+        status.className = "status";
+        status.textContent = active ? "فعال است" : owned ? "خریداری شده" : "";
+
+        footer.append(price, status);
+
+        const button = document.createElement("button");
+        button.className = "action";
+        button.type = "button";
+        button.disabled = busy;
+
+        if (active) {
+          button.textContent = "✓ تم فعال";
+          button.classList.add("active");
+          button.disabled = true;
+        } else if (owned) {
+          button.textContent = busy ? "در حال اعمال..." : "انتخاب این تم";
+          button.classList.add("equip");
+          button.addEventListener("click", () => handleEquip(item));
+        } else {
+          button.textContent = busy ? "در حال خرید..." : "خرید تم";
+          button.addEventListener("click", () => handleBuy(item));
+        }
+
+        body.append(title, description, footer, button);
+        card.append(preview, body);
+        gridEl.appendChild(card);
+      }
+    }
+
+    async function handleBuy(item) {
+      if (!currentName || busyItems.has(item.id)) return;
+
+      const confirmed = window.confirm(
+        `تم «${item.name}» با ${item.price} سکه خریداری شود؟`
+      );
+      if (!confirmed) return;
+
+      setBusy(item.id, true);
+      showMessage("در حال انجام خرید با حساب دومیتو...");
+
+      try {
+        const result = await buyItem(currentName, item.id);
+
+        if (result?.ok) {
+          showMessage(
+            `خرید «${item.name}» انجام شد! حالا می‌توانی تم را انتخاب کنی.`,
+            "success"
+          );
+        } else if (result?.reason === "owned") {
+          showMessage("این تم را قبلاً خریداری کرده‌ای.", "error");
+        } else if (result?.reason === "insufficient") {
+          showMessage("سکهٔ کافی برای این خرید نداری.", "error");
+        } else if (result?.reason === "not-found") {
+          showMessage("این آیتم در فروشگاه فعلی پیدا نشد.", "error");
+        } else {
+          showMessage("خرید انجام نشد. دوباره تلاش کن.", "error");
+        }
+      } catch (error) {
+        console.error("Domito shop purchase error:", error);
+        showMessage("خطا هنگام خرید؛ اتصال اینترنت و حساب را بررسی کن.", "error");
+      } finally {
+        setBusy(item.id, false);
+      }
+    }
+
+    async function handleEquip(item) {
+      if (!currentName || busyItems.has(item.id)) return;
+
+      setBusy(item.id, true);
+      showMessage("در حال فعال‌کردن تم...");
+
+      try {
+        const result = await equipTheme(currentName, item.id);
+
+        if (result?.ok === false) {
+          showMessage("فعال‌کردن تم انجام نشد.", "error");
+        } else {
+          showMessage(`درخواست فعال‌کردن «${item.name}» ارسال شد.`, "success");
+        }
+      } catch (error) {
+        console.error("Domito shop equip error:", error);
+        showMessage("خطا هنگام انتخاب تم. دوباره تلاش کن.", "error");
+      } finally {
+        setBusy(item.id, false);
+      }
+    }
+
+    async function startShop() {
+      try {
+        const user = await waitForUser();
+
+        if (!user) {
+          coinsEl.textContent = "—";
+          welcomeEl.textContent = "برای خرید، ابتدا وارد حساب دومیتو شو.";
+          showMessage(
+            "برای ورود، به صفحهٔ اصلی برگرد و با حساب خودت وارد شو.",
+            "error"
+          );
+          gridEl.innerHTML =
+            '<div class="empty"><a href="./index.html">رفتن به صفحهٔ ورود ←</a></div>';
+          return;
+        }
+
+        currentName = getSavedName();
+
+        if (!currentName) {
+          showMessage(
+            "نام کاربری ذخیره‌شده پیدا نشد. از صفحهٔ اصلی دوباره وارد شو.",
+            "error"
+          );
+          return;
+        }
+
+        welcomeEl.textContent = `خوش اومدی، ${currentName} 👋`;
+
+        onValue(
+          profileRef(currentName),
+          (snapshot) => {
+            profile = snapshot.val() || {
+              coins: 0,
+              purchased: [],
+              equippedTheme: "default"
+            };
+
+            coinsEl.textContent = Number(profile.coins) || 0;
+            profileReady = true;
+            renderShop();
+          },
+          (error) => {
+            console.error("Domito profile listener error:", error);
+            showMessage(
+              "دریافت پروفایل ممکن نشد. اتصال را بررسی کن و صفحه را دوباره باز کن.",
+              "error"
+            );
+          }
+        );
+      } catch (error) {
+        console.error("Domito shop startup error:", error);
+        showMessage(
+          "اتصال به حساب انجام نشد. به صفحهٔ اصلی برگرد و دوباره امتحان کن.",
+          "error"
+        );
+      }
+    }
+
+    startShop();
+  </script>
+</body>
+</html>
