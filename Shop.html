@@ -3,487 +3,491 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f111a">
-  <title>فروشگاه دومیتو</title>
-  <link rel="icon" type="image/png" href="./logo.png">
+  <title>فروشگاه دومیتو 🛍️</title>
+  <link rel="stylesheet" href="css/style.css">
 
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #0b0d16;
-      --card: #151827;
-      --border: rgba(255,255,255,.09);
-      --text: #f6f7ff;
-      --muted: #a5aac0;
-      --gold: #ffd166;
-      --purple: #9b72ff;
+      --shop-gold: #ffd166;
+      --shop-muted: #aab1c5;
+      --shop-border: rgba(255,255,255,.09);
     }
-
-    * { box-sizing: border-box; }
 
     body {
-      margin: 0;
       min-height: 100vh;
-      color: var(--text);
       background:
-        radial-gradient(ellipse at top, #242044 0, transparent 50%),
-        var(--bg);
-      font-family: system-ui, -apple-system, sans-serif;
+        radial-gradient(ellipse at top right, rgba(107,80,255,.15), transparent 45%),
+        radial-gradient(ellipse at bottom left, rgba(255,190,70,.08), transparent 40%);
     }
 
-    a { color: inherit; text-decoration: none; }
-
-    button {
-      font: inherit;
-      cursor: pointer;
-      color: var(--text);
-    }
-
-    button:disabled {
-      cursor: not-allowed;
-      opacity: .55;
-    }
-
-    .container {
-      width: min(1100px, 100%);
+    .shop-wrap {
+      width: min(100%, 900px);
       margin: auto;
-      padding: 18px;
+      padding: 20px 14px 40px;
     }
 
-    .topbar {
+    .shop-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
-    .back, .balance {
+    .shop-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .shop-logo {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 17px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid var(--shop-border);
+      font-size: 26px;
+    }
+
+    .shop-title {
+      margin: 0;
+      font-size: 23px;
+      font-weight: 900;
+    }
+
+    .shop-subtitle {
+      margin: 5px 0 0;
+      color: var(--shop-muted);
+      font-size: 12px;
+    }
+
+    .shop-wallet {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       padding: 11px 15px;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,209,102,.2);
       border-radius: 15px;
-      background: rgba(255,255,255,.055);
+      background: rgba(255,209,102,.09);
+      color: var(--shop-gold);
+      font-weight: 900;
+      text-decoration: none;
+      white-space: nowrap;
     }
 
-    .balance {
-      color: var(--gold);
-      font-weight: 800;
+    .shop-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 25px 20px;
+      margin-bottom: 22px;
+      border: 1px solid var(--shop-border);
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(116,91,255,.16), rgba(255,255,255,.035));
     }
 
-    .hero {
-      padding: 25px 18px;
-      border: 1px solid var(--border);
-      border-radius: 25px;
-      background: linear-gradient(135deg,
-        rgba(155,114,255,.19),
-        rgba(255,209,102,.07));
-      margin-bottom: 24px;
+    .shop-hero h2 {
+      margin: 0 0 8px;
+      font-size: 21px;
     }
 
-    .hero h1 { margin: 0 0 8px; font-size: clamp(25px, 5vw, 38px); }
-    .hero p { margin: 0; color: var(--muted); line-height: 1.9; }
-
-    .notice {
-      margin: 15px 0;
-      padding: 13px 15px;
-      border-radius: 14px;
-      background: rgba(255,255,255,.055);
-      color: var(--muted);
+    .shop-hero p {
+      margin: 0;
+      color: var(--shop-muted);
       line-height: 1.9;
+      font-size: 13px;
     }
 
-    .notice.error { color: #ffb6b6; }
-    .notice.success { color: #9af0c0; }
-
-    .section-head {
+    .shop-section-title {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      flex-wrap: wrap;
-      margin: 25px 0 14px;
+      margin: 22px 2px 13px;
     }
 
-    .section-head h2 { margin: 0; font-size: 20px; }
+    .shop-section-title h2 {
+      margin: 0;
+      font-size: 17px;
+    }
 
-    .grid {
+    .shop-count {
+      color: var(--shop-muted);
+      font-size: 12px;
+    }
+
+    .shop-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
-    .item {
-      overflow: hidden;
-      border: 1px solid var(--border);
+    .shop-item {
+      min-width: 0;
+      padding: 13px;
       border-radius: 21px;
-      background: rgba(21,24,39,.92);
-      transition: transform .18s, border-color .18s;
+      border: 1px solid var(--shop-border);
+      background: rgba(255,255,255,.035);
+      transition: transform .18s ease, border-color .18s ease;
     }
 
-    .item:hover {
-      transform: translateY(-3px);
-      border-color: rgba(255,255,255,.2);
+    .shop-item.owned {
+      border-color: rgba(76,217,123,.24);
     }
 
-    .preview {
-      min-height: 140px;
-      padding: 18px;
+    .shop-item.equipped {
+      border-color: rgba(255,209,102,.6);
+      background: rgba(255,209,102,.055);
+    }
+
+    .shop-item:active {
+      transform: scale(.985);
+    }
+
+    .shop-swatch {
+      height: 82px;
+      border-radius: 15px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .shop-swatch::after {
+      content: "D";
+      position: absolute;
+      inset: 0;
       display: grid;
       place-items: center;
-      position: relative;
-      background:
-        radial-gradient(circle at 30% 20%, rgba(255,255,255,.23), transparent 40%),
-        linear-gradient(135deg, var(--c1), var(--c2));
+      color: rgba(255,255,255,.88);
+      font-size: 35px;
+      font-weight: 1000;
+      text-shadow: 0 3px 20px rgba(0,0,0,.25);
     }
 
-    .preview::before {
-      content: "";
-      position: absolute;
-      inset: 12px;
-      border: 1px solid rgba(255,255,255,.28);
-      border-radius: 15px;
+    .shop-item-name {
+      font-weight: 900;
+      font-size: 14px;
+      margin-bottom: 7px;
     }
 
-    .preview-icon {
-      position: relative;
-      font-size: 44px;
-      filter: drop-shadow(0 5px 12px rgba(0,0,0,.3));
+    .shop-item-price {
+      color: var(--shop-gold);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 12px;
     }
 
-    .item-body { padding: 15px; }
+    .shop-item-state {
+      color: var(--shop-muted);
+      font-size: 11px;
+      margin-bottom: 10px;
+      min-height: 17px;
+    }
 
-    .item h3 { margin: 0 0 7px; font-size: 17px; }
+    .shop-action {
+      width: 100%;
+      min-height: 39px;
+      padding: 9px 8px;
+      border: 0;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      color: #171717;
+      background: var(--shop-gold);
+    }
 
-    .item p {
-      margin: 0 0 13px;
-      color: var(--muted);
+    .shop-action.secondary {
+      color: #fff;
+      background: rgba(255,255,255,.09);
+      border: 1px solid var(--shop-border);
+    }
+
+    .shop-action:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .shop-status {
+      min-height: 24px;
+      margin: 16px 2px;
+      text-align: center;
       font-size: 13px;
       line-height: 1.8;
     }
 
-    .item-footer {
+    .shop-links {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 12px;
+      gap: 10px;
+      margin-top: 25px;
     }
 
-    .price { color: var(--gold); font-weight: 800; }
-    .status { color: #9af0c0; font-size: 12px; }
-
-    .action {
-      width: 100%;
-      border: 0;
-      border-radius: 12px;
+    .shop-links a {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
       padding: 12px;
-      font-weight: 800;
-      background: linear-gradient(135deg, #a17aff, #7751e8);
+      border-radius: 14px;
     }
 
-    .action.equip {
-      background: linear-gradient(135deg, #ffd166, #e9a92f);
-      color: #241a08;
+    .shop-back {
+      color: inherit;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--shop-border);
     }
 
-    .action.active {
-      background: rgba(110,220,160,.13);
-      border: 1px solid rgba(110,220,160,.3);
-      color: #9af0c0;
+    .shop-wallet-link {
+      color: #171717;
+      background: var(--shop-gold);
+      font-weight: 900;
     }
 
-    .empty {
+    .shop-loading {
       grid-column: 1 / -1;
       text-align: center;
-      padding: 28px 15px;
-      color: var(--muted);
-      border: 1px dashed var(--border);
-      border-radius: 16px;
+      padding: 32px 12px;
+      color: var(--shop-muted);
     }
 
-    .footer {
-      text-align: center;
-      padding: 30px 10px;
-      color: var(--muted);
-      font-size: 12px;
+    @media (min-width: 650px) {
+      .shop-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 15px;
+      }
+
+      .shop-swatch {
+        height: 105px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .shop-item {
+        transition: none;
+      }
     }
   </style>
 </head>
 
 <body>
-  <main class="container">
-    <header class="topbar">
-      <a class="back" href="./index.html">← بازگشت به دومیتو</a>
-      <div class="balance">🪙 <span id="coins">—</span> سکه</div>
+  <main class="shop-wrap">
+
+    <header class="shop-header">
+      <div class="shop-brand">
+        <div class="shop-logo">🛍️</div>
+        <div>
+          <h1 class="shop-title">فروشگاه دومیتو</h1>
+          <p class="shop-subtitle">ظاهر خودت رو خاص کن ✨</p>
+        </div>
+      </div>
+
+      <a class="shop-wallet" href="wallet.html">
+        🪙 <span id="shopCoins">۰</span> سکه
+      </a>
     </header>
 
-    <section class="hero">
-      <h1>✨ فروشگاه دومیتو</h1>
+    <section class="shop-hero">
+      <h2>استایل بعدی تو کدومه؟ 🎨</h2>
       <p>
-        ظاهر بازی‌ات را انتخاب کن، تم دلخواهت را بخر و آن را فعال کن.
-        خریدها با پروفایل فعلی دومیتو هماهنگ می‌شوند.
+        تم موردعلاقه‌ات رو انتخاب کن، با سکه بخر و روی آواتارت فعالش کن.
+        تم‌های خریداری‌شده همیشه در دسترس تو می‌مونن.
       </p>
-      <p id="welcome" style="margin-top:10px"></p>
     </section>
 
-    <div id="message" class="notice" role="status" aria-live="polite">
-      در حال بررسی حساب کاربری...
+    <div class="shop-section-title">
+      <h2>🎨 تم‌های آواتار</h2>
+      <span class="shop-count" id="shopItemCount">در حال بارگذاری...</span>
     </div>
 
-    <section>
-      <div class="section-head">
-        <h2>🎨 تم‌های قابل خرید</h2>
-        <span id="itemCount" style="color:var(--muted);font-size:13px"></span>
-      </div>
-      <div id="shopGrid" class="grid"></div>
+    <section class="shop-grid" id="shopGrid" aria-live="polite">
+      <div class="shop-loading">در حال دریافت فروشگاه...</div>
     </section>
 
-    <div class="notice">
-      💡 خرید و انتخاب تم به حساب فعلی متصل است. اگر سکهٔ کافی نداشته باشی،
-      خرید انجام نمی‌شود. برای اطمینان، صفحه را هنگام انجام خرید نبند.
-    </div>
+    <p class="shop-status" id="shopStatus" role="status" aria-live="polite"></p>
 
-    <footer class="footer">
-      Domito · فروشگاه تم‌ها
-    </footer>
+    <nav class="shop-links">
+      <a href="profile.html" class="shop-back">👤 پروفایل من</a>
+      <a href="wallet.html" class="shop-wallet-link">🪙 کیف پول</a>
+    </nav>
+
   </main>
 
   <script type="module">
     import {
-      waitForUser,
       getSavedName,
       profileRef,
       onValue,
       SHOP_ITEMS,
       buyItem,
-      equipTheme
+      equipTheme,
+      waitForUser
     } from "./js/app.js";
 
-    const coinsEl = document.getElementById("coins");
-    const welcomeEl = document.getElementById("welcome");
-    const messageEl = document.getElementById("message");
-    const gridEl = document.getElementById("shopGrid");
-    const countEl = document.getElementById("itemCount");
+    const grid = document.getElementById("shopGrid");
+    const coinsEl = document.getElementById("shopCoins");
+    const statusEl = document.getElementById("shopStatus");
+    const countEl = document.getElementById("shopItemCount");
 
-    let profile = null;
-    let currentName = "";
+    let myName = "";
+    let currentProfile = {};
     let busyItems = new Set();
-    let profileReady = false;
 
-    function showMessage(text, type = "") {
-      messageEl.textContent = text;
-      messageEl.className = "notice" + (type ? " " + type : "");
+    function faNumber(value) {
+      return Number(value || 0).toLocaleString("fa-IR");
     }
 
-    function setBusy(id, busy) {
-      if (busy) busyItems.add(id);
-      else busyItems.delete(id);
-      renderShop();
+    function setStatus(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.style.color = isError ? "#ff8b8b" : "#7fe5a0";
+    }
+
+    function createItem(item) {
+      const owned = (currentProfile.purchased || []).includes(item.id);
+      const equipped = currentProfile.equippedTheme === item.id;
+      const busy = busyItems.has(item.id);
+
+      const card = document.createElement("article");
+      card.className = "shop-item" +
+        (owned ? " owned" : "") +
+        (equipped ? " equipped" : "");
+
+      const swatch = document.createElement("div");
+      swatch.className = "shop-swatch";
+      swatch.style.background =
+        `linear-gradient(135deg, ${item.colors[0]}, ${item.colors[1]})`;
+
+      const name = document.createElement("div");
+      name.className = "shop-item-name";
+      name.textContent = item.name;
+
+      const price = document.createElement("div");
+      price.className = "shop-item-price";
+      price.textContent = owned ? "متعلق به تو" : `🪙 ${faNumber(item.price)} سکه`;
+
+      const state = document.createElement("div");
+      state.className = "shop-item-state";
+      state.textContent = equipped
+        ? "✨ همین الان فعاله"
+        : owned
+          ? "✅ خریداری شده"
+          : "برای تغییر ظاهر آواتار";
+
+      const button = document.createElement("button");
+      button.className = "shop-action";
+      button.type = "button";
+      button.disabled = busy || equipped;
+      button.textContent = busy
+        ? "در حال انجام..."
+        : equipped
+          ? "تم فعال"
+          : owned
+            ? "فعال کردن"
+            : "خرید تم";
+
+      if (owned && !equipped) {
+        button.classList.add("secondary");
+      }
+
+      button.addEventListener("click", async () => {
+        if (busyItems.has(item.id)) return;
+
+        busyItems.add(item.id);
+        setStatus("");
+
+        // تا رسیدن نتیجه، دکمه قفل می‌شود.
+        renderShop();
+
+        try {
+          if (owned) {
+            const result = await equipTheme(myName, item.id);
+
+            if (result && result.ok === false) {
+              setStatus("فعال‌کردن تم انجام نشد.", true);
+            } else {
+              setStatus(`✨ تم «${item.name}» فعال شد!`);
+            }
+          } else {
+            const result = await buyItem(myName, item.id);
+
+            if (result && result.ok) {
+              setStatus(`🎉 تم «${item.name}» خریداری شد!`);
+            } else if (result?.reason === "insufficient") {
+              setStatus("سکه‌هات برای خرید این تم کافی نیست. 🪙", true);
+            } else if (result?.reason === "owned") {
+              setStatus("این تم از قبل خریداری شده است.");
+            } else {
+              setStatus("خرید انجام نشد. دوباره تلاش کن.", true);
+            }
+          }
+        } catch (error) {
+          console.error("Shop action failed:", error);
+          setStatus("ارتباط با فروشگاه برقرار نشد. دوباره امتحان کن.", true);
+        } finally {
+          busyItems.delete(item.id);
+          renderShop();
+        }
+      });
+
+      card.append(swatch, name, price, state, button);
+      return card;
     }
 
     function renderShop() {
-      if (!profileReady || !profile) {
-        gridEl.innerHTML =
-          '<div class="empty">در حال دریافت اطلاعات حساب...</div>';
+      grid.replaceChildren();
+
+      if (!Array.isArray(SHOP_ITEMS) || SHOP_ITEMS.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "shop-loading";
+        empty.textContent = "فعلاً تمی در فروشگاه موجود نیست.";
+        grid.appendChild(empty);
+        countEl.textContent = "۰ تم";
         return;
       }
 
-      const items = Array.isArray(SHOP_ITEMS) ? SHOP_ITEMS : [];
-      const purchased = Array.isArray(profile.purchased)
-        ? profile.purchased
-        : [];
+      countEl.textContent = `${faNumber(SHOP_ITEMS.length)} تم`;
 
-      const equipped = profile.equippedTheme || "default";
-
-      countEl.textContent = `${items.length} تم`;
-
-      if (!items.length) {
-        gridEl.innerHTML =
-          '<div class="empty">فعلاً تمی در فروشگاه ثبت نشده است.</div>';
-        return;
-      }
-
-      gridEl.replaceChildren();
-
-      for (const item of items) {
-        const owned = purchased.includes(item.id);
-        const active = equipped === item.id;
-        const busy = busyItems.has(item.id);
-
-        const card = document.createElement("article");
-        card.className = "item";
-
-        const preview = document.createElement("div");
-        preview.className = "preview";
-        preview.style.setProperty("--c1", item.colors?.[0] || "#7957e8");
-        preview.style.setProperty("--c2", item.colors?.[1] || "#151827");
-
-        const icon = document.createElement("span");
-        icon.className = "preview-icon";
-        icon.textContent = "🎨";
-        preview.appendChild(icon);
-
-        const body = document.createElement("div");
-        body.className = "item-body";
-
-        const title = document.createElement("h3");
-        title.textContent = item.name || "تم دومیتو";
-
-        const description = document.createElement("p");
-        description.textContent = "تم ظاهری برای شخصی‌سازی تجربهٔ دومیتو.";
-
-        const footer = document.createElement("div");
-        footer.className = "item-footer";
-
-        const price = document.createElement("span");
-        price.className = "price";
-        price.textContent = `🪙 ${Number(item.price) || 0}`;
-
-        const status = document.createElement("span");
-        status.className = "status";
-        status.textContent = active ? "فعال است" : owned ? "خریداری شده" : "";
-
-        footer.append(price, status);
-
-        const button = document.createElement("button");
-        button.className = "action";
-        button.type = "button";
-        button.disabled = busy;
-
-        if (active) {
-          button.textContent = "✓ تم فعال";
-          button.classList.add("active");
-          button.disabled = true;
-        } else if (owned) {
-          button.textContent = busy ? "در حال اعمال..." : "انتخاب این تم";
-          button.classList.add("equip");
-          button.addEventListener("click", () => handleEquip(item));
-        } else {
-          button.textContent = busy ? "در حال خرید..." : "خرید تم";
-          button.addEventListener("click", () => handleBuy(item));
-        }
-
-        body.append(title, description, footer, button);
-        card.append(preview, body);
-        gridEl.appendChild(card);
-      }
-    }
-
-    async function handleBuy(item) {
-      if (!currentName || busyItems.has(item.id)) return;
-
-      const confirmed = window.confirm(
-        `تم «${item.name}» با ${item.price} سکه خریداری شود؟`
-      );
-      if (!confirmed) return;
-
-      setBusy(item.id, true);
-      showMessage("در حال انجام خرید با حساب دومیتو...");
-
-      try {
-        const result = await buyItem(currentName, item.id);
-
-        if (result?.ok) {
-          showMessage(
-            `خرید «${item.name}» انجام شد! حالا می‌توانی تم را انتخاب کنی.`,
-            "success"
-          );
-        } else if (result?.reason === "owned") {
-          showMessage("این تم را قبلاً خریداری کرده‌ای.", "error");
-        } else if (result?.reason === "insufficient") {
-          showMessage("سکهٔ کافی برای این خرید نداری.", "error");
-        } else if (result?.reason === "not-found") {
-          showMessage("این آیتم در فروشگاه فعلی پیدا نشد.", "error");
-        } else {
-          showMessage("خرید انجام نشد. دوباره تلاش کن.", "error");
-        }
-      } catch (error) {
-        console.error("Domito shop purchase error:", error);
-        showMessage("خطا هنگام خرید؛ اتصال اینترنت و حساب را بررسی کن.", "error");
-      } finally {
-        setBusy(item.id, false);
-      }
-    }
-
-    async function handleEquip(item) {
-      if (!currentName || busyItems.has(item.id)) return;
-
-      setBusy(item.id, true);
-      showMessage("در حال فعال‌کردن تم...");
-
-      try {
-        const result = await equipTheme(currentName, item.id);
-
-        if (result?.ok === false) {
-          showMessage("فعال‌کردن تم انجام نشد.", "error");
-        } else {
-          showMessage(`درخواست فعال‌کردن «${item.name}» ارسال شد.`, "success");
-        }
-      } catch (error) {
-        console.error("Domito shop equip error:", error);
-        showMessage("خطا هنگام انتخاب تم. دوباره تلاش کن.", "error");
-      } finally {
-        setBusy(item.id, false);
+      for (const item of SHOP_ITEMS) {
+        grid.appendChild(createItem(item));
       }
     }
 
     async function startShop() {
       try {
         const user = await waitForUser();
+        myName = getSavedName();
 
-        if (!user) {
-          coinsEl.textContent = "—";
-          welcomeEl.textContent = "برای خرید، ابتدا وارد حساب دومیتو شو.";
-          showMessage(
-            "برای ورود، به صفحهٔ اصلی برگرد و با حساب خودت وارد شو.",
-            "error"
-          );
-          gridEl.innerHTML =
-            '<div class="empty"><a href="./index.html">رفتن به صفحهٔ ورود ←</a></div>';
+        if (!user || !myName) {
+          grid.innerHTML = "";
+          const message = document.createElement("div");
+          message.className = "shop-loading";
+          message.textContent = "برای استفاده از فروشگاه، ابتدا وارد دومیتو شو.";
+          grid.appendChild(message);
+          countEl.textContent = "نیازمند ورود";
+          setStatus("از صفحه اصلی وارد حساب خودت شو.", true);
           return;
         }
 
-        currentName = getSavedName();
-
-        if (!currentName) {
-          showMessage(
-            "نام کاربری ذخیره‌شده پیدا نشد. از صفحهٔ اصلی دوباره وارد شو.",
-            "error"
-          );
-          return;
-        }
-
-        welcomeEl.textContent = `خوش اومدی، ${currentName} 👋`;
-
-        onValue(
-          profileRef(currentName),
-          (snapshot) => {
-            profile = snapshot.val() || {
-              coins: 0,
-              purchased: [],
-              equippedTheme: "default"
-            };
-
-            coinsEl.textContent = Number(profile.coins) || 0;
-            profileReady = true;
-            renderShop();
-          },
-          (error) => {
-            console.error("Domito profile listener error:", error);
-            showMessage(
-              "دریافت پروفایل ممکن نشد. اتصال را بررسی کن و صفحه را دوباره باز کن.",
-              "error"
-            );
-          }
-        );
+        onValue(profileRef(myName), (snapshot) => {
+          currentProfile = snapshot.val() || {};
+          coinsEl.textContent = faNumber(currentProfile.coins || 0);
+          renderShop();
+        }, (error) => {
+          console.error("Profile listener failed:", error);
+          setStatus("دریافت اطلاعات حساب انجام نشد.", true);
+        });
       } catch (error) {
-        console.error("Domito shop startup error:", error);
-        showMessage(
-          "اتصال به حساب انجام نشد. به صفحهٔ اصلی برگرد و دوباره امتحان کن.",
-          "error"
-        );
+        console.error("Shop initialization failed:", error);
+        grid.innerHTML = "";
+        const message = document.createElement("div");
+        message.className = "shop-loading";
+        message.textContent = "بارگذاری فروشگاه ناموفق بود. صفحه را دوباره باز کن.";
+        grid.appendChild(message);
+        setStatus("خطا در اتصال به حساب کاربری.", true);
       }
     }
 
