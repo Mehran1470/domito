@@ -2,23 +2,14 @@
 <html lang="fa" dir="rtl">
 
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0"
->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>پروفایل | دومیتو</title>
 
-<link
-  rel="stylesheet"
-  href="css/style.css"
->
+<link rel="stylesheet" href="css/style.css">
 
 <style>
-
 .profile-presence {
   margin-top: 8px;
   font-size: 13px;
@@ -51,22 +42,15 @@
   border: 1px solid rgba(255,200,69,.25);
 }
 
-
-/* ================================================= */
 /* LOGOUT MODAL */
-/* ================================================= */
-
 .logout-modal {
   position: fixed;
   inset: 0;
   z-index: 9999;
-
   display: none;
   align-items: center;
   justify-content: center;
-
   padding: 20px;
-
   background: rgba(0,0,0,.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -78,35 +62,24 @@
 
 .logout-box {
   width: min(360px, 100%);
-
   padding: 22px;
-
   border-radius: 22px;
-
   background: rgba(20,20,25,.96);
-
   border: 1px solid rgba(255,255,255,.10);
-
-  box-shadow:
-    0 20px 60px rgba(0,0,0,.45);
-
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
   text-align: center;
-
   animation: logoutPop .18s ease-out;
 }
 
 @keyframes logoutPop {
-
   from {
     opacity: 0;
     transform: scale(.94);
   }
-
   to {
     opacity: 1;
     transform: scale(1);
   }
-
 }
 
 .logout-message {
@@ -123,11 +96,6 @@
 .logout-actions button {
   flex: 1;
 }
-
-
-/* ================================================= */
-/* GOODBYE */
-/* ================================================= */
 
 .goodbye-message {
   font-size: 19px;
@@ -147,212 +115,94 @@
   margin-top: 4px;
 }
 
+/* MAIN SHOP LINK */
+.main-shop-description {
+  line-height: 1.9;
+  margin: 8px 0 16px;
+}
+
+.main-shop-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
 </style>
-
 </head>
-
 
 <body>
 
 <div class="wrap">
 
-
-  <!-- ================================================= -->
   <!-- BRAND -->
-  <!-- ================================================= -->
-
   <div class="brand">
-
-    <div class="brand-mark">
-      🁢
-    </div>
-
-    <h1 id="pageTitle">
-      پروفایل
-    </h1>
-
+    <div class="brand-mark">🁢</div>
+    <h1 id="pageTitle">پروفایل</h1>
   </div>
 
-
-  <!-- ================================================= -->
   <!-- NOT LOGGED IN -->
-  <!-- ================================================= -->
-
-  <div
-    class="card"
-    id="noNameCard"
-    style="display:none"
-  >
-
-    <p class="status-line">
-      هنوز وارد نشدی.
-    </p>
-
-    <a
-      href="index.html"
-      class="btn btn-full"
-    >
-      ورود
-    </a>
-
+  <div class="card" id="noNameCard" style="display:none">
+    <p class="status-line">هنوز وارد نشدی.</p>
+    <a href="index.html" class="btn btn-full">ورود</a>
   </div>
 
-
-  <!-- ================================================= -->
   <!-- NOT FOUND -->
-  <!-- ================================================= -->
-
-  <div
-    class="card"
-    id="notFoundCard"
-    style="display:none"
-  >
-
-    <p class="status-line">
-      همچین کاربری پیدا نشد.
-    </p>
-
+  <div class="card" id="notFoundCard" style="display:none">
+    <p class="status-line">همچین کاربری پیدا نشد.</p>
   </div>
 
-
-  <!-- ================================================= -->
   <!-- PROFILE -->
-  <!-- ================================================= -->
+  <div id="profileContent" style="display:none">
 
-  <div
-    id="profileContent"
-    style="display:none"
-  >
-
-
-    <!-- ================================================= -->
     <!-- MAIN PROFILE -->
-    <!-- ================================================= -->
-
     <div class="card">
 
       <div class="profile-header">
-
-        <div
-          class="avatar"
-          id="avatarBox"
-        ></div>
+        <div class="avatar" id="avatarBox"></div>
 
         <div>
-
           <div
-            style="
-              font-weight:900;
-              font-size:18px;
-            "
+            style="font-weight:900;font-size:18px;"
             id="nameText"
           ></div>
 
-          <div
-            class="muted"
-            id="joinedGamesText"
-          ></div>
+          <div class="muted" id="joinedGamesText"></div>
 
-
-          <!-- وضعیت آنلاین / آخرین حضور -->
-
-          <div
-            id="presenceText"
-            class="profile-presence"
-          ></div>
-
-
-          <!-- آخرین ورود واقعی به حساب -->
+          <div id="presenceText" class="profile-presence"></div>
 
           <div
             id="lastLoginText"
             class="profile-presence presence-offline"
           ></div>
-
         </div>
-
       </div>
 
-
-      <!-- ================================================= -->
       <!-- COINS -->
-      <!-- ================================================= -->
+      <div id="coinBadgeWrap" style="margin-top:10px;"></div>
 
-      <div
-        id="coinBadgeWrap"
-        style="margin-top:10px;"
-      ></div>
-
-
-      <!-- ================================================= -->
       <!-- STATS -->
-      <!-- ================================================= -->
-
       <div class="stat-grid">
 
         <div class="stat-box">
-
-          <div
-            class="num"
-            id="winsNum"
-          >
-            0
-          </div>
-
-          <div class="lbl">
-            برد
-          </div>
-
+          <div class="num" id="winsNum">0</div>
+          <div class="lbl">برد</div>
         </div>
 
-
         <div class="stat-box">
-
-          <div
-            class="num"
-            id="lossesNum"
-          >
-            0
-          </div>
-
-          <div class="lbl">
-            باخت
-          </div>
-
+          <div class="num" id="lossesNum">0</div>
+          <div class="lbl">باخت</div>
         </div>
 
-
         <div class="stat-box">
-
-          <div
-            class="num"
-            id="playedNum"
-          >
-            0
-          </div>
-
-          <div class="lbl">
-            کل بازی‌ها
-          </div>
-
+          <div class="num" id="playedNum">0</div>
+          <div class="lbl">کل بازی‌ها</div>
         </div>
 
       </div>
 
-
-      <!-- ================================================= -->
       <!-- FRIEND ACTION -->
-      <!-- ================================================= -->
+      <div id="addFriendWrap" style="display:none;">
 
-      <div
-        id="addFriendWrap"
-        style="display:none;"
-      >
-
-        <button
-          id="addFriendFromProfileBtn"
-          class="btn-full"
-        >
+        <button id="addFriendFromProfileBtn" class="btn-full">
           ➕ ارسال درخواست دوستی
         </button>
 
@@ -362,65 +212,35 @@
           style="display:none;"
         ></div>
 
-        <p
-          class="status-line"
-          id="friendReqStatus"
-        ></p>
+        <p class="status-line" id="friendReqStatus"></p>
 
       </div>
 
     </div>
 
-
-    <!-- ================================================= -->
     <!-- GAME STATS -->
-    <!-- ================================================= -->
-
     <div class="card">
-
-      <h2>
-        امتیاز به تفکیک بازی
-      </h2>
-
-      <div
-        class="score-board"
-        id="perGameBoard"
-      ></div>
-
+      <h2>امتیاز به تفکیک بازی</h2>
+      <div class="score-board" id="perGameBoard"></div>
     </div>
 
+    <!-- MAIN SHOP -->
+    <div class="card" id="fullShopLinkCard" style="display:none;">
+      <h2>🛍️ فروشگاه دومیتو</h2>
 
-    <!-- ================================================= -->
-    <!-- SHOP -->
-    <!-- ================================================= -->
+      <p class="muted main-shop-description">
+        آیتم‌های فروشگاه را ببین و خریدهایت را انجام بده.
+      </p>
 
-    <div
-      class="card"
-      id="shopCard"
-      style="display:none;"
-    >
-
-      <h2>
-        فروشگاه تم آواتار
-      </h2>
-
-      <div
-        class="shop-grid"
-        id="shopGrid"
-      ></div>
-
-      <p
-        class="status-line"
-        id="shopStatus"
-      ></p>
-
+      <a
+        href="shop.html"
+        class="btn btn-full main-shop-link"
+      >
+        ورود به فروشگاه 🛒
+      </a>
     </div>
 
-
-    <!-- ================================================= -->
     <!-- LOGOUT -->
-    <!-- ================================================= -->
-
     <button
       id="logoutBtn"
       class="btn-full btn-ghost"
@@ -431,1262 +251,408 @@
 
   </div>
 
-
-  <!-- ================================================= -->
   <!-- BACK -->
-  <!-- ================================================= -->
-
-  <a
-    href="index.html"
-    class="link-back"
-  >
-    ← بازگشت
-  </a>
+  <a href="index.html" class="link-back">← بازگشت</a>
 
 </div>
 
-
-<!-- ================================================= -->
 <!-- LOGOUT MODAL -->
-<!-- ================================================= -->
+<div id="logoutModal" class="logout-modal">
 
-<div
-  id="logoutModal"
-  class="logout-modal"
->
+  <div id="logoutBox" class="logout-box">
 
-  <div
-    id="logoutBox"
-    class="logout-box"
-  >
-
-    <div
-      id="logoutQuestion"
-    >
+    <div id="logoutQuestion">
 
       <div class="logout-message">
-        مهران، واقعاً می‌خوای از دومیتو خارج بشی؟ 👀
+        واقعاً می‌خوای از دومیتو خارج بشی؟ 👀
       </div>
 
       <div class="logout-actions">
-
-        <button
-          id="stayBtn"
-          class="btn-ghost"
-        >
+        <button id="stayBtn" class="btn-ghost">
           بمونم 🎮
         </button>
 
-        <button
-          id="confirmLogoutBtn"
-          class="btn-full"
-        >
+        <button id="confirmLogoutBtn" class="btn-full">
           خروج 🚪
         </button>
-
       </div>
 
     </div>
 
+    <div id="goodbyeBox" style="display:none;">
 
-    <div
-      id="goodbyeBox"
-      style="display:none;"
-    >
+      <div class="goodbye-message" id="goodbyeMessage"></div>
 
-      <div
-        class="goodbye-message"
-        id="goodbyeMessage"
-      ></div>
+      <div class="logout-countdown">خروج در</div>
 
-      <div class="logout-countdown">
-        خروج در
-      </div>
-
-      <div
-        class="logout-number"
-        id="logoutCountdown"
-      >
-        ۵
-      </div>
+      <div class="logout-number" id="logoutCountdown">۵</div>
 
     </div>
 
   </div>
-
 </div>
-
 
 <script type="module">
 
 import {
-
   getSavedName,
   profileRef,
   onValue,
-
   GAMES,
-  SHOP_ITEMS,
-
-  buyItem,
-  equipTheme,
-
   waitForUser,
   logoutUser,
-
   getPublicProfile,
-
   sendFriendRequest,
   getFriendStatus
-
 } from "./js/app.js";
 
+const params = new URLSearchParams(location.search);
+const viewedUser = params.get("user");
 
-const params =
-  new URLSearchParams(
-    location.search
-  );
+waitForUser().then(async (user) => {
 
+  const myName = getSavedName();
 
-const viewedUser =
-  params.get("user");
+  // LOGIN
+  if (!user || !myName) {
+    document.getElementById("noNameCard").style.display = "block";
+    return;
+  }
 
+  // TARGET
+  const isOwnProfile = !viewedUser || viewedUser === myName;
+  const targetName = isOwnProfile ? myName : viewedUser;
 
-waitForUser().then(
-  async (user) => {
+  // USER EXISTS
+  if (!isOwnProfile) {
+    const exists = await getPublicProfile(targetName);
 
-    const myName =
-      getSavedName();
-
-
-    // =================================================
-    // LOGIN
-    // =================================================
-
-    if (
-      !user ||
-      !myName
-    ) {
-
-      document
-        .getElementById(
-          "noNameCard"
-        )
-        .style.display =
-          "block";
-
+    if (!exists) {
+      document.getElementById("notFoundCard").style.display = "block";
       return;
-
     }
 
+    document.getElementById("pageTitle").textContent =
+      `پروفایل ${targetName}`;
+  }
 
-    // =================================================
-    // TARGET
-    // =================================================
+  // SHOW PROFILE
+  document.getElementById("profileContent").style.display = "block";
+  document.getElementById("nameText").textContent = targetName;
 
-    const isOwnProfile =
-      !viewedUser ||
-      viewedUser === myName;
+  // OWN PROFILE
+  if (isOwnProfile) {
 
+    document.getElementById("fullShopLinkCard").style.display = "block";
+    document.getElementById("logoutBtn").style.display = "block";
 
-    const targetName =
-      isOwnProfile
-        ? myName
-        : viewedUser;
+    const logoutBtn = document.getElementById("logoutBtn");
+    const logoutModal = document.getElementById("logoutModal");
+    const stayBtn = document.getElementById("stayBtn");
+    const confirmLogoutBtn = document.getElementById("confirmLogoutBtn");
+    const goodbyeBox = document.getElementById("goodbyeBox");
+    const logoutQuestion = document.getElementById("logoutQuestion");
+    const goodbyeMessage = document.getElementById("goodbyeMessage");
+    const logoutCountdown = document.getElementById("logoutCountdown");
 
+    logoutBtn.addEventListener("click", () => {
+      logoutModal.classList.add("show");
+    });
 
-    // =================================================
-    // USER EXISTS
-    // =================================================
+    stayBtn.addEventListener("click", () => {
+      logoutModal.classList.remove("show");
+    });
 
-    if (!isOwnProfile) {
-
-      const exists =
-        await getPublicProfile(
-          targetName
-        );
-
-
-      if (!exists) {
-
-        document
-          .getElementById(
-            "notFoundCard"
-          )
-          .style.display =
-            "block";
-
-        return;
-
+    logoutModal.addEventListener("click", (event) => {
+      if (event.target === logoutModal) {
+        logoutModal.classList.remove("show");
       }
+    });
 
+    let logoutStarted = false;
 
-      document
-        .getElementById(
-          "pageTitle"
-        )
-        .textContent =
-          `پروفایل ${targetName}`;
+    confirmLogoutBtn.addEventListener("click", async () => {
 
-    }
+      if (logoutStarted) return;
+      logoutStarted = true;
 
+      logoutQuestion.style.display = "none";
+      goodbyeBox.style.display = "block";
+      goodbyeMessage.textContent = `خداحافظ ${myName} 👋`;
 
-    // =================================================
-    // SHOW
-    // =================================================
+      let seconds = 5;
+      logoutCountdown.textContent = seconds;
 
-    document
-      .getElementById(
-        "profileContent"
-      )
-      .style.display =
-        "block";
+      const timer = setInterval(async () => {
+        seconds--;
 
-
-    document
-      .getElementById(
-        "nameText"
-      )
-      .textContent =
-        targetName;
-
-
-    // =================================================
-    // OWN PROFILE
-    // =================================================
-
-    if (isOwnProfile) {
-
-      document
-        .getElementById(
-          "shopCard"
-        )
-        .style.display =
-          "block";
-
-
-      document
-        .getElementById(
-          "logoutBtn"
-        ).style.display =
-          "block";
-
-
-      // =================================================
-      // LOGOUT MODAL
-      // =================================================
-
-      const logoutBtn =
-        document.getElementById(
-          "logoutBtn"
-        );
-
-      const logoutModal =
-        document.getElementById(
-          "logoutModal"
-        );
-
-      const stayBtn =
-        document.getElementById(
-          "stayBtn"
-        );
-
-      const confirmLogoutBtn =
-        document.getElementById(
-          "confirmLogoutBtn"
-        );
-
-      const goodbyeBox =
-        document.getElementById(
-          "goodbyeBox"
-        );
-
-      const logoutQuestion =
-        document.getElementById(
-          "logoutQuestion"
-        );
-
-      const goodbyeMessage =
-        document.getElementById(
-          "goodbyeMessage"
-        );
-
-      const logoutCountdown =
-        document.getElementById(
-          "logoutCountdown"
-        );
-
-
-      // باز کردن تأییدیه
-
-      logoutBtn.addEventListener(
-        "click",
-        () => {
-
-          logoutModal.classList.add(
-            "show"
-          );
-
-        }
-      );
-
-
-      // ماندن
-
-      stayBtn.addEventListener(
-        "click",
-        () => {
-
-          logoutModal.classList.remove(
-            "show"
-          );
-
-        }
-      );
-
-
-      // خروج
-
-      confirmLogoutBtn.addEventListener(
-        "click",
-        async () => {
-
-          logoutQuestion.style.display =
-            "none";
-
-          goodbyeBox.style.display =
-            "block";
-
-
-          goodbyeMessage.textContent =
-            `خداحافظ ${myName} 👋`;
-
-
-          let seconds = 5;
-
-          logoutCountdown.textContent =
-            seconds;
-
-
-          const timer =
-            setInterval(
-              () => {
-
-                seconds--;
-
-                if (seconds <= 0) {
-
-                  clearInterval(timer);
-
-                  logoutUser().then(
-                    () => {
-
-                      window.location.href =
-                        "index.html";
-
-                    }
-                  );
-
-                  return;
-
-                }
-
-
-                logoutCountdown.textContent =
-                  seconds;
-
-              },
-              1000
-            );
-
-        }
-      );
-
-
-      // بستن مودال با کلیک روی فضای بیرون
-
-      logoutModal.addEventListener(
-        "click",
-        (event) => {
-
-          if (
-            event.target ===
-            logoutModal
-          ) {
-
-            logoutModal.classList.remove(
-              "show"
-            );
-
-          }
-
-        }
-      );
-
-    }
-
-
-    // =================================================
-    // OTHER PROFILE
-    // =================================================
-
-    else {
-
-      const wrap =
-        document.getElementById(
-          "addFriendWrap"
-        );
-
-
-      wrap.style.display =
-        "block";
-
-
-      const button =
-        document.getElementById(
-          "addFriendFromProfileBtn"
-        );
-
-
-      const state =
-        document.getElementById(
-          "friendState"
-        );
-
-
-      async function refreshFriendState() {
-
-        try {
-
-          const status =
-            await getFriendStatus(
-              myName,
-              targetName
-            );
-
-
-          if (status.isFriend) {
-
-            button.style.display =
-              "none";
-
-            state.style.display =
-              "block";
-
-            state.className =
-              "friend-state is-friend";
-
-            state.textContent =
-              "✅ این کاربر دوست شماست";
-
-            return;
-
-          }
-
-
-          if (
-            status.requestPending
-          ) {
-
-            button.style.display =
-              "none";
-
-            state.style.display =
-              "block";
-
-            state.className =
-              "friend-state pending";
-
-            state.textContent =
-              "⏳ درخواست دوستی ارسال شده";
-
-            return;
-
-          }
-
-
-          button.style.display =
-            "block";
-
-          state.style.display =
-            "none";
-
-
-        } catch (error) {
-
-          console.error(
-            "Friend state error:",
-            error
-          );
-
-        }
-
-      }
-
-
-      await refreshFriendState();
-
-
-      button.addEventListener(
-        "click",
-        async () => {
-
-          button.disabled =
-            true;
-
-          button.textContent =
-            "در حال ارسال...";
-
+        if (seconds <= 0) {
+          clearInterval(timer);
 
           try {
-
-            const res =
-              await sendFriendRequest(
-                myName,
-                targetName
-              );
-
-
-            const st =
-              document.getElementById(
-                "friendReqStatus"
-              );
-
-
-            if (res.ok) {
-
-              st.textContent =
-                "✅ درخواست دوستی ارسال شد!";
-
-            }
-
-            else if (
-              res.reason ===
-              "already-friends"
-            ) {
-
-              st.textContent =
-                "✅ این کاربر از قبل دوست شماست";
-
-            }
-
-            else if (
-              res.reason ===
-              "request-pending"
-            ) {
-
-              st.textContent =
-                "⏳ درخواست قبلاً ارسال شده";
-
-            }
-
-            else {
-
-              st.textContent =
-                "❌ خطا در ارسال درخواست";
-
-            }
-
-
-            await refreshFriendState();
-
-
+            await logoutUser();
+            window.location.href = "index.html";
           } catch (error) {
-
-            console.error(
-              error
-            );
-
-            document
-              .getElementById(
-                "friendReqStatus"
-              )
-              .textContent =
-              "❌ ارسال درخواست انجام نشد";
-
-
-            button.disabled =
-              false;
-
-            button.textContent =
-              "➕ ارسال درخواست دوستی";
-
+            console.error("Logout error:", error);
+            logoutStarted = false;
+            logoutModal.classList.remove("show");
+            logoutQuestion.style.display = "block";
+            goodbyeBox.style.display = "none";
           }
-
-        }
-      );
-
-    }
-
-
-    // =================================================
-    // THEME
-    // =================================================
-
-    function themeGradient(
-      equippedTheme
-    ) {
-
-      const item =
-        SHOP_ITEMS.find(
-          (i) =>
-            i.id === equippedTheme
-        );
-
-
-      return item
-        ? `linear-gradient(145deg, ${item.colors[0]}, ${item.colors[1]})`
-        : null;
-
-    }
-
-
-    // =================================================
-    // PROFILE REALTIME
-    // =================================================
-
-    onValue(
-      profileRef(targetName),
-      (snap) => {
-
-        const p =
-          snap.val() || {
-
-            wins: 0,
-            losses: 0,
-            gamesPlayed: 0,
-
-            byGame: {},
-
-            coins: 0,
-
-            purchased: [],
-
-            equippedTheme:
-              "default",
-
-            lastLogin: 0
-
-          };
-
-
-        document
-          .getElementById(
-            "winsNum"
-          )
-          .textContent =
-            p.wins || 0;
-
-
-        document
-          .getElementById(
-            "lossesNum"
-          )
-          .textContent =
-            p.losses || 0;
-
-
-        document
-          .getElementById(
-            "playedNum"
-          )
-          .textContent =
-            p.gamesPlayed || 0;
-
-
-        document
-          .getElementById(
-            "joinedGamesText"
-          )
-          .textContent =
-            `${p.gamesPlayed || 0} دور بازی کرده`;
-
-
-        const lastLoginText =
-          document.getElementById(
-            "lastLoginText"
-          );
-
-
-        const lastLogin =
-          Number(
-            p.lastLogin || 0
-          );
-
-
-        if (lastLogin) {
-
-          lastLoginText.className =
-            "profile-presence presence-offline";
-
-          lastLoginText.textContent =
-            `🔐 آخرین ورود: ${formatLastLogin(lastLogin)}`;
-
-        }
-
-        else {
-
-          lastLoginText.className =
-            "profile-presence presence-offline";
-
-          lastLoginText.textContent =
-            "🔐 هنوز ورود ثبت نشده";
-
-        }
-
-
-        if (isOwnProfile) {
-
-          document
-            .getElementById(
-              "coinBadgeWrap"
-            )
-            .innerHTML = `
-
-              <a
-                href="wallet.html"
-                class="coin-badge"
-                style="text-decoration:none;"
-              >
-                🪙 ${p.coins || 0} سکه ←
-              </a>
-
-            `;
-
-        }
-
-
-        const avatarBox =
-          document.getElementById(
-            "avatarBox"
-          );
-
-
-        avatarBox.textContent =
-          targetName
-            .trim()[0]
-            ?.toUpperCase() ||
-          "?";
-
-
-        const grad =
-          themeGradient(
-            p.equippedTheme
-          );
-
-
-        if (grad) {
-
-          avatarBox.style.background =
-            grad;
-
-        }
-
-
-        const board =
-          document.getElementById(
-            "perGameBoard"
-          );
-
-
-        board.innerHTML =
-          "";
-
-
-        GAMES.forEach(
-          (g) => {
-
-            const stats =
-              (
-                p.byGame &&
-                p.byGame[g.id]
-              ) || {
-
-                wins: 0,
-                plays: 0
-
-              };
-
-
-            const row =
-              document.createElement(
-                "div"
-              );
-
-
-            row.className =
-              "score-row";
-
-
-            row.innerHTML = `
-
-              <span>
-                ${g.name}
-              </span>
-
-              <span
-                class="muted"
-                style="font-size:12px;"
-              >
-                ${stats.plays} بازی
-              </span>
-
-              <span class="points">
-                ${stats.wins} برد
-              </span>
-
-            `;
-
-
-            board.appendChild(
-              row
-            );
-
-          }
-        );
-
-
-        if (isOwnProfile) {
-
-          renderShop(p);
-
-        }
-
-      }
-    );
-
-
-    // =================================================
-    // PRESENCE
-    // =================================================
-
-    onValue(
-      profileRef(targetName),
-      (snap) => {
-
-        const profile =
-          snap.val() || {};
-
-
-        const presence =
-          profile.presence || {
-            online: false,
-            lastSeen: 0
-          };
-
-
-        const presenceText =
-          document.getElementById(
-            "presenceText"
-          );
-
-
-        if (
-          presence.online
-        ) {
-
-          presenceText.className =
-            "profile-presence presence-online";
-
-
-          presenceText.textContent =
-            "🟢 اکنون آنلاین است";
-
 
           return;
-
         }
 
+        logoutCountdown.textContent = seconds;
+      }, 1000);
 
-        presenceText.className =
-          "profile-presence presence-offline";
-
-
-        const lastSeen =
-          Number(
-            presence.lastSeen || 0
-          );
-
-
-        if (!lastSeen) {
-
-          presenceText.textContent =
-            "⚪ هنوز سابقه حضور ثبت نشده";
-
-          return;
-
-        }
-
-
-        presenceText.textContent =
-          `⚪ آخرین حضور: ${formatLastSeen(lastSeen)}`;
-
-      }
-    );
-
-
-    // =================================================
-    // LAST LOGIN FORMAT
-    // =================================================
-
-    function formatLastLogin(
-      timestamp
-    ) {
-
-      const date =
-        new Date(timestamp);
-
-
-      if (
-        Number.isNaN(
-          date.getTime()
-        )
-      ) {
-
-        return "نامشخص";
-
-      }
-
-
-      return (
-        formatDate(date) +
-        "، ساعت " +
-        formatTime(date)
-      );
-
-    }
-
-
-    // =================================================
-    // LAST SEEN FORMAT
-    // =================================================
-
-    function formatLastSeen(
-      timestamp
-    ) {
-
-      const date =
-        new Date(timestamp);
-
-
-      const now =
-        new Date();
-
-
-      const diff =
-        Math.max(
-          0,
-          now.getTime() -
-          date.getTime()
-        );
-
-
-      const minute =
-        60 * 1000;
-
-      const hour =
-        60 * minute;
-
-      const day =
-        24 * hour;
-
-
-      if (
-        diff < minute
-      ) {
-
-        return "همین الان";
-
-      }
-
-
-      if (
-        diff < hour
-      ) {
-
-        const n =
-          Math.floor(
-            diff / minute
-          );
-
-        return `${n} دقیقه پیش`;
-
-      }
-
-
-      if (
-        diff < day
-      ) {
-
-        const n =
-          Math.floor(
-            diff / hour
-          );
-
-        return `${n} ساعت پیش`;
-
-      }
-
-
-      if (
-        diff < 2 * day
-      ) {
-
-        return `دیروز، ساعت ${formatTime(date)}`;
-
-      }
-
-
-      if (
-        diff < 7 * day
-      ) {
-
-        const n =
-          Math.floor(
-            diff / day
-          );
-
-        return `${n} روز پیش`;
-
-      }
-
-
-      return `${formatDate(date)}، ساعت ${formatTime(date)}`;
-
-    }
-
-
-    // =================================================
-    // TIME
-    // =================================================
-
-    function formatTime(
-      date
-    ) {
-
-      return date.toLocaleTimeString(
-        "fa-IR",
-        {
-          hour: "2-digit",
-          minute: "2-digit"
-        }
-      );
-
-    }
-
-
-    // =================================================
-    // DATE
-    // =================================================
-
-    function formatDate(
-      date
-    ) {
-
-      return date.toLocaleDateString(
-        "fa-IR",
-        {
-          year: "numeric",
-          month: "long",
-          day: "numeric"
-        }
-      );
-
-    }
-
-
-    // =================================================
-    // SHOP
-    // =================================================
-
-    function renderShop(
-      p
-    ) {
-
-      const purchased =
-        p.purchased || [];
-
-
-      const grid =
-        document.getElementById(
-          "shopGrid"
-        );
-
-
-      grid.innerHTML =
-        "";
-
-
-      SHOP_ITEMS.forEach(
-        (item) => {
-
-          const owned =
-            purchased.includes(
-              item.id
-            );
-
-
-          const equipped =
-            p.equippedTheme ===
-            item.id;
-
-
-          const el =
-            document.createElement(
-              "div"
-            );
-
-
-          el.className =
-            "shop-item" +
-            (
-              owned
-                ? " owned"
-                : ""
-            ) +
-            (
-              equipped
-                ? " equipped"
-                : ""
-            );
-
-
-          el.innerHTML = `
-
-            <div
-              class="swatch"
-              style="
-                background:
-                linear-gradient(
-                  135deg,
-                  ${item.colors[0]},
-                  ${item.colors[1]}
-                )
-              "
-            ></div>
-
-            <div class="name">
-              ${item.name}
-            </div>
-
-            <div class="price">
-
-              ${
-                owned
-                  ? (
-                      equipped
-                        ? "فعاله"
-                        : "خریداری‌شده"
-                    )
-                  : `🪙 ${item.price}`
-              }
-
-            </div>
-
-          `;
-
-
-          const btn =
-            document.createElement(
-              "button"
-            );
-
-
-          if (equipped) {
-
-            btn.textContent =
-              "فعاله";
-
-            btn.disabled =
-              true;
-
-          }
-
-          else if (owned) {
-
-            btn.textContent =
-              "فعال کردن";
-
-            btn.className =
-              "btn-ghost";
-
-
-            btn.addEventListener(
-              "click",
-              async () => {
-
-                await equipTheme(
-                  targetName,
-                  item.id
-                );
-
-              }
-            );
-
-          }
-
-          else {
-
-            btn.textContent =
-              "خرید";
-
-            btn.className =
-              "btn-gold";
-
-
-            btn.addEventListener(
-              "click",
-              async () => {
-
-                const res =
-                  await buyItem(
-                    targetName,
-                    item.id
-                  );
-
-
-                document
-                  .getElementById(
-                    "shopStatus"
-                  )
-                  .textContent =
-
-                  res.ok
-                    ? "خریداری شد!"
-                    : (
-                        res.reason ===
-                        "insufficient"
-
-                          ? "سکه‌ت کافی نیست"
-
-                          : "خطا در خرید"
-                      );
-
-              }
-            );
-
-          }
-
-
-          el.appendChild(
-            btn
-          );
-
-
-          grid.appendChild(
-            el
-          );
-
-        }
-      );
-
-    }
+    });
 
   }
-);
+
+  // OTHER PROFILE
+  else {
+
+    const wrap = document.getElementById("addFriendWrap");
+    wrap.style.display = "block";
+
+    const button = document.getElementById("addFriendFromProfileBtn");
+    const state = document.getElementById("friendState");
+    const statusText = document.getElementById("friendReqStatus");
+
+    async function refreshFriendState() {
+      try {
+        const status = await getFriendStatus(myName, targetName);
+
+        if (status.isFriend) {
+          button.style.display = "none";
+          state.style.display = "block";
+          state.className = "friend-state is-friend";
+          state.textContent = "✅ این کاربر دوست شماست";
+          return;
+        }
+
+        if (status.requestPending) {
+          button.style.display = "none";
+          state.style.display = "block";
+          state.className = "friend-state pending";
+          state.textContent = "⏳ درخواست دوستی ارسال شده";
+          return;
+        }
+
+        button.style.display = "block";
+        state.style.display = "none";
+
+      } catch (error) {
+        console.error("Friend state error:", error);
+      }
+    }
+
+    await refreshFriendState();
+
+    button.addEventListener("click", async () => {
+
+      button.disabled = true;
+      button.textContent = "در حال ارسال...";
+
+      try {
+        const res = await sendFriendRequest(myName, targetName);
+
+        if (res.ok) {
+          statusText.textContent = "✅ درخواست دوستی ارسال شد!";
+        } else if (res.reason === "already-friends") {
+          statusText.textContent = "✅ این کاربر از قبل دوست شماست";
+        } else if (res.reason === "request-pending") {
+          statusText.textContent = "⏳ درخواست قبلاً ارسال شده";
+        } else {
+          statusText.textContent = "❌ خطا در ارسال درخواست";
+        }
+
+        await refreshFriendState();
+
+      } catch (error) {
+        console.error(error);
+
+        statusText.textContent = "❌ ارسال درخواست انجام نشد";
+        button.disabled = false;
+        button.textContent = "➕ ارسال درخواست دوستی";
+      }
+
+    });
+
+  }
+
+  // PROFILE REALTIME
+  onValue(profileRef(targetName), (snap) => {
+
+    const p = snap.val() || {
+      wins: 0,
+      losses: 0,
+      gamesPlayed: 0,
+      byGame: {},
+      coins: 0,
+      lastLogin: 0
+    };
+
+    document.getElementById("winsNum").textContent = p.wins || 0;
+    document.getElementById("lossesNum").textContent = p.losses || 0;
+    document.getElementById("playedNum").textContent = p.gamesPlayed || 0;
+
+    document.getElementById("joinedGamesText").textContent =
+      `${p.gamesPlayed || 0} دور بازی کرده`;
+
+    // LAST LOGIN
+    const lastLoginText = document.getElementById("lastLoginText");
+    const lastLogin = Number(p.lastLogin || 0);
+
+    if (lastLogin) {
+      lastLoginText.className = "profile-presence presence-offline";
+      lastLoginText.textContent =
+        `🔐 آخرین ورود: ${formatLastLogin(lastLogin)}`;
+    } else {
+      lastLoginText.className = "profile-presence presence-offline";
+      lastLoginText.textContent = "🔐 هنوز ورود ثبت نشده";
+    }
+
+    // WALLET LINK
+    if (isOwnProfile) {
+      document.getElementById("coinBadgeWrap").innerHTML = `
+        <a href="wallet.html" class="coin-badge" style="text-decoration:none;">
+          🪙 ${Number(p.coins || 0)} سکه ←
+        </a>
+      `;
+    }
+
+    // AVATAR
+    const avatarBox = document.getElementById("avatarBox");
+
+    if (!avatarBox.dataset.customized) {
+      avatarBox.textContent = targetName.trim()[0]?.toUpperCase() || "?";
+      avatarBox.style.background = "";
+    }
+
+    // PER-GAME STATS
+    const board = document.getElementById("perGameBoard");
+    board.innerHTML = "";
+
+    GAMES.forEach((g) => {
+
+      const stats = (p.byGame && p.byGame[g.id]) || {
+        wins: 0,
+        plays: 0
+      };
+
+      const row = document.createElement("div");
+      row.className = "score-row";
+
+      const gameName = document.createElement("span");
+      gameName.textContent = g.name;
+
+      const plays = document.createElement("span");
+      plays.className = "muted";
+      plays.style.fontSize = "12px";
+      plays.textContent = `${Number(stats.plays || 0)} بازی`;
+
+      const wins = document.createElement("span");
+      wins.className = "points";
+      wins.textContent = `${Number(stats.wins || 0)} برد`;
+
+      row.append(gameName, plays, wins);
+      board.appendChild(row);
+
+    });
+
+  });
+
+  // PRESENCE
+  onValue(profileRef(targetName), (snap) => {
+
+    const profile = snap.val() || {};
+
+    const presence = profile.presence || {
+      online: false,
+      lastSeen: 0
+    };
+
+    const presenceText = document.getElementById("presenceText");
+
+    if (presence.online) {
+      presenceText.className = "profile-presence presence-online";
+      presenceText.textContent = "🟢 اکنون آنلاین است";
+      return;
+    }
+
+    presenceText.className = "profile-presence presence-offline";
+
+    const lastSeen = Number(presence.lastSeen || 0);
+
+    if (!lastSeen) {
+      presenceText.textContent = "⚪ هنوز سابقه حضور ثبت نشده";
+      return;
+    }
+
+    presenceText.textContent =
+      `⚪ آخرین حضور: ${formatLastSeen(lastSeen)}`;
+
+  });
+
+});
+
+// TIME FORMATTING
+function formatLastLogin(timestamp) {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) return "نامشخص";
+
+  return `${formatDate(date)}، ساعت ${formatTime(date)}`;
+}
+
+function formatLastSeen(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = Math.max(0, now.getTime() - date.getTime());
+
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < minute) return "همین الان";
+
+  if (diff < hour) {
+    return `${Math.floor(diff / minute)} دقیقه پیش`;
+  }
+
+  if (diff < day) {
+    return `${Math.floor(diff / hour)} ساعت پیش`;
+  }
+
+  if (diff < 2 * day) {
+    return `دیروز، ساعت ${formatTime(date)}`;
+  }
+
+  if (diff < 7 * day) {
+    return `${Math.floor(diff / day)} روز پیش`;
+  }
+
+  return `${formatDate(date)}، ساعت ${formatTime(date)}`;
+}
+
+function formatTime(date) {
+  return date.toLocaleTimeString("fa-IR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatDate(date) {
+  return date.toLocaleDateString("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+}
 
 </script>
 
 </body>
-
 </html>
