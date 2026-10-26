@@ -1476,11 +1476,13 @@ export async function leaveLobby() {
 
 export const GAMES = [
 
-{ id:"minecraft",
+{
+  id:"minecraft",
  name:"ماینکرافت",
  desc:"با دوستات توی یه دنیای مشترک بساز و زنده بمون",
  icon:"⛏️",
- soloThreshold:1 },
+ soloThreshold:1 
+},
   
   {
     id: "quiz",
