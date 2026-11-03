@@ -4459,7 +4459,28 @@ function aiQuotaRef() {
   return profileRef(username, "aiQuota");
 }
 
+// حساب‌های بدون محدودیت: فقط uid هایی که در Firebase زیر admins/{uid} = true هستند.
+// این مسیر را فقط از کنسول Firebase می‌شود نوشت (قوانین دیتابیس باید نوشتن را ببندند).
+let aiUnlimitedCache = { uid: null, value: false };
+async function aiIsUnlimited() {
+  const uid = currentUid();
+  if (!uid) return false;
+  if (aiUnlimitedCache.uid === uid) return aiUnlimitedCache.value;
+  let value = false;
+  try {
+    value = (await get(ref(db, `admins/${uid}`))).val() === true;
+  } catch (e) {
+    value = false; // اگر خواندن ممنوع بود، محدودیت عادی اعمال می‌شود
+  }
+  aiUnlimitedCache = { uid, value };
+  return value;
+}
+function aiUnlimitedQuota() {
+  return { day: aiDayKey(), used: 0, bonus: 0, limit: 999999, pending: 0, remaining: 999999, unlimited: true };
+}
+
 export async function getAIQuota() {
+  if (await aiIsUnlimited()) return aiUnlimitedQuota();
   const day = aiDayKey();
   const now = Date.now();
   const result = await runTransaction(aiQuotaRef(), cur => aiCleanQuota(cur, day, now));
@@ -4469,6 +4490,7 @@ export async function getAIQuota() {
 
 // پیش از صدا زدن Worker یک سؤال رزرو می‌شود تا دو تب هم‌زمان یک سؤال را خرج نکنند.
 export async function reserveAIQuestion() {
+  if (await aiIsUnlimited()) return { id: "unlimited_" + aiMakeId(), quota: aiUnlimitedQuota() };
   const day = aiDayKey();
   const now = Date.now();
   const reservationId = aiMakeId();
@@ -4492,6 +4514,7 @@ export async function reserveAIQuestion() {
 // success=true سؤال را مصرف می‌کند؛ false رزرو را آزاد می‌کند.
 export async function finishAIQuestion(reservationId, success) {
   if (!reservationId) return getAIQuota();
+  if (String(reservationId).startsWith("unlimited_")) return aiUnlimitedQuota();
   const day = aiDayKey();
   const now = Date.now();
   const result = await runTransaction(aiQuotaRef(), cur => {
