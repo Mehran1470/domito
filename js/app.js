@@ -1913,6 +1913,27 @@ export async function recordRoundResult(
     }
   );
 
+
+  // پاداش دستیار: برد در بازی تک‌نفره = +۱ سؤال
+  if (won) {
+
+    try {
+
+      await maybeAwardSoloBonus(
+        gameId
+      );
+
+    } catch (err) {
+
+      console.warn(
+        "AI bonus:",
+        err
+      );
+
+    }
+
+  }
+
 }
 
 
@@ -4333,3 +4354,195 @@ export async function getLeaderboard(
   );
 
     }
+
+
+
+// ============================================================
+// سهمیه روزانه دستیار هوشمند
+// ============================================================
+
+const AI_DAILY_BASE = 5;
+const AI_DAILY_MAX = 15;
+const MAX_GAME_BONUS = AI_DAILY_MAX - AI_DAILY_BASE;
+const AI_PENDING_TTL_MS = 2 * 60 * 1000;
+const AI_DAY_TIME_ZONE = "Asia/Tehran";
+
+// فقط بازی‌های تک‌نفره‌ی پایان‌دار پاداش می‌دهند.
+const ELIGIBLE_SOLO_GAMES = Object.freeze({
+  reaction:    { minScore: 500 },
+  memory:      { minScore: 3 },
+  math:        { minScore: 40 },
+  typing:      { minScore: 60 },
+  astra:       { minScore: 1 },
+  lightpuzzle: { minScore: 1 }
+});
+
+// شناسه‌ی این بار بازشدن صفحه؛ هر بازی در هر بار باز شدن فقط یک پاداش می‌دهد.
+const PAGE_RUN_ID = aiMakeId();
+
+function aiMakeId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `q${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+}
+
+function aiDayKey() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: AI_DAY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const v = Object.fromEntries(parts.map(p => [p.type, p.value]));
+  return `${v.year}-${v.month}-${v.day}`;
+}
+
+function aiNewQuota(day) {
+  return { day, used: 0, bonus: 0, rewards: {}, pending: {} };
+}
+
+function aiSafeInt(value, min = 0, max = 1000000) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+function aiCleanQuota(raw, day, now) {
+  if (!raw || typeof raw !== "object" || raw.day !== day) {
+    return aiNewQuota(day);
+  }
+
+  const quota = {
+    day,
+    used: aiSafeInt(raw.used, 0, AI_DAILY_MAX),
+    bonus: aiSafeInt(raw.bonus, 0, MAX_GAME_BONUS),
+    rewards: raw.rewards && typeof raw.rewards === "object" ? { ...raw.rewards } : {},
+    pending: raw.pending && typeof raw.pending === "object" ? { ...raw.pending } : {}
+  };
+
+  // رزروهای رهاشده (مثلاً تب بسته‌شده) پاک می‌شوند.
+  for (const [id, createdAt] of Object.entries(quota.pending)) {
+    const ts = Number(createdAt);
+    if (!Number.isFinite(ts) || now - ts > AI_PENDING_TTL_MS || ts > now + 30000) {
+      delete quota.pending[id];
+    }
+  }
+
+  return quota;
+}
+
+function aiLimit(quota) {
+  return Math.min(AI_DAILY_MAX, AI_DAILY_BASE + aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS));
+}
+
+function aiPublicQuota(quota) {
+  const pendingCount = Object.keys(quota.pending || {}).length;
+  const limit = aiLimit(quota);
+  const used = aiSafeInt(quota.used, 0, AI_DAILY_MAX);
+  return {
+    day: quota.day,
+    used,
+    bonus: aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS),
+    limit,
+    pending: pendingCount,
+    remaining: Math.max(0, limit - used - pendingCount)
+  };
+}
+
+function aiQuotaRef() {
+  const uid = currentUid();
+  const username = getSavedName();
+  if (!uid || !username) {
+    const error = new Error("برای استفاده از دستیار باید وارد حساب دومیتو شوی.");
+    error.code = "not-authenticated";
+    throw error;
+  }
+  return profileRef(username, "aiQuota");
+}
+
+export async function getAIQuota() {
+  const day = aiDayKey();
+  const now = Date.now();
+  const result = await runTransaction(aiQuotaRef(), cur => aiCleanQuota(cur, day, now));
+  if (!result.committed) throw new Error("خواندن سهمیه انجام نشد.");
+  return aiPublicQuota(result.snapshot.val() || aiNewQuota(day));
+}
+
+// پیش از صدا زدن Worker یک سؤال رزرو می‌شود تا دو تب هم‌زمان یک سؤال را خرج نکنند.
+export async function reserveAIQuestion() {
+  const day = aiDayKey();
+  const now = Date.now();
+  const reservationId = aiMakeId();
+  const result = await runTransaction(aiQuotaRef(), cur => {
+    const quota = aiCleanQuota(cur, day, now);
+    const inFlight = Object.keys(quota.pending).length;
+    if (quota.used + inFlight >= aiLimit(quota)) return;
+    quota.pending[reservationId] = now;
+    return quota;
+  });
+
+  if (!result.committed) {
+    const error = new Error("سهمیه امروزت تمام شده است.");
+    error.code = "AI_QUOTA_EXHAUSTED";
+    throw error;
+  }
+
+  return { id: reservationId, quota: aiPublicQuota(result.snapshot.val()) };
+}
+
+// success=true سؤال را مصرف می‌کند؛ false رزرو را آزاد می‌کند.
+export async function finishAIQuestion(reservationId, success) {
+  if (!reservationId) return getAIQuota();
+  const day = aiDayKey();
+  const now = Date.now();
+  const result = await runTransaction(aiQuotaRef(), cur => {
+    const quota = aiCleanQuota(cur, day, now);
+    if (!Object.prototype.hasOwnProperty.call(quota.pending, reservationId)) return quota;
+    delete quota.pending[reservationId];
+    if (success) quota.used = Math.min(aiLimit(quota), quota.used + 1);
+    return quota;
+  });
+  if (!result.committed) throw new Error("ثبت مصرف سهمیه انجام نشد.");
+  return aiPublicQuota(result.snapshot.val());
+}
+
+// فراخوانی از مسیر پایان موفق بازی تک‌نفره؛ runId تکرار را بی‌اثر می‌کند.
+export async function awardAIQuestionForSoloGame(gameId, score, runId) {
+  const rule = ELIGIBLE_SOLO_GAMES[String(gameId || "")];
+  const numericScore = Number(score);
+  if (!rule || !Number.isFinite(numericScore) || numericScore < rule.minScore) {
+    return { awarded: false, reason: "not-eligible", quota: await getAIQuota() };
+  }
+
+  const day = aiDayKey();
+  const now = Date.now();
+  const safeRunId = String(runId || aiMakeId()).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80) || aiMakeId();
+  const rewardKey = `${gameId}_${safeRunId}`;
+  let granted = false;
+
+  const result = await runTransaction(aiQuotaRef(), cur => {
+    const quota = aiCleanQuota(cur, day, now);
+    granted = false;
+    if (Object.prototype.hasOwnProperty.call(quota.rewards, rewardKey)) return quota;
+    if (quota.bonus >= MAX_GAME_BONUS) return quota;
+    quota.bonus += 1;
+    quota.rewards[rewardKey] = now;
+    granted = true;
+    return quota;
+  });
+
+  if (!result.committed) throw new Error("ثبت پاداش بازی انجام نشد.");
+  return {
+    awarded: granted,
+    reason: granted ? "awarded" : "already-claimed-or-daily-cap",
+    quota: aiPublicQuota(result.snapshot.val())
+  };
+}
+
+// از recordRoundResult صدا زده می‌شود: فقط وقتی صفحه با ?solo باز شده باشد.
+async function maybeAwardSoloBonus(gameId) {
+  if (!new URLSearchParams(location.search).has("solo")) return;
+  const rule = ELIGIBLE_SOLO_GAMES[String(gameId || "")];
+  if (!rule) return;
+  if (!currentUid() || !getSavedName()) return;
+  await awardAIQuestionForSoloGame(gameId, rule.minScore, PAGE_RUN_ID);
+}

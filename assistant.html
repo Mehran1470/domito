@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<title>دستیار دومیتو</title>
+
+<style>
+:root{
+ --bg:#0a0f1e;
+ --panel:#121a2e;
+ --panel2:#19233c;
+ --bar:#0e1527cc;
+ --codebg:#070c1a;
+ --line:#ffffff14;
+ --text:#eef2ff;
+ --muted:#8e9bb8;
+ --accent:#5b8cff;
+ --accent2:#8b5cf6;
+ --danger:#ff7b8a;
+ --ok:#3ddc97;
+ --glow1:#1d2f6366;
+ --glow2:#4c1d9544;
+ --fs:14.5px;
+}
+:root[data-theme="light"]{
+ --bg:#f3f5fb;
+ --panel:#ffffff;
+ --panel2:#e9edf8;
+ --bar:#ffffffd9;
+ --codebg:#f0f3fb;
+ --line:#00000018;
+ --text:#141a2e;
+ --muted:#66728e;
+ --danger:#d93a50;
+ --glow1:#9db8ff55;
+ --glow2:#c4b0ff44;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+ margin:0;display:flex;flex-direction:column;height:100dvh;
+ color:var(--text);font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif;
+ background:
+ radial-gradient(900px 500px at 100% -10%,var(--glow1),transparent 60%),
+ radial-gradient(700px 400px at -10% 110%,var(--glow2),transparent 60%),
+ var(--bg);
+}
+button{font-family:inherit;cursor:pointer;border:0;color:inherit}
+input,select,textarea{font-family:inherit}
+
+/* ورود */
+#accessGate{
+ position:fixed;inset:0;z-index:99999;
+ display:flex;align-items:center;justify-content:center;
+ padding:22px;background:var(--bg);
+}
+#accessGate[hidden]{display:none}
+.gate-card{
+ width:100%;max-width:380px;padding:28px 22px;
+ border-radius:24px;text-align:center;
+ background:var(--panel);border:1px solid var(--line);
+ box-shadow:0 20px 70px #0006;
+}
+.gate-logo{
+ width:70px;height:70px;margin:0 auto 15px;
+ border-radius:22px;display:grid;place-items:center;font-size:32px;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+.gate-card h2{margin:0 0 8px;font-size:22px}
+.gate-card p{color:var(--muted);font-size:13px;line-height:2;margin:0 0 18px}
+#goDomitoLogin{
+ display:flex;align-items:center;justify-content:center;
+ min-height:48px;margin-top:14px;padding:10px 14px;
+ color:#fff;text-decoration:none;font-weight:bold;
+ border-radius:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+
+/* هدر */
+header{
+ display:flex;align-items:center;justify-content:space-between;
+ padding:10px 12px;background:var(--bar);
+ backdrop-filter:blur(16px);border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{
+ width:38px;height:38px;border-radius:12px;flex:none;
+ display:grid;place-items:center;font-size:19px;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+ box-shadow:0 6px 20px #5b8cff44;
+}
+.titles{min-width:0}
+h1{margin:0;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.sub{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:11px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px #3ddc97aa}
+.dot.err{background:var(--danger);box-shadow:none}
+.dot.busy{background:#ffc857;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.icon{
+ width:38px;height:38px;border-radius:50%;
+ background:transparent;color:var(--muted);
+ font-size:18px;display:grid;place-items:center;flex:none;
+}
+.icon:active{background:var(--line);color:var(--text)}
+a.icon{text-decoration:none}
+.hdr-actions{display:flex;gap:2px}
+
+/* انتخاب شخصیت */
+#personas{
+ display:flex;gap:8px;overflow-x:auto;padding:8px 12px;
+ border-bottom:1px solid var(--line);background:var(--bar);
+ scrollbar-width:none;
+}
+#personas::-webkit-scrollbar{display:none}
+#personas button{
+ flex:none;padding:6px 13px;border-radius:999px;font-size:12.5px;
+ background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+}
+#personas button.on{
+ color:#fff;border-color:transparent;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+
+/* چت */
+#chat{
+ flex:1;overflow-y:auto;padding:16px 12px;
+ display:flex;flex-direction:column;gap:12px;
+ width:100%;max-width:820px;margin:0 auto;
+ position:relative;
+}
+.welcome{margin:auto;text-align:center;max-width:360px;padding:20px}
+.welcome .big{
+ width:72px;height:72px;margin:0 auto 14px;
+ border-radius:24px;display:grid;place-items:center;font-size:34px;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+.welcome h2{margin:0 0 6px;font-size:21px}
+.welcome p{color:var(--muted);font-size:13px;line-height:2;margin:0 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chips button{
+ background:var(--panel2);border:1px solid var(--line);
+ border-radius:999px;padding:8px 14px;font-size:12.5px;color:var(--text);
+}
+.row{display:flex;flex-direction:column;max-width:90%}
+.row.user{align-self:flex-start;align-items:flex-start}
+.row.ai{align-self:flex-end;align-items:flex-end}
+.msg{
+ padding:11px 15px;border-radius:18px;
+ line-height:1.95;font-size:var(--fs);overflow-wrap:anywhere;
+}
+.user .msg{
+ border-bottom-right-radius:6px;white-space:pre-wrap;color:#fff;
+ background:linear-gradient(135deg,#2f6bf0,#6a4fe0);
+}
+.ai .msg{
+ border-bottom-left-radius:6px;
+ background:var(--panel);border:1px solid var(--line);
+}
+.ai .msg.error{color:var(--danger);white-space:pre-wrap}
+.msg h3,.msg h4,.msg h5{margin:8px 0 2px;line-height:1.6}
+.msg h3{font-size:1.15em}.msg h4{font-size:1.07em}.msg h5{font-size:1em}
+.msg ul,.msg ol{margin:4px 0;padding-inline-start:22px}
+.msg li{margin:1px 0}
+.msg blockquote{
+ margin:6px 0;padding:2px 10px;color:var(--muted);
+ border-inline-start:3px solid var(--accent);
+}
+.msg a{color:var(--accent);word-break:break-all}
+.msg p{margin:4px 0}
+.thumb{
+ display:block;max-width:100%;width:220px;max-height:220px;
+ object-fit:cover;border-radius:12px;margin-bottom:8px;
+}
+.filechip{
+ display:inline-flex;background:#ffffff26;border-radius:10px;
+ padding:5px 10px;font-size:12px;margin-bottom:8px;direction:ltr;
+}
+code.inl{
+ background:var(--line);border-radius:6px;padding:1px 6px;
+ font:12.5px monospace;direction:ltr;unicode-bidi:embed;
+}
+.code{
+ background:var(--codebg);border:1px solid var(--line);
+ border-radius:12px;margin:8px 0;overflow:hidden;
+}
+.codebar{
+ display:flex;justify-content:space-between;align-items:center;
+ direction:ltr;padding:7px 8px;background:var(--line);
+ font-size:11px;color:var(--muted);
+}
+.copy{background:var(--line);border-radius:8px;padding:4px 10px;color:var(--text)}
+.code pre{
+ margin:0;padding:12px;overflow-x:auto;direction:ltr;text-align:left;
+ font:12.5px/1.65 monospace;color:var(--text);
+}
+.actions{display:flex;gap:2px;margin-top:3px;opacity:.85}
+.actions button{
+ background:transparent;color:var(--muted);font-size:12px;
+ padding:3px 8px;border-radius:8px;
+}
+.actions button:active{background:var(--line);color:var(--text)}
+.typing{display:inline-flex;gap:5px;padding:6px}
+.typing i{
+ width:7px;height:7px;border-radius:50%;
+ background:var(--muted);animation:bounce 1.2s infinite;
+}
+.typing i:nth-child(2){animation-delay:.15s}
+.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{
+ 0%,60%,100%{transform:translateY(0);opacity:.5}
+ 30%{transform:translateY(-5px);opacity:1}
+}
+#toBottom{
+ position:fixed;left:50%;transform:translateX(-50%);bottom:130px;
+ width:38px;height:38px;border-radius:50%;z-index:20;
+ background:var(--panel);border:1px solid var(--line);
+ box-shadow:0 6px 20px #0005;display:none;place-items:center;font-size:17px;
+}
+#toBottom.show{display:grid}
+
+/* پایین */
+footer{
+ padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+ background:var(--bar);backdrop-filter:blur(16px);
+ border-top:1px solid var(--line);
+}
+.wrap{max-width:820px;margin:0 auto}
+#tray{display:flex;gap:10px;overflow-x:auto;padding:6px 2px 10px}
+#tray:empty{display:none}
+.chip{
+ position:relative;flex:none;height:56px;min-width:56px;
+ border-radius:12px;overflow:hidden;background:var(--panel2);
+ border:1px solid var(--line);display:flex;align-items:center;
+}
+.chip img{width:56px;height:56px;object-fit:cover}
+.chip span{padding:0 12px;font-size:12px;direction:ltr}
+.chip .x{
+ position:absolute;top:3px;left:3px;width:20px;height:20px;
+ border-radius:50%;background:#000a;color:#fff;
+}
+form{
+ display:flex;align-items:flex-end;gap:2px;padding:5px;
+ background:var(--panel);border:1px solid var(--line);border-radius:24px;
+}
+form:focus-within{border-color:var(--accent)}
+textarea{
+ flex:1;min-width:0;resize:none;height:42px;max-height:140px;
+ padding:10px 6px;background:transparent;border:0;
+ outline:0;color:var(--text);font-size:15px;
+}
+textarea::placeholder{color:var(--muted)}
+#send{
+ width:42px;height:42px;border-radius:50%;flex:none;
+ font-size:18px;color:#fff;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+#send:disabled{opacity:.45;cursor:not-allowed}
+#send.stop{background:linear-gradient(135deg,#ff7b8a,#e0445a)}
+#send span{display:inline-block}
+#send:not(.stop) span{transform:scaleX(-1)}
+#mic.rec{color:#fff;background:#e0445a;animation:pulse 1s infinite}
+#quotaInfo{text-align:center;font-size:11px;color:var(--muted);padding:7px 0 1px}
+#quotaInfo.finished{color:var(--danger)}
+#quotaInfo a{color:var(--accent)}
+
+/* منو و تنظیمات */
+#scrim{
+ position:fixed;inset:0;background:#0009;z-index:50;
+ opacity:0;pointer-events:none;transition:.2s;
+}
+#scrim.show{opacity:1;pointer-events:auto}
+#drawer{
+ position:fixed;top:0;bottom:0;right:0;width:min(86vw,330px);z-index:60;
+ background:var(--bg);border-left:1px solid var(--line);
+ transform:translateX(105%);transition:transform .25s;
+ display:flex;flex-direction:column;
+ padding-bottom:env(safe-area-inset-bottom);
+}
+#drawer.open{transform:none}
+.dr-head{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 8px}
+.dr-head h3{margin:0;font-size:16px}
+#newChat{
+ margin:4px 14px 8px;height:44px;border-radius:13px;font-weight:bold;color:#fff;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+#convSearch{
+ margin:0 14px 8px;height:40px;padding:0 12px;border-radius:12px;
+ border:1px solid var(--line);background:var(--panel);color:var(--text);outline:0;
+}
+#convList{flex:1;overflow-y:auto;padding:0 8px 10px}
+.conv{
+ display:flex;align-items:center;gap:4px;padding:4px 6px 4px 4px;
+ border-radius:12px;margin-bottom:2px;
+}
+.conv.on{background:var(--panel2)}
+.conv .t{
+ flex:1;min-width:0;text-align:right;background:transparent;padding:9px 8px;
+ font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);
+}
+.conv .m{font-size:11px;color:var(--muted);display:block;margin-top:1px}
+.conv .b{background:transparent;color:var(--muted);width:30px;height:30px;border-radius:50%;font-size:14px}
+.conv .b:active{background:var(--line)}
+.empty{color:var(--muted);font-size:12.5px;text-align:center;padding:24px 10px}
+.dr-foot{padding:8px 14px 12px;border-top:1px solid var(--line);display:flex;gap:8px}
+.dr-foot button{
+ flex:1;height:40px;border-radius:12px;font-size:12.5px;
+ background:var(--panel2);border:1px solid var(--line);color:var(--text);
+}
+
+#sheet{
+ position:fixed;left:50%;top:50%;z-index:70;
+ transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;
+ width:min(92vw,380px);max-height:86dvh;overflow-y:auto;
+ background:var(--panel);border:1px solid var(--line);border-radius:22px;
+ padding:18px 18px 14px;box-shadow:0 20px 70px #0007;transition:.2s;
+}
+#sheet.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%)}
+#sheet h3{margin:0 0 12px;font-size:17px}
+.set{margin-bottom:14px}
+.set label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.seg{display:flex;gap:6px}
+.seg button{
+ flex:1;padding:8px 4px;border-radius:10px;font-size:12.5px;
+ background:var(--panel2);border:1px solid var(--line);color:var(--muted);
+}
+.seg button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.sw{display:flex;align-items:center;justify-content:space-between;font-size:13.5px}
+.sw input{width:20px;height:20px;accent-color:var(--accent)}
+#closeSheet{
+ width:100%;height:42px;border-radius:12px;margin-top:4px;color:#fff;font-weight:bold;
+ background:linear-gradient(135deg,var(--accent),var(--accent2));
+}
+
+#toast{
+ position:fixed;left:50%;bottom:100px;transform:translateX(-50%);
+ background:#000d;color:#fff;padding:9px 16px;max-width:90vw;text-align:center;
+ border-radius:12px;font-size:13px;opacity:0;
+ pointer-events:none;transition:.25s;z-index:100000;
+}
+#toast.show{opacity:1}
+</style>
+</head>
+
+<body>
+
+<div id="accessGate">
+ <div class="gate-card">
+  <div class="gate-logo">🔐</div>
+  <h2>ورود به دومیتو لازم است</h2>
+  <p>برای استفاده از دستیار، ابتدا با حساب خودت وارد دومیتو شو.</p>
+  <a id="goDomitoLogin" href="./index.html">رفتن به صفحه ورود دومیتو</a>
+ </div>
+</div>
+
+<header>
+ <div class="brand">
+  <a class="icon" href="index.html" title="بازگشت" style="font-size:22px">→</a>
+  <div class="logo">🎲</div>
+  <div class="titles">
+   <h1 id="convTitle">دستیار دومیتو</h1>
+   <div class="sub"><span class="dot" id="dot"></span><span id="statusEl">آماده</span></div>
+  </div>
+ </div>
+ <div class="hdr-actions">
+  <button class="icon" id="menuBtn" title="گفتگوها">☰</button>
+  <button class="icon" id="settingsBtn" title="تنظیمات">⚙️</button>
+ </div>
+</header>
+
+<div id="personas"></div>
+
+<main id="chat"></main>
+<button id="toBottom" type="button" title="رفتن به پایین">⬇</button>
+
+<footer>
+ <div class="wrap">
+  <div id="tray"></div>
+  <form id="form">
+   <button type="button" class="icon" id="attach" title="پیوست">📎</button>
+   <button type="button" class="icon" id="mic" title="ورودی صوتی">🎤</button>
+   <textarea id="input" rows="1" placeholder="پیامت رو بنویس..."></textarea>
+   <button type="submit" id="send" title="ارسال"><span>➤</span></button>
+  </form>
+  <div id="quotaInfo"></div>
+  <input type="file" id="file" hidden multiple
+   accept="image/*,.txt,.md,.csv,.json,.js,.ts,.html,.css,.py,.xml,.log,.yaml,.yml,.java,.c,.cpp,.sql,.ini">
+ </div>
+</footer>
+
+<div id="scrim"></div>
+
+<aside id="drawer" aria-label="گفتگوها">
+ <div class="dr-head">
+  <h3>گفتگوها</h3>
+  <button class="icon" id="closeDrawer">✕</button>
+ </div>
+ <button id="newChat" type="button">➕ گفتگوی جدید</button>
+ <input id="convSearch" type="search" placeholder="جستجو در گفتگوها...">
+ <div id="convList"></div>
+ <div class="dr-foot">
+  <button id="exportBtn" type="button">📤 خروجی گفتگو</button>
+  <button id="logout" type="button">🚪 خروج</button>
+ </div>
+</aside>
+
+<div id="sheet" role="dialog" aria-label="تنظیمات">
+ <h3>⚙️ تنظیمات</h3>
+ <div class="set">
+  <label>پوسته</label>
+  <div class="seg" id="setTheme">
+   <button type="button" data-v="dark">🌙 تیره</button>
+   <button type="button" data-v="light">☀️ روشن</button>
+  </div>
+ </div>
+ <div class="set">
+  <label>اندازه متن</label>
+  <div class="seg" id="setFont">
+   <button type="button" data-v="13">کوچک</button>
+   <button type="button" data-v="14.5">معمولی</button>
+   <button type="button" data-v="17">بزرگ</button>
+  </div>
+ </div>
+ <div class="set">
+  <label>طول پاسخ</label>
+  <div class="seg" id="setLen">
+   <button type="button" data-v="short">کوتاه</button>
+   <button type="button" data-v="normal">متوسط</button>
+   <button type="button" data-v="long">مفصل</button>
+  </div>
+ </div>
+ <div class="set sw">
+  <span>ارسال با Enter (کامپیوتر)</span>
+  <input type="checkbox" id="setEnter">
+ </div>
+ <div class="set sw">
+  <span>تایپ تدریجی پاسخ</span>
+  <input type="checkbox" id="setTypewriter">
+ </div>
+ <button id="closeSheet" type="button">تأیید</button>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import {
+ waitForUser, getSavedName, currentUid, logoutUser,
+ getAIQuota, reserveAIQuestion, finishAIQuestion
+} from "./js/app.js";
+
+// ======================================
+// تنظیمات ثابت
+// ======================================
+
+const API = "https://sparkling-limit-d8d5.mhranzary40.workers.dev";
+
+const MAX_FILES = 3;
+const MAX_TEXT = 8000;
+const MAX_CONVS = 40;
+const MAX_MSGS = 80;
+const CONTEXT_MSGS = 16;
+
+const BASE_PROMPT =
+ "تو دستیار هوشمند دومیتو هستی، یک سالن مینی‌گیم آنلاین فارسی. فارسی و انگلیسی بلدی و به زبانی جواب می‌دهی که کاربر نوشته.";
+
+const PERSONAS = {
+ friend: {
+  name:"دوست دومیتو", icon:"😄",
+  prompt:"دوستانه، شوخ‌طبع و صمیمی جواب بده.",
+  hello:"هر چی می‌خوای بپرس: ایده بازی، معما، کوییز یا هر چیز دیگه. می‌تونی عکس یا فایل هم بفرستی.",
+  chips:["یه بازی گروهی پیشنهاد بده","یه جوک بامزه بگو","۵ تا سؤال کوییز بپرس ازم"]
+ },
+ gm: {
+  name:"گیم‌مستر", icon:"🎲",
+  prompt:"نقش گیم‌مستر را داری: ایده بازی، قوانین واضح، چالش و برنامه‌ی دورهمی پیشنهاد بده. قوانین را قدم‌به‌قدم و خلاصه بگو.",
+  hello:"ایده بازی گروهی، قانون‌نویسی و برنامه‌ریزی دورهمی؟ من حاضرم.",
+  chips:["یه بازی برای ۴ نفر بدون وسیله بگو","قوانین بازی مافیا رو ساده بگو","یه چالش خنده‌دار برای دورهمی بده"]
+ },
+ quiz: {
+  name:"کوییزباز", icon:"❓",
+  prompt:"نقش مجری کوییز را داری. هر بار فقط یک سؤال چهارگزینه‌ای بپرس، منتظر جواب بمان، بعد درست یا غلط بودنش را با توضیح کوتاه بگو و امتیاز را نگه دار.",
+  hello:"موضوع رو بگو تا کوییز شروع شه؛ من امتیازها رو نگه می‌دارم.",
+  chips:["کوییز اطلاعات عمومی","کوییز درباره فضا و ستاره‌ها","کوییز فیلم و سریال"]
+ },
+ teacher: {
+  name:"معلم", icon:"📚",
+  prompt:"نقش معلم صبور را داری. مفاهیم را ساده، مرحله‌ای و با مثال توضیح بده و آخرش یک سؤال کوچک برای تمرین بپرس.",
+  hello:"هر چیزی رو که می‌خوای یاد بگیری بپرس تا ساده توضیح بدم.",
+  chips:["هوش مصنوعی چطور کار می‌کنه؟","فرق ویروس و باکتری چیه؟","زبان انگلیسی رو چطور تقویت کنم؟"]
+ },
+ coder: {
+  name:"برنامه‌نویس", icon:"💻",
+  prompt:"نقش برنامه‌نویس باتجربه را داری. کد را داخل بلاک کد بنویس، کوتاه توضیح بده و اگر خطایی دیدی دلیلش را بگو.",
+  hello:"سؤال برنامه‌نویسی داری یا کد خراب؟ بفرست تا بررسی کنیم.",
+  chips:["یه بازی ساده با JavaScript بنویس","خطای undefined is not a function یعنی چی؟","تفاوت let و const رو بگو"]
+ },
+ riddle: {
+  name:"معماگو", icon:"🧩",
+  prompt:"نقش معماگو را داری. معما بگو، جواب را تا وقتی کاربر نخواسته یا جواب نداده فاش نکن، در صورت درخواست راهنمایی تدریجی بده.",
+  hello:"آماده‌ای مغزت رو بچرخونی؟ یه معما بخواه!",
+  chips:["یه معما بگو","یه معمای سخت‌تر","یه معمای ریاضی"]
+ }
+};
+
+const LENGTHS = {
+ short:"پاسخ‌ها را بسیار کوتاه و فشرده بنویس (حداکثر چند جمله).",
+ normal:"پاسخ‌ها را کوتاه تا متوسط و کاربردی بنویس.",
+ long:"پاسخ‌ها را کامل و مفصل با مثال بنویس."
+};
+
+// ======================================
+// ابزارهای ساده
+// ======================================
+
+const $ = id => document.getElementById(id);
+const chat = $("chat"), input = $("input"), send = $("send");
+const tray = $("tray"), fileInput = $("file");
+const dot = $("dot"), statusEl = $("statusEl"), gate = $("accessGate");
+
+function esc(s){
+ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+}
+
+function makeId(){
+ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+let toastTimer;
+function toast(msg){
+ const t = $("toast");
+ t.textContent = msg;
+ t.classList.add("show");
+ clearTimeout(toastTimer);
+ toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+function setStatus(text, cls){
+ statusEl.textContent = text;
+ dot.className = "dot" + (cls ? " " + cls : "");
+}
+
+function copyText(t){
+ if(navigator.clipboard?.writeText){
+  navigator.clipboard.writeText(t).catch(() => fallbackCopy(t));
+ }else fallbackCopy(t);
+}
+function fallbackCopy(t){
+ const ta = document.createElement("textarea");
+ ta.value = t;
+ document.body.appendChild(ta);
+ ta.select();
+ try{ document.execCommand("copy"); }catch(e){}
+ ta.remove();
+}
+
+// ======================================
+// نمایش مارک‌داون
+// ======================================
+
+function inline(s){
+ return s.split(/(`[^`\n]+`)/g).map((part, i) => {
+  if(i % 2 === 1) return '<code class="inl">' + part.slice(1, -1) + "</code>";
+  return part
+   .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+   .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+   .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<i>$2</i>");
+ }).join("");
+}
+
+function renderText(p){
+ const lines = esc(p).split("\n");
+ const out = [];
+ let list = null;
+ const close = () => { if(list){ out.push("</" + list + ">"); list = null; } };
+
+ for(const raw of lines){
+  const line = raw.replace(/\s+$/, "");
+  let m;
+  if((m = line.match(/^(#{1,3})\s+(.*)$/))){
+   close();
+   const tag = ["h3","h4","h5"][m[1].length - 1];
+   out.push("<" + tag + ">" + inline(m[2]) + "</" + tag + ">");
+  }else if((m = line.match(/^\s*[-*•]\s+(.*)$/))){
+   if(list !== "ul"){ close(); out.push("<ul>"); list = "ul"; }
+   out.push("<li>" + inline(m[1]) + "</li>");
+  }else if((m = line.match(/^\s*(\d+)[.)]\s+(.*)$/))){
+   if(list !== "ol"){ close(); out.push("<ol>"); list = "ol"; }
+   out.push("<li>" + inline(m[2]) + "</li>");
+  }else if((m = line.match(/^&gt;\s?(.*)$/))){
+   close();
+   out.push("<blockquote>" + inline(m[1]) + "</blockquote>");
+  }else if(line.trim() === ""){
+   close();
+  }else{
+   close();
+   out.push("<p>" + inline(line) + "</p>");
+  }
+ }
+ close();
+ return out.join("");
+}
+
+function render(text){
+ return String(text).split("```").map((p, i) => {
+  if(i % 2 === 1){
+   const nl = p.indexOf("\n");
+   const lang = nl > -1 ? p.slice(0, nl).trim() : "";
+   const code = nl > -1 ? p.slice(nl + 1) : p;
+   return '<div class="code"><div class="codebar"><span>' + (esc(lang) || "code") +
+    '</span><button type="button" class="copy">کپی</button></div><pre><code>' +
+    esc(code.replace(/\n$/, "")) + "</code></pre></div>";
+  }
+  return renderText(p);
+ }).join("");
+}
+
+// ======================================
+// تنظیمات کاربر
+// ======================================
+
+const SETTINGS_KEY = "domito_ai_settings_v1";
+const defaultSettings = { theme:"dark", font:"14.5", length:"normal", enterSend:true, typewriter:true, persona:"friend" };
+let settings = { ...defaultSettings };
+
+function loadSettings(){
+ try{
+  const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+  settings = { ...defaultSettings, ...raw };
+ }catch(e){ settings = { ...defaultSettings }; }
+ if(!PERSONAS[settings.persona]) settings.persona = "friend";
+}
+function saveSettings(){
+ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){}
+}
+function applySettings(){
+ const root = document.documentElement;
+ root.setAttribute("data-theme", settings.theme);
+ root.style.setProperty("--fs", settings.font + "px");
+ document.querySelector('meta[name="theme-color"]').setAttribute("content",
+  settings.theme === "light" ? "#f3f5fb" : "#0a0f1e");
+ markSeg("setTheme", settings.theme);
+ markSeg("setFont", settings.font);
+ markSeg("setLen", settings.length);
+ $("setEnter").checked = !!settings.enterSend;
+ $("setTypewriter").checked = !!settings.typewriter;
+}
+function markSeg(id, value){
+ document.querySelectorAll("#" + id + " button").forEach(b =>
+  b.classList.toggle("on", b.dataset.v === String(value)));
+}
+function bindSeg(id, key){
+ $(id).addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if(!b) return;
+  settings[key] = b.dataset.v;
+  saveSettings();
+  applySettings();
+ });
+}
+bindSeg("setTheme", "theme");
+bindSeg("setFont", "font");
+bindSeg("setLen", "length");
+$("setEnter").onchange = e => { settings.enterSend = e.target.checked; saveSettings(); };
+$("setTypewriter").onchange = e => { settings.typewriter = e.target.checked; saveSettings(); };
+
+// ======================================
+// گفتگوها (ذخیره روی همین دستگاه)
+// ======================================
+
+let uid = null, userName = "";
+let convs = [];
+let conv = null;
+
+function storeKey(){ return "domito_ai_chats_v1_" + uid; }
+
+function loadConvs(){
+ try{
+  const raw = JSON.parse(localStorage.getItem(storeKey()) || "[]");
+  convs = Array.isArray(raw) ? raw.filter(c => c && c.id && Array.isArray(c.messages)) : [];
+ }catch(e){ convs = []; }
+}
+function saveConvs(){
+ convs.sort((a, b) => b.updated - a.updated);
+ convs = convs.slice(0, MAX_CONVS);
+ try{ localStorage.setItem(storeKey(), JSON.stringify(convs)); }
+ catch(e){ toast("ذخیره گفتگو انجام نشد (حافظه مرورگر پر است)."); }
+ renderConvList();
+}
+function newConv(){
+ conv = { id:makeId(), title:"گفتگوی جدید", persona:settings.persona, updated:Date.now(), messages:[] };
+ return conv;
+}
+function openConv(id){
+ const c = convs.find(x => x.id === id);
+ if(!c) return;
+ conv = c;
+ if(!PERSONAS[conv.persona]) conv.persona = "friend";
+ settings.persona = conv.persona;
+ saveSettings();
+ renderPersonas();
+ renderConversation();
+}
+function persistCurrent(){
+ if(!conv || !conv.messages.length) return;
+ conv.updated = Date.now();
+ if(conv.messages.length > MAX_MSGS) conv.messages = conv.messages.slice(-MAX_MSGS);
+ if(!convs.includes(conv)) convs.push(conv);
+ saveConvs();
+}
+function makeTitle(text){
+ const t = String(text).replace(/\s+/g, " ").trim();
+ return t.length > 32 ? t.slice(0, 32) + "…" : (t || "گفتگوی جدید");
+}
+
+// ======================================
+// منو و تنظیمات: نمایش
+// ======================================
+
+const drawer = $("drawer"), scrim = $("scrim"), sheet = $("sheet");
+function openDrawer(){ drawer.classList.add("open"); scrim.classList.add("show"); renderConvList(); }
+function closeAll(){ drawer.classList.remove("open"); sheet.classList.remove("open"); scrim.classList.remove("show"); }
+$("menuBtn").onclick = openDrawer;
+$("closeDrawer").onclick = closeAll;
+scrim.onclick = closeAll;
+$("settingsBtn").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); };
+$("closeSheet").onclick = closeAll;
+
+function fmtDate(t){
+ try{
+  return new Intl.DateTimeFormat("fa-IR", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" }).format(new Date(t));
+ }catch(e){ return ""; }
+}
+
+function renderConvList(){
+ const box = $("convList");
+ const q = $("convSearch").value.trim().toLowerCase();
+ const list = convs.filter(c => !q ||
+  c.title.toLowerCase().includes(q) ||
+  c.messages.some(m => String(m.content).toLowerCase().includes(q)));
+ if(!list.length){
+  box.innerHTML = '<div class="empty">' + (q ? "چیزی پیدا نشد." : "هنوز گفتگویی ذخیره نشده.") + "</div>";
+  return;
+ }
+ box.innerHTML = "";
+ list.forEach(c => {
+  const row = document.createElement("div");
+  row.className = "conv" + (conv && c.id === conv.id ? " on" : "");
+  const p = PERSONAS[c.persona] || PERSONAS.friend;
+
+  const t = document.createElement("button");
+  t.type = "button";
+  t.className = "t";
+  t.innerHTML = p.icon + " " + esc(c.title) + '<span class="m">' + esc(fmtDate(c.updated)) + "</span>";
+  t.onclick = () => { if(busy) return toast("صبر کن پاسخ تموم شه."); openConv(c.id); closeAll(); };
+
+  const ren = document.createElement("button");
+  ren.type = "button"; ren.className = "b"; ren.textContent = "✏️"; ren.title = "تغییر نام";
+  ren.onclick = () => {
+   const name = prompt("نام جدید گفتگو:", c.title);
+   if(name && name.trim()){ c.title = name.trim().slice(0, 60); saveConvs(); if(conv === c) updateHeader(); }
+  };
+
+  const del = document.createElement("button");
+  del.type = "button"; del.className = "b"; del.textContent = "🗑"; del.title = "حذف";
+  del.onclick = () => {
+   if(busy) return toast("صبر کن پاسخ تموم شه.");
+   if(!confirm("این گفتگو حذف شود؟")) return;
+   convs = convs.filter(x => x !== c);
+   if(conv === c){ newConv(); renderConversation(); }
+   saveConvs();
+  };
+
+  row.append(t, ren, del);
+  box.appendChild(row);
+ });
+}
+$("convSearch").addEventListener("input", renderConvList);
+
+$("newChat").onclick = () => {
+ if(busy) return toast("صبر کن پاسخ تموم شه.");
+ newConv();
+ renderConversation();
+ closeAll();
+};
+
+$("exportBtn").onclick = () => {
+ if(!conv || !conv.messages.length) return toast("گفتگوی خالی قابل خروجی نیست.");
+ const p = PERSONAS[conv.persona] || PERSONAS.friend;
+ let text = "# " + conv.title + "\nشخصیت: " + p.name + "\n\n";
+ conv.messages.forEach(m => {
+  text += (m.role === "user" ? "🧑 من" : "🤖 دستیار") + ":\n" + m.content + "\n\n";
+ });
+ const blob = new Blob([text], { type:"text/markdown;charset=utf-8" });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement("a");
+ a.href = url;
+ a.download = "domito-chat-" + new Date().toISOString().slice(0, 10) + ".md";
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ setTimeout(() => URL.revokeObjectURL(url), 2000);
+ toast("گفتگو ذخیره شد ✓");
+};
+
+$("logout").onclick = async () => {
+ if(busy) return;
+ try{ await logoutUser(); }catch(e){ console.error("Domito logout:", e); }
+ location.href = "./index.html";
+};
+
+// ======================================
+// شخصیت‌ها
+// ======================================
+
+function renderPersonas(){
+ const box = $("personas");
+ box.innerHTML = "";
+ Object.entries(PERSONAS).forEach(([key, p]) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = key === settings.persona ? "on" : "";
+  b.textContent = p.icon + " " + p.name;
+  b.onclick = () => {
+   if(busy) return;
+   settings.persona = key;
+   if(conv) conv.persona = key;
+   saveSettings();
+   if(conv && conv.messages.length) persistCurrent();
+   renderPersonas();
+   if(conv && !conv.messages.length) renderConversation();
+   toast("شخصیت: " + p.name);
+  };
+  box.appendChild(b);
+ });
+}
+
+// ======================================
+// سهمیه
+// ======================================
+
+let authReady = false;
+let quotaState = null;
+let busy = false;
+
+function quotaRemaining(){ return Math.max(0, Number(quotaState?.remaining) || 0); }
+function canSendMessage(){ return authReady && !!uid && !!quotaState && quotaRemaining() > 0; }
+
+function updateQuotaDisplay(){
+ const info = $("quotaInfo");
+ if(!authReady){
+  info.textContent = "برای استفاده، با حساب دومیتو وارد شو.";
+  info.className = "";
+ }else if(!quotaState){
+  info.textContent = "در حال دریافت سهمیه روزانه...";
+  info.className = "";
+ }else{
+  const r = quotaRemaining();
+  const limit = Number(quotaState.limit) || 5;
+  if(r > 0){
+   info.textContent = "🤖 سهمیه امروز: " + r + " از " + limit + " سؤال باقی مانده • با برد در بازی تک‌نفره +۱ سؤال";
+   info.className = "";
+  }else{
+   info.innerHTML = 'سهمیه امروز تمام شده؛ یکی از بازی‌های تک‌نفره رو ببر و سؤال اضافه بگیر. <a href="./index.html">برو به بازی‌ها</a>';
+   info.className = "finished";
+  }
+ }
+ updateSendButton();
+}
+
+async function refreshQuota(){
+ quotaState = await getAIQuota();
+ updateQuotaDisplay();
+ return quotaState;
+}
+
+function updateSendButton(){
+ send.disabled = !authReady || !uid;
+ send.classList.toggle("stop", busy);
+ send.querySelector("span").textContent = busy ? "■" : "➤";
+ send.title = busy ? "توقف" : "ارسال";
+}
+
+function showLimitMessage(){
+ toast("سهمیه امروز تمام شده؛ با برد در بازی تک‌نفره سؤال اضافه بگیر.");
+ updateQuotaDisplay();
+}
+
+function setBusy(b){
+ busy = b;
+ updateSendButton();
+ setStatus(b ? "در حال پاسخ..." : "آماده", b ? "busy" : "");
+}
+
+// ======================================
+// نمایش گفتگو
+// ======================================
+
+function updateHeader(){
+ $("convTitle").textContent = conv && conv.messages.length ? conv.title : "دستیار دومیتو";
+}
+
+function scrollDown(force){
+ const near = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 160;
+ if(force || near) chat.scrollTop = chat.scrollHeight;
+}
+
+chat.addEventListener("scroll", () => {
+ const far = chat.scrollHeight - chat.scrollTop - chat.clientHeight > 260;
+ $("toBottom").classList.toggle("show", far);
+});
+$("toBottom").onclick = () => { chat.scrollTo({ top:chat.scrollHeight, behavior:"smooth" }); };
+
+function showWelcome(){
+ const p = PERSONAS[conv?.persona] || PERSONAS[settings.persona] || PERSONAS.friend;
+ chat.innerHTML =
+  '<div class="welcome" id="welcome">' +
+  '<div class="big">' + p.icon + "</div>" +
+  "<h2>سلام " + esc(userName) + "!</h2>" +
+  "<p>" + esc(p.hello) + "</p>" +
+  '<div class="chips">' + p.chips.map(c => '<button type="button">' + esc(c) + "</button>").join("") + "</div></div>";
+}
+
+function makeRow(role, html, isHtml){
+ const row = document.createElement("div");
+ row.className = "row " + role;
+ const msg = document.createElement("div");
+ msg.className = "msg";
+ if(isHtml) msg.innerHTML = html; else msg.textContent = html;
+ row.appendChild(msg);
+ return { row, msg };
+}
+
+function actionBar(index, isLastAI){
+ const bar = document.createElement("div");
+ bar.className = "actions";
+ const add = (label, title, fn) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = label; b.title = title; b.onclick = fn;
+  bar.appendChild(b);
+ };
+ add("📋", "کپی", () => { copyText(conv.messages[index].content); toast("کپی شد ✓"); });
+ if(conv.messages[index].role === "assistant"){
+  add("🔊", "خواندن با صدا", () => speak(conv.messages[index].content));
+  if(isLastAI) add("🔄", "پاسخ دوباره", () => regenerate());
+ }
+ return bar;
+}
+
+function renderConversation(){
+ updateHeader();
+ if(!conv || !conv.messages.length){
+  showWelcome();
+  renderConvList();
+  return;
+ }
+ chat.innerHTML = "";
+ const lastAI = (() => {
+  for(let i = conv.messages.length - 1; i >= 0; i--) if(conv.messages[i].role === "assistant") return i;
+  return -1;
+ })();
+ conv.messages.forEach((m, i) => {
+  const isUser = m.role === "user";
+  const { row, msg } = makeRow(isUser ? "user" : "ai", isUser ? m.content : render(m.content), !isUser);
+  if(isUser) msg.textContent = m.content;
+  row.appendChild(actionBar(i, i === lastAI && i === conv.messages.length - 1));
+  chat.appendChild(row);
+ });
+ // اگر آخرین پیام کاربر بی‌پاسخ مانده، دکمه تلاش دوباره
+ if(conv.messages[conv.messages.length - 1].role === "user") addRetryBubble("پاسخی دریافت نشد.");
+ renderConvList();
+ scrollDown(true);
+}
+
+function addRetryBubble(text){
+ const { row, msg } = makeRow("ai", text, false);
+ msg.classList.add("error");
+ const bar = document.createElement("div");
+ bar.className = "actions";
+ const b = document.createElement("button");
+ b.type = "button"; b.textContent = "🔄 تلاش دوباره";
+ b.onclick = () => regenerate();
+ bar.appendChild(b);
+ row.appendChild(bar);
+ chat.appendChild(row);
+ scrollDown(true);
+ return row;
+}
+
+function addTyping(){
+ const { row, msg } = makeRow("ai", '<span class="typing"><i></i><i></i><i></i></span>', true);
+ chat.appendChild(row);
+ scrollDown(true);
+ return { row, msg };
+}
+
+chat.addEventListener("click", e => {
+ const chip = e.target.closest(".chips button");
+ if(chip){
+  input.value = chip.textContent;
+  autoGrow();
+  input.focus();
+  return;
+ }
+ if(e.target.classList.contains("copy")){
+  const code = e.target.closest(".code").querySelector("code").textContent;
+  copyText(code);
+  e.target.textContent = "کپی شد ✓";
+  setTimeout(() => e.target.textContent = "کپی", 1500);
+ }
+});
+
+// ======================================
+// خواندن با صدا و ورودی صوتی
+// ======================================
+
+function speak(text){
+ if(!("speechSynthesis" in window)) return toast("مرورگرت خواندن با صدا رو پشتیبانی نمی‌کنه.");
+ window.speechSynthesis.cancel();
+ const clean = String(text).replace(/```[\s\S]*?```/g, " (کد) ").replace(/[*#`>_]/g, "");
+ const u = new SpeechSynthesisUtterance(clean);
+ const voices = window.speechSynthesis.getVoices();
+ const fa = voices.find(v => /^fa/i.test(v.lang));
+ if(fa){ u.voice = fa; u.lang = fa.lang; }
+ else toast("صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه.");
+ window.speechSynthesis.speak(u);
+}
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null, recording = false;
+$("mic").onclick = () => {
+ if(!SR) return toast("مرورگرت ورودی صوتی رو پشتیبانی نمی‌کنه.");
+ if(recording && recog){ recog.stop(); return; }
+ recog = new SR();
+ recog.lang = "fa-IR";
+ recog.interimResults = true;
+ recog.continuous = false;
+ const base = input.value ? input.value.trim() + " " : "";
+ recog.onresult = ev => {
+  let t = "";
+  for(let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+  input.value = base + t;
+  autoGrow();
+ };
+ recog.onerror = ev => {
+  if(ev.error === "not-allowed") toast("اجازه میکروفون داده نشد.");
+  else if(ev.error !== "aborted" && ev.error !== "no-speech") toast("ورودی صوتی انجام نشد.");
+ };
+ recog.onend = () => { recording = false; $("mic").classList.remove("rec"); };
+ try{
+  recog.start();
+  recording = true;
+  $("mic").classList.add("rec");
+ }catch(e){ recording = false; }
+};
+
+// ======================================
+// فایل‌ها و تصاویر
+// ======================================
+
+let pending = [];
+
+function toImage(file){
+ return new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+   const max = 1024;
+   let w = img.width, h = img.height;
+   const s = Math.min(1, max / Math.max(w, h));
+   w = Math.round(w * s); h = Math.round(h * s);
+   const c = document.createElement("canvas");
+   c.width = w; c.height = h;
+   const ctx = c.getContext("2d");
+   ctx.fillStyle = "#fff";
+   ctx.fillRect(0, 0, w, h);
+   ctx.drawImage(img, 0, 0, w, h);
+   URL.revokeObjectURL(url);
+   resolve(c.toDataURL("image/jpeg", 0.82));
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("عکس خوانده نشد")); };
+  img.src = url;
+ });
+}
+
+async function addFiles(files){
+ if(!canSendMessage()){ showLimitMessage(); return; }
+ for(const f of files){
+  if(pending.length >= MAX_FILES){ toast("حداکثر " + MAX_FILES + " فایل در هر پیام"); break; }
+  try{
+   if(f.type.startsWith("image/")){
+    pending.push({ kind:"image", name:f.name, dataUrl:await toImage(f) });
+   }else{
+    if(f.size > 2 * 1024 * 1024){ toast("فایل بزرگ‌تر از ۲ مگابایت است"); continue; }
+    let text = await f.text();
+    if(text.includes("\u0000")){ toast("این نوع فایل پشتیبانی نمی‌شود"); continue; }
+    if(text.length > MAX_TEXT) text = text.slice(0, MAX_TEXT) + "\n...[ادامه فایل بریده شد]";
+    pending.push({ kind:"text", name:f.name, text });
+   }
+  }catch(err){ toast(err.message || "فایل خوانده نشد"); }
+ }
+ renderTray();
+}
+
+function renderTray(){
+ tray.innerHTML = "";
+ pending.forEach((a, i) => {
+  const c = document.createElement("div");
+  c.className = "chip";
+  if(a.kind === "image"){
+   const im = document.createElement("img");
+   im.src = a.dataUrl;
+   c.appendChild(im);
+  }else{
+   const s = document.createElement("span");
+   s.textContent = "📄 " + a.name;
+   c.appendChild(s);
+  }
+  const x = document.createElement("button");
+  x.type = "button"; x.className = "x"; x.textContent = "✕";
+  x.onclick = () => { pending.splice(i, 1); renderTray(); };
+  c.appendChild(x);
+  tray.appendChild(c);
+ });
+}
+
+$("attach").onclick = () => {
+ if(!canSendMessage()){ showLimitMessage(); return; }
+ fileInput.click();
+};
+fileInput.onchange = () => { addFiles([...fileInput.files]); fileInput.value = ""; };
+
+// ======================================
+// ساخت درخواست
+// ======================================
+
+function buildContent(text, atts){
+ let t = text;
+ atts.filter(a => a.kind === "text").forEach(a => { t += "\n\n[فایل: " + a.name + "]\n" + a.text; });
+ t = t.trim();
+ const imgs = atts.filter(a => a.kind === "image");
+ if(!imgs.length) return t;
+ const parts = [{ type:"text", text:t || "این عکس رو توضیح بده" }];
+ imgs.forEach(a => parts.push({ type:"image_url", image_url:{ url:a.dataUrl } }));
+ return parts;
+}
+
+function systemMessage(){
+ const p = PERSONAS[conv?.persona] || PERSONAS.friend;
+ let content = BASE_PROMPT + " " + p.prompt + " " + (LENGTHS[settings.length] || LENGTHS.normal);
+ if(userName) content += " نام کاربر: " + userName + ".";
+ return { role:"system", content };
+}
+
+function payload(lastContent){
+ const items = conv.messages.slice(-CONTEXT_MSGS).map(m => ({ role:m.role, content:m.content }));
+ if(lastContent && items.length) items[items.length - 1] = { role:"user", content:lastContent };
+ return [systemMessage(), ...items];
+}
+
+// ======================================
+// ارسال، توقف و تلاش دوباره
+// ======================================
+
+let abortCtrl = null;
+let typer = null;
+
+async function tryReserve(){
+ try{
+  const r = await reserveAIQuestion();
+  quotaState = r.quota;
+  updateQuotaDisplay();
+  return r.id;
+ }catch(error){
+  console.error("AI quota reserve:", error);
+  if(error.code === "AI_QUOTA_EXHAUSTED"){
+   await refreshQuota().catch(() => {});
+   showLimitMessage();
+  }else{
+   toast("بررسی سهمیه انجام نشد؛ اتصال اینترنت رو بررسی کن.");
+  }
+  return null;
+ }
+}
+
+function stopGeneration(){
+ if(typer){ typer.finish(); return; }
+ if(abortCtrl) abortCtrl.abort();
+}
+
+// جواب را کم‌کم نشان می‌دهد؛ با توقف، همه یک‌جا نشان داده می‌شود.
+function typewrite(box, text){
+ return new Promise(resolve => {
+  if(!settings.typewriter || text.length < 40){
+   box.innerHTML = render(text);
+   return resolve();
+  }
+  let i = 0;
+  const step = Math.max(3, Math.ceil(text.length / 260));
+  const id = setInterval(() => {
+   i = Math.min(text.length, i + step);
+   box.innerHTML = render(text.slice(0, i));
+   scrollDown(false);
+   if(i >= text.length) done();
+  }, 22);
+  function done(){
+   clearInterval(id);
+   typer = null;
+   box.innerHTML = render(text);
+   resolve();
+  }
+  typer = { finish: done };
+ });
+}
+
+async function runAssistant(reservationId, lastContent){
+ setBusy(true);
+ const { row, msg } = addTyping();
+ const ctrl = new AbortController();
+ abortCtrl = ctrl;
+ const timer = setTimeout(() => ctrl.abort(), 70000);
+ let timedOut = false;
+ const timeoutWatch = setTimeout(() => { timedOut = true; }, 69900);
+ let success = false;
+ let failedStatus = false;
+
+ try{
+  const res = await fetch(API, {
+   method:"POST",
+   headers:{ "Content-Type":"application/json" },
+   body:JSON.stringify({ messages:payload(lastContent) }),
+   signal:ctrl.signal
+  });
+  clearTimeout(timer);
+  clearTimeout(timeoutWatch);
+
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(data.error || "HTTP " + res.status);
+
+  const answer = (data.choices?.[0]?.message?.content || "").trim();
+  if(!answer) throw new Error("پاسخ خالی بود");
+
+  abortCtrl = null;
+  conv.messages.push({ role:"assistant", content:answer, t:Date.now() });
+  persistCurrent();
+  success = true;
+
+  await typewrite(msg, answer);
+ }catch(err){
+  clearTimeout(timer);
+  clearTimeout(timeoutWatch);
+  abortCtrl = null;
+  row.remove();
+  const stoppedByUser = err.name === "AbortError" && !timedOut;
+  let text;
+  if(stoppedByUser) text = "پاسخ متوقف شد.";
+  else if(err.name === "AbortError") text = "زمان اتصال تمام شد. دوباره امتحان کن.";
+  else if(err.name === "TypeError") text = "اتصال برقرار نشد. اینترنتت رو بررسی کن.";
+  else text = "خطا: " + err.message;
+  addRetryBubble(text);
+  failedStatus = !stoppedByUser;
+ }
+
+ // فقط پاسخ موفق سهمیه مصرف می‌کند؛ در غیر این صورت رزرو آزاد می‌شود.
+ try{
+  quotaState = await finishAIQuestion(reservationId, success);
+  updateQuotaDisplay();
+ }catch(qe){
+  console.error("AI quota finish:", qe);
+ }
+
+ setBusy(false);
+ if(success) renderConversation();
+ if(failedStatus) setStatus("خطا در اتصال", "err");
+ input.focus();
+}
+
+$("form").addEventListener("submit", async e => {
+ e.preventDefault();
+
+ if(busy){ stopGeneration(); return; }
+
+ if(!authReady || !uid){
+  toast("ابتدا با حساب دومیتو وارد شو.");
+  location.href = "./index.html";
+  return;
+ }
+
+ const text = input.value.trim();
+ if(!text && !pending.length) return;
+
+ const reservationId = await tryReserve();
+ if(!reservationId) return;
+
+ const atts = pending;
+ pending = [];
+ renderTray();
+ input.value = "";
+ autoGrow();
+
+ const w = $("welcome");
+ if(w) w.remove();
+
+ // در ذخیره‌سازی فقط متن می‌ماند؛ عکس‌ها به‌صورت یادداشت ذخیره می‌شوند.
+ const stored = (text + atts.map(a => a.kind === "image" ? "\n[عکس: " + a.name + "]" : "\n[فایل: " + a.name + "]").join("")).trim();
+ const content = buildContent(text, atts);
+ if(!conv) newConv();
+ if(!conv.messages.length) conv.title = makeTitle(text || (atts[0] && atts[0].name) || "");
+ conv.persona = settings.persona;
+ conv.messages.push({ role:"user", content:stored, t:Date.now() });
+ persistCurrent();
+
+ // نمایش پیام کاربر (با پیش‌نمایش عکس)
+ const { row, msg } = makeRow("user", "", false);
+ atts.forEach(a => {
+  if(a.kind === "image"){
+   const im = document.createElement("img");
+   im.className = "thumb"; im.src = a.dataUrl;
+   msg.appendChild(im);
+  }else{
+   const c = document.createElement("div");
+   c.className = "filechip"; c.textContent = "📄 " + a.name;
+   msg.appendChild(c);
+  }
+ });
+ if(text){ const t = document.createElement("div"); t.textContent = text; msg.appendChild(t); }
+ chat.appendChild(row);
+ updateHeader();
+ scrollDown(true);
+
+ await runAssistant(reservationId, Array.isArray(content) ? content : null);
+});
+
+async function regenerate(){
+ if(busy) return;
+ if(!conv || !conv.messages.length) return;
+ if(!canSendMessage()){ showLimitMessage(); return; }
+ const reservationId = await tryReserve();
+ if(!reservationId) return;
+ if(conv.messages[conv.messages.length - 1].role === "assistant") conv.messages.pop();
+ if(!conv.messages.length || conv.messages[conv.messages.length - 1].role !== "user"){
+  await finishAIQuestion(reservationId, false).catch(() => {});
+  return;
+ }
+ persistCurrent();
+ renderConversation();
+ // renderConversation بالا برای پیام بی‌پاسخ حباب خطا می‌گذارد؛ آن را برمی‌داریم.
+ const last = chat.lastElementChild;
+ if(last && last.querySelector(".msg.error")) last.remove();
+ await runAssistant(reservationId, null);
+}
+
+// ======================================
+// ورودی
+// ======================================
+
+function autoGrow(){
+ input.style.height = "42px";
+ input.style.height = Math.min(input.scrollHeight, 140) + "px";
+}
+input.addEventListener("input", autoGrow);
+input.addEventListener("keydown", e => {
+ if(e.key === "Enter" && !e.shiftKey && settings.enterSend && window.innerWidth > 700){
+  e.preventDefault();
+  $("form").requestSubmit();
+ }
+});
+
+// ======================================
+// شروع
+// ======================================
+
+async function initializeDomitoAccount(){
+ loadSettings();
+ applySettings();
+ renderPersonas();
+ try{
+  const authUser = await waitForUser();
+  const name = String(getSavedName() || "").trim();
+  const id = currentUid();
+  if(!authUser || !name || !id){
+   authReady = false;
+   gate.hidden = false;
+   updateQuotaDisplay();
+   return;
+  }
+  uid = id;
+  userName = name;
+  authReady = true;
+  gate.hidden = true;
+  loadConvs();
+  newConv();
+  renderConversation();
+  updateSendButton();
+  await refreshQuota();
+ }catch(error){
+  console.error("Domito account/quota init:", error);
+  if(!authReady) gate.hidden = false;
+  updateQuotaDisplay();
+  toast("اتصال به حساب دومیتو یا سهمیه برقرار نشد.");
+ }
+}
+
+chat.innerHTML = "";
+updateSendButton();
+initializeDomitoAccount();
+</script>
+</body>
+</html>
