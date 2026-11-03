@@ -857,7 +857,10 @@ function updateQuotaDisplay(){
  }else{
   const r = quotaRemaining();
   const limit = Number(quotaState.limit) || 5;
-  if(r > 0){
+  if(quotaState.unlimited){
+   info.textContent = "🤖 سهمیه امروز: نامحدود";
+   info.className = "";
+  }else if(r > 0){
    info.textContent = "🤖 سهمیه امروز: " + r + " از " + limit + " سؤال باقی مانده • با برد در بازی تک‌نفره +۱ سؤال";
    info.className = "";
   }else{
