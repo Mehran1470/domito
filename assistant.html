@@ -40,7 +40,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 body{
- margin:0;display:flex;flex-direction:column;position:fixed;inset:0;height:100vh;height:100dvh;
+ margin:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);
  color:var(--text);font-family:Vazirmatn,Tahoma,"Segoe UI",sans-serif;
  background:
  radial-gradient(900px 500px at 100% -10%,var(--glow1),transparent 60%),
@@ -233,7 +233,7 @@ code.inl{
 
 /* پایین */
 footer{
- padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+ padding:8px 12px calc(14px + env(safe-area-inset-bottom));
  background:var(--bar);backdrop-filter:blur(16px);
  border-top:1px solid var(--line);
 }
@@ -459,6 +459,24 @@ import {
  waitForUser, getSavedName, currentUid, logoutUser,
  getAIQuota, reserveAIQuestion, finishAIQuestion
 } from "./js/app.js";
+
+// ======================================
+// ارتفاع واقعی ناحیه‌ی قابل‌دیدن (برای مرورگرهایی که 100dvh را درست حساب نمی‌کنند)
+// ======================================
+
+function fitHeight(){
+ const vv = window.visualViewport;
+ const h = Math.min(
+  window.innerHeight || 1e9,
+  document.documentElement.clientHeight || 1e9,
+  vv ? vv.height : 1e9
+ );
+ if(h > 0 && h < 1e9) document.documentElement.style.setProperty("--app-h", Math.round(h) + "px");
+}
+fitHeight();
+window.addEventListener("resize", fitHeight);
+window.addEventListener("orientationchange", () => setTimeout(fitHeight, 250));
+if(window.visualViewport) window.visualViewport.addEventListener("resize", fitHeight);
 
 // ======================================
 // تنظیمات ثابت
