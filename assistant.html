@@ -233,7 +233,7 @@ code.inl{
 
 /* پایین */
 footer{
- padding:8px 12px calc(14px + env(safe-area-inset-bottom));
+ padding:8px 12px calc(14px + env(safe-area-inset-bottom) + var(--bo,0px));
  background:var(--bar);backdrop-filter:blur(16px);
  border-top:1px solid var(--line);
 }
@@ -449,6 +449,11 @@ textarea::placeholder{color:var(--muted)}
   <span>تایپ تدریجی پاسخ</span>
   <input type="checkbox" id="setTypewriter">
  </div>
+ <div class="set">
+  <label>فاصله‌ی پایین صفحه: <b id="boOut">0</b> پیکسل<br>اگر جعبه‌ی نوشتن زیر نوار سیستم رفته، این را زیاد کن.</label>
+  <input type="range" id="setBottom" min="0" max="120" step="4" value="0" style="width:100%;accent-color:var(--accent)">
+ </div>
+ <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۴ / ۴</div>
  <button id="closeSheet" type="button">تأیید</button>
 </div>
 
@@ -650,7 +655,7 @@ function render(text){
 // ======================================
 
 const SETTINGS_KEY = "domito_ai_settings_v1";
-const defaultSettings = { theme:"dark", font:"14.5", length:"normal", enterSend:true, typewriter:true, persona:"friend" };
+const defaultSettings = { bottomOffset:0, theme:"dark", font:"14.5", length:"normal", enterSend:true, typewriter:true, persona:"friend" };
 let settings = { ...defaultSettings };
 
 function loadSettings(){
@@ -672,6 +677,9 @@ function applySettings(){
  markSeg("setTheme", settings.theme);
  markSeg("setFont", settings.font);
  markSeg("setLen", settings.length);
+ document.documentElement.style.setProperty("--bo", (Number(settings.bottomOffset) || 0) + "px");
+ $("setBottom").value = Number(settings.bottomOffset) || 0;
+ $("boOut").textContent = Number(settings.bottomOffset) || 0;
  $("setEnter").checked = !!settings.enterSend;
  $("setTypewriter").checked = !!settings.typewriter;
 }
@@ -691,6 +699,11 @@ function bindSeg(id, key){
 bindSeg("setTheme", "theme");
 bindSeg("setFont", "font");
 bindSeg("setLen", "length");
+$("setBottom").addEventListener("input", e => {
+ settings.bottomOffset = Number(e.target.value) || 0;
+ saveSettings();
+ applySettings();
+});
 $("setEnter").onchange = e => { settings.enterSend = e.target.checked; saveSettings(); };
 $("setTypewriter").onchange = e => { settings.typewriter = e.target.checked; saveSettings(); };
 
