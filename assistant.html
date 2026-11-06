@@ -403,6 +403,12 @@ textarea::placeholder{color:var(--muted)}
 .seg button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2))}
 .sw{display:flex;align-items:center;justify-content:space-between;font-size:13.5px}
 .sw input{width:20px;height:20px;accent-color:var(--accent)}
+.buy-btn{
+ flex:none;padding:7px 12px;border-radius:10px;font-size:12px;white-space:nowrap;
+ color:#fff;background:linear-gradient(135deg,#f2b84b,#e08a2c);font-weight:bold;
+}
+.buy-btn:disabled{opacity:.45;cursor:not-allowed}
+.set small{display:block;margin-top:2px;font-size:11px;color:var(--muted)}
 #closeSheet{
  width:100%;height:42px;border-radius:12px;margin-top:4px;color:#fff;font-weight:bold;
  background:linear-gradient(135deg,var(--accent),var(--accent2));
@@ -523,7 +529,11 @@ textarea::placeholder{color:var(--muted)}
   <label>فاصله‌ی پایین صفحه: <b id="boOut">0</b> پیکسل<br>اگر جعبه‌ی نوشتن زیر نوار سیستم رفته، این را زیاد کن.</label>
   <input type="range" id="setBottom" min="0" max="120" step="4" value="0" style="width:100%;accent-color:var(--accent)">
  </div>
- <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۴</div>
+ <div class="set sw">
+  <span>🪙 خرید سؤال با سکه<small id="buyInfo">...</small></span>
+  <button type="button" class="buy-btn" id="buyQ" disabled>خرید ۱ سؤال</button>
+ </div>
+ <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۷ / ۱</div>
  <button id="closeSheet" type="button">تأیید</button>
 </div>
 
@@ -546,7 +556,8 @@ textarea::placeholder{color:var(--muted)}
 <script type="module">
 import {
  waitForUser, getSavedName, currentUid, logoutUser,
- getAIQuota, reserveAIQuestion, finishAIQuestion
+ getAIQuota, reserveAIQuestion, finishAIQuestion,
+ getAIShopInfo, buyAIQuestionWithCoins
 } from "./js/app.js";
 
 // ======================================
@@ -952,7 +963,42 @@ function closeAll(){ drawer.classList.remove("open"); sheet.classList.remove("op
 $("menuBtn").onclick = openDrawer;
 $("closeDrawer").onclick = closeAll;
 scrim.onclick = closeAll;
-$("settingsBtn").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); };
+$("settingsBtn").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); refreshShop(); };
+
+// خرید سؤال با سکه (۲۵ سکه = ۱ سؤال، حداکثر ۵ بار در روز)
+async function refreshShop(){
+ const btn = $("buyQ"), info = $("buyInfo");
+ btn.disabled = true;
+ if(!authReady || !uid){ info.textContent = "اول با حساب دومیتو وارد شو."; return; }
+ if(quotaState && quotaState.unlimited){ info.textContent = "حساب نامحدود نیازی به خرید ندارد."; return; }
+ try{
+  const s = await getAIShopInfo();
+  info.textContent = "سکه‌ات: " + toFa(s.coins) + " • امروز " + toFa(s.bought) + " از " + toFa(s.max) + " خرید";
+  btn.textContent = "خرید ۱ سؤال · " + toFa(s.price) + " 🪙";
+  btn.disabled = s.bought >= s.max || s.coins < s.price;
+ }catch(e){
+  info.textContent = "خواندن سکه‌ها ممکن نشد.";
+ }
+}
+
+$("buyQ").onclick = async () => {
+ if(busy) return;
+ $("buyQ").disabled = true;
+ try{
+  const r = await buyAIQuestionWithCoins();
+  if(r.ok){
+   quotaState = r.quota;
+   updateQuotaDisplay();
+   toast("🪙 یک سؤال خریدی؛ " + toFa(r.quota.remaining) + " سؤال باقی مانده");
+  }else{
+   const msg = { insufficient:"سکه‌ات کافی نیست.", "daily-cap":"سقف خرید امروز تموم شده.", "no-profile":"پروفایل پیدا نشد." };
+   toast(msg[r.reason] || "خرید انجام نشد.");
+  }
+ }catch(e){
+  toast("خرید انجام نشد. دوباره تلاش کن.");
+ }
+ refreshShop();
+};
 $("closeSheet").onclick = closeAll;
 
 function fmtDate(t){
@@ -1093,7 +1139,7 @@ function updateQuotaDisplay(){
    info.textContent = "🤖 سهمیه امروز: " + r + " از " + limit + " سؤال باقی مانده • با برد در بازی تک‌نفره +۱ سؤال";
    info.className = "";
   }else{
-   info.innerHTML = 'سهمیه امروز تمام شده؛ یکی از بازی‌های تک‌نفره رو ببر و سؤال اضافه بگیر. <a href="./index.html">برو به بازی‌ها</a>';
+   info.innerHTML = 'سهمیه امروز تمام شده؛ یکی از بازی‌های تک‌نفره رو ببر یا از تنظیمات (⚙️) با سکه سؤال بخر. <a href="./index.html">برو به بازی‌ها</a>';
    info.className = "finished";
   }
  }
@@ -1115,7 +1161,7 @@ function updateSendButton(){
 }
 
 function showLimitMessage(){
- toast("سهمیه امروز تمام شده؛ با برد در بازی تک‌نفره سؤال اضافه بگیر.");
+ toast("سهمیه امروز تمام شده؛ با بازی تک‌نفره یا خرید با سکه (⚙️) سؤال اضافه بگیر.");
  updateQuotaDisplay();
 }
 

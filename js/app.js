@@ -4362,8 +4362,11 @@ export async function getLeaderboard(
 // ============================================================
 
 const AI_DAILY_BASE = 5;
-const AI_DAILY_MAX = 15;
-const MAX_GAME_BONUS = AI_DAILY_MAX - AI_DAILY_BASE;
+const MAX_GAME_BONUS = 10;   // حداکثر پاداش بازی‌های تک‌نفره در روز
+const MAX_COIN_BUY = 5;      // حداکثر سؤالی که در روز با سکه می‌شود خرید
+const AI_DAILY_MAX = AI_DAILY_BASE + MAX_GAME_BONUS + MAX_COIN_BUY;
+export const AI_QUESTION_COIN_PRICE = 25;
+export const AI_MAX_COIN_BUY = MAX_COIN_BUY;
 const AI_PENDING_TTL_MS = 2 * 60 * 1000;
 const AI_DAY_TIME_ZONE = "Asia/Tehran";
 
@@ -4397,7 +4400,7 @@ function aiDayKey() {
 }
 
 function aiNewQuota(day) {
-  return { day, used: 0, bonus: 0, rewards: {}, pending: {} };
+  return { day, used: 0, bonus: 0, bought: 0, rewards: {}, pending: {} };
 }
 
 function aiSafeInt(value, min = 0, max = 1000000) {
@@ -4415,6 +4418,7 @@ function aiCleanQuota(raw, day, now) {
     day,
     used: aiSafeInt(raw.used, 0, AI_DAILY_MAX),
     bonus: aiSafeInt(raw.bonus, 0, MAX_GAME_BONUS),
+    bought: aiSafeInt(raw.bought, 0, MAX_COIN_BUY),
     rewards: raw.rewards && typeof raw.rewards === "object" ? { ...raw.rewards } : {},
     pending: raw.pending && typeof raw.pending === "object" ? { ...raw.pending } : {}
   };
@@ -4431,7 +4435,10 @@ function aiCleanQuota(raw, day, now) {
 }
 
 function aiLimit(quota) {
-  return Math.min(AI_DAILY_MAX, AI_DAILY_BASE + aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS));
+  return Math.min(
+    AI_DAILY_MAX,
+    AI_DAILY_BASE + aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS) + aiSafeInt(quota.bought, 0, MAX_COIN_BUY)
+  );
 }
 
 // هزینه‌ی هر سؤال داخل شناسه‌ی رزرو ذخیره می‌شود (k3_...) تا ساختار دیتابیس عوض نشود.
@@ -4455,6 +4462,7 @@ function aiPublicQuota(quota) {
     day: quota.day,
     used,
     bonus: aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS),
+    bought: aiSafeInt(quota.bought, 0, MAX_COIN_BUY),
     limit,
     pending: pendingCost,
     remaining: Math.max(0, limit - used - pendingCost)
@@ -4499,6 +4507,63 @@ export async function getAIQuota() {
   const result = await runTransaction(aiQuotaRef(), cur => aiCleanQuota(cur, day, now));
   if (!result.committed) throw new Error("خواندن سهمیه انجام نشد.");
   return aiPublicQuota(result.snapshot.val() || aiNewQuota(day));
+}
+
+// اطلاعات فروشگاه سؤال: موجودی سکه و تعداد خرید امروز.
+export async function getAIShopInfo() {
+  const username = getSavedName();
+  const base = { coins: 0, bought: 0, price: AI_QUESTION_COIN_PRICE, max: MAX_COIN_BUY };
+  if (!currentUid() || !username) return base;
+  const [coinsSnap, quota] = await Promise.all([
+    get(profileRef(username, "coins")),
+    getAIQuota()
+  ]);
+  return {
+    ...base,
+    coins: Math.max(0, Math.floor(Number(coinsSnap.val()) || 0)),
+    bought: aiSafeInt(quota.bought, 0, MAX_COIN_BUY)
+  };
+}
+
+// خرید یک سؤال با سکه. کم‌شدن سکه و اضافه‌شدن سؤال در یک تراکنش روی پروفایل انجام می‌شود،
+// پس یا هر دو اتفاق می‌افتند یا هیچ‌کدام.
+export async function buyAIQuestionWithCoins() {
+  if (await aiIsUnlimited()) return { ok: false, reason: "unlimited", quota: aiUnlimitedQuota() };
+  aiQuotaRef(); // اگر وارد نشده باشد خطا می‌دهد
+  const username = getSavedName();
+  const day = aiDayKey();
+  const now = Date.now();
+  let result = { ok: false, reason: "unknown" };
+
+  const tx = await runTransaction(profileRef(username), cur => {
+    if (!cur || typeof cur !== "object") {
+      result = { ok: false, reason: "no-profile" };
+      return cur;
+    }
+    const quota = aiCleanQuota(cur.aiQuota, day, now);
+    const coins = Number(cur.coins || 0);
+    if (quota.bought >= MAX_COIN_BUY) {
+      result = { ok: false, reason: "daily-cap" };
+      return cur;
+    }
+    if (!Number.isFinite(coins) || coins < AI_QUESTION_COIN_PRICE) {
+      result = { ok: false, reason: "insufficient" };
+      return cur;
+    }
+    cur.coins = coins - AI_QUESTION_COIN_PRICE;
+    quota.bought += 1;
+    cur.aiQuota = quota;
+    result = { ok: true, reason: "bought" };
+    return cur;
+  });
+
+  if (!tx.committed) throw new Error("خرید انجام نشد.");
+  const val = tx.snapshot.val() || {};
+  return {
+    ...result,
+    coins: Math.max(0, Math.floor(Number(val.coins) || 0)),
+    quota: aiPublicQuota(aiCleanQuota(val.aiQuota, day, now))
+  };
 }
 
 // پیش از صدا زدن Worker یک سؤال رزرو می‌شود تا دو تب هم‌زمان یک سؤال را خرج نکنند.
