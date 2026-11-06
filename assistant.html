@@ -628,8 +628,9 @@ function renderThinkBar(){
   const b = document.createElement("button");
   b.type = "button";
   b.className = (key === thinkMode ? "on" : "") + (key === "max" ? " max" : "");
-  b.textContent = t.label + " · " + toFa(t.cost);
-  b.title = "مصرف " + toFa(t.cost) + " سؤال از سهمیه";
+  const free = !!quotaState && !!quotaState.unlimited;
+  b.textContent = free ? t.label : t.label + " · " + toFa(t.cost);
+  b.title = free ? "بدون محدودیت" : "مصرف " + toFa(t.cost) + " سؤال از سهمیه";
   b.disabled = !!quotaState && !quotaState.unlimited && quotaRemaining() < t.cost;
   b.onclick = () => chooseThink(key);
   box.appendChild(b);
@@ -650,7 +651,8 @@ async function chooseThink(key){
    toast("سهمیه‌ات برای این حالت کافی نیست.");
    return;
   }
-  if(!(await confirmThink(key))) return;
+  // حساب نامحدود (ادمین) چیزی مصرف نمی‌کنه، پس هشدار و تأیید لازم نیست.
+  if(!quotaState.unlimited && !(await confirmThink(key))) return;
  }
  thinkMode = key;
  renderThinkBar();
@@ -1537,7 +1539,7 @@ async function regenerate(){
    toast("سهمیه‌ات برای پاسخ دوباره با این حالت کافی نیست.");
    return;
   }
-  if(!(await confirmThink(mode))) return;
+  if(!quotaState.unlimited && !(await confirmThink(mode))) return;
  }
  const reservationId = await tryReserve(THINK[mode].cost);
  if(!reservationId) return;
