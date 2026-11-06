@@ -294,6 +294,7 @@ textarea::placeholder{color:var(--muted)}
  border-radius:12px;background:transparent;color:var(--text);font-size:14px;text-align:right;
 }
 .pin-item:active{background:var(--line)}
+.pin-item.on{color:var(--accent);background:var(--panel2)}
 .pin-title{font-size:12.5px;color:var(--muted);padding:8px 10px 6px;border-top:1px solid var(--line);margin-top:4px}
 #thinkOpts{display:flex;gap:6px;padding:0 2px 2px}
 #thinkOpts button{
@@ -440,6 +441,7 @@ textarea::placeholder{color:var(--muted)}
   <div id="tray"></div>
   <div id="pinMenu" hidden>
    <button type="button" class="pin-item" id="pinFile"><span>📁</span><span>ارسال فایل یا عکس</span></button>
+   <button type="button" class="pin-item" id="pinSearch"><span>🌐</span><span id="pinSearchLabel">جستجوی وب: خاموش</span></button>
    <div class="pin-title">🧠 حالت تفکر (فقط برای پیام بعدی)</div>
    <div id="thinkOpts"></div>
   </div>
@@ -508,7 +510,7 @@ textarea::placeholder{color:var(--muted)}
   <label>فاصله‌ی پایین صفحه: <b id="boOut">0</b> پیکسل<br>اگر جعبه‌ی نوشتن زیر نوار سیستم رفته، این را زیاد کن.</label>
   <input type="range" id="setBottom" min="0" max="120" step="4" value="0" style="width:100%;accent-color:var(--accent)">
  </div>
- <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۲</div>
+ <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۳</div>
  <button id="closeSheet" type="button">تأیید</button>
 </div>
 
@@ -639,13 +641,18 @@ const THINK = {
 // حالت انتخاب‌شده فقط برای پیام بعدی معتبره و بعد از ارسال به «کم» برمی‌گرده.
 let thinkMode = "low";
 let lastThink = "low";
+// جستجوی وب هم فقط برای پیام بعدی روشن می‌ماند.
+let searchOn = false;
+let lastSearch = false;
 
 function toFa(n){ return String(n).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]); }
 
 function renderThinkBar(){
  const box = $("thinkOpts");
  if(!box) return;
- $("attach").classList.toggle("badge", thinkMode !== "low");
+ $("attach").classList.toggle("badge", thinkMode !== "low" || searchOn);
+ $("pinSearch").classList.toggle("on", searchOn);
+ $("pinSearchLabel").textContent = searchOn ? "جستجوی وب: روشن (فقط پیام بعدی)" : "جستجوی وب: خاموش";
  box.innerHTML = "";
  Object.entries(THINK).forEach(([key, t]) => {
   const b = document.createElement("button");
@@ -1345,6 +1352,13 @@ $("pinFile").onclick = () => {
  if(!canSendMessage()){ showLimitMessage(); return; }
  fileInput.click();
 };
+$("pinSearch").onclick = () => {
+ if(busy) return;
+ searchOn = !searchOn;
+ renderThinkBar();
+ closePin();
+ toast(searchOn ? "🌐 جستجوی وب برای پیام بعدی روشن شد" : "جستجوی وب خاموش شد");
+};
 document.addEventListener("click", e => {
  if($("pinMenu").hidden) return;
  if(e.target.closest("#pinMenu") || e.target.closest("#attach")) return;
@@ -1435,15 +1449,18 @@ function typewrite(box, text){
  });
 }
 
-async function runAssistant(reservationId, lastContent, mode){
+async function runAssistant(reservationId, lastContent, mode, search){
  mode = THINK[mode] ? mode : "low";
+ search = !!search;
  lastThink = mode;
+ lastSearch = search;
  setBusy(true);
  if(mode !== "low") setStatus("در حال فکر کردن...", "busy");
+ if(search) setStatus("در حال جستجو در وب...", "busy");
  const { row, msg } = addTyping();
  const ctrl = new AbortController();
  abortCtrl = ctrl;
- const limitMs = mode === "max" ? 130000 : mode === "medium" ? 100000 : 70000;
+ const limitMs = (mode === "max" ? 130000 : mode === "medium" ? 100000 : 70000) + (search ? 20000 : 0);
  const timer = setTimeout(() => ctrl.abort(), limitMs);
  let timedOut = false;
  const timeoutWatch = setTimeout(() => { timedOut = true; }, limitMs - 100);
@@ -1454,7 +1471,7 @@ async function runAssistant(reservationId, lastContent, mode){
   const res = await fetch(API, {
    method:"POST",
    headers:{ "Content-Type":"application/json" },
-   body:JSON.stringify({ messages:payload(lastContent), think:mode }),
+   body:JSON.stringify({ messages:payload(lastContent), think:mode, search }),
    signal:ctrl.signal
   });
   clearTimeout(timer);
@@ -1467,7 +1484,7 @@ async function runAssistant(reservationId, lastContent, mode){
   if(!answer) throw new Error("پاسخ خالی بود");
 
   abortCtrl = null;
-  conv.messages.push({ role:"assistant", content:answer, t:Date.now(), think:mode });
+  conv.messages.push({ role:"assistant", content:answer, t:Date.now(), think:mode, search });
   persistCurrent();
   success = true;
 
@@ -1516,9 +1533,11 @@ $("form").addEventListener("submit", async e => {
  if(!text && !pending.length) return;
 
  const mode = thinkMode;
+ const search = searchOn;
  const reservationId = await tryReserve(THINK[mode].cost);
  if(!reservationId) return;
  thinkMode = "low";
+ searchOn = false;
  renderThinkBar();
 
  const atts = pending;
@@ -1557,7 +1576,7 @@ $("form").addEventListener("submit", async e => {
  updateHeader();
  scrollDown(true);
 
- await runAssistant(reservationId, Array.isArray(content) ? content : null, mode);
+ await runAssistant(reservationId, Array.isArray(content) ? content : null, mode, search);
 });
 
 async function regenerate(){
@@ -1567,6 +1586,7 @@ async function regenerate(){
  // پاسخ دوباره با همان حالت تفکر قبلی انجام می‌شود (و همان هزینه را دارد).
  const prev = conv.messages[conv.messages.length - 1];
  const mode = THINK[prev.think] ? prev.think : (THINK[lastThink] ? lastThink : "low");
+ const search = prev.role === "assistant" && "search" in prev ? !!prev.search : lastSearch;
  if(mode !== "low"){
   if(!quotaState.unlimited && quotaRemaining() < THINK[mode].cost){
    toast("سهمیه‌ات برای پاسخ دوباره با این حالت کافی نیست.");
@@ -1586,7 +1606,7 @@ async function regenerate(){
  // renderConversation بالا برای پیام بی‌پاسخ حباب خطا می‌گذارد؛ آن را برمی‌داریم.
  const last = chat.lastElementChild;
  if(last && last.querySelector(".msg.error")) last.remove();
- await runAssistant(reservationId, null, mode);
+ await runAssistant(reservationId, null, mode, search);
 }
 
 // ======================================
