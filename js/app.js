@@ -4434,8 +4434,21 @@ function aiLimit(quota) {
   return Math.min(AI_DAILY_MAX, AI_DAILY_BASE + aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS));
 }
 
+// هزینه‌ی هر سؤال داخل شناسه‌ی رزرو ذخیره می‌شود (k3_...) تا ساختار دیتابیس عوض نشود.
+// حالت کم = ۱، متوسط = ۳، حداکثر = ۵.
+const AI_MAX_COST = 5;
+
+function aiCostFromId(id) {
+  const m = /^k([1-9])_/.exec(String(id || ""));
+  return m ? Math.min(AI_MAX_COST, Number(m[1])) : 1;
+}
+
+function aiPendingCost(quota) {
+  return Object.keys(quota.pending || {}).reduce((sum, id) => sum + aiCostFromId(id), 0);
+}
+
 function aiPublicQuota(quota) {
-  const pendingCount = Object.keys(quota.pending || {}).length;
+  const pendingCost = aiPendingCost(quota);
   const limit = aiLimit(quota);
   const used = aiSafeInt(quota.used, 0, AI_DAILY_MAX);
   return {
@@ -4443,8 +4456,8 @@ function aiPublicQuota(quota) {
     used,
     bonus: aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS),
     limit,
-    pending: pendingCount,
-    remaining: Math.max(0, limit - used - pendingCount)
+    pending: pendingCost,
+    remaining: Math.max(0, limit - used - pendingCost)
   };
 }
 
@@ -4489,15 +4502,15 @@ export async function getAIQuota() {
 }
 
 // پیش از صدا زدن Worker یک سؤال رزرو می‌شود تا دو تب هم‌زمان یک سؤال را خرج نکنند.
-export async function reserveAIQuestion() {
+export async function reserveAIQuestion(cost = 1) {
   if (await aiIsUnlimited()) return { id: "unlimited_" + aiMakeId(), quota: aiUnlimitedQuota() };
   const day = aiDayKey();
   const now = Date.now();
-  const reservationId = aiMakeId();
+  const safeCost = aiSafeInt(cost, 1, AI_MAX_COST);
+  const reservationId = `k${safeCost}_${aiMakeId()}`;
   const result = await runTransaction(aiQuotaRef(), cur => {
     const quota = aiCleanQuota(cur, day, now);
-    const inFlight = Object.keys(quota.pending).length;
-    if (quota.used + inFlight >= aiLimit(quota)) return;
+    if (quota.used + aiPendingCost(quota) + safeCost > aiLimit(quota)) return;
     quota.pending[reservationId] = now;
     return quota;
   });
@@ -4521,7 +4534,7 @@ export async function finishAIQuestion(reservationId, success) {
     const quota = aiCleanQuota(cur, day, now);
     if (!Object.prototype.hasOwnProperty.call(quota.pending, reservationId)) return quota;
     delete quota.pending[reservationId];
-    if (success) quota.used = Math.min(aiLimit(quota), quota.used + 1);
+    if (success) quota.used = Math.min(aiLimit(quota), quota.used + aiCostFromId(reservationId));
     return quota;
   });
   if (!result.committed) throw new Error("ثبت مصرف سهمیه انجام نشد.");
