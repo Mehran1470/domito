@@ -276,15 +276,33 @@ textarea::placeholder{color:var(--muted)}
 #quotaInfo.finished{color:var(--danger)}
 #quotaInfo a{color:var(--accent)}
 
-/* حالت تفکر */
-#thinkBar{display:flex;gap:6px;padding:0 2px 8px}
-#thinkBar button{
- flex:1;padding:7px 4px;border-radius:12px;font-size:12px;line-height:1.5;
+/* منوی سنجاق: ارسال فایل + حالت تفکر */
+.wrap{position:relative}
+#attach{position:relative}
+#attach.badge::after{
+ content:"";position:absolute;top:6px;right:6px;width:9px;height:9px;
+ border-radius:50%;background:#ff9d4d;border:2px solid var(--panel);
+}
+#pinMenu{
+ position:absolute;right:0;bottom:100%;margin-bottom:6px;z-index:40;
+ width:min(100%,330px);padding:8px;border-radius:18px;
+ background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 40px #0006;
+}
+#pinMenu[hidden]{display:none}
+.pin-item{
+ display:flex;align-items:center;gap:10px;width:100%;padding:11px 10px;
+ border-radius:12px;background:transparent;color:var(--text);font-size:14px;text-align:right;
+}
+.pin-item:active{background:var(--line)}
+.pin-title{font-size:12.5px;color:var(--muted);padding:8px 10px 6px;border-top:1px solid var(--line);margin-top:4px}
+#thinkOpts{display:flex;gap:6px;padding:0 2px 2px}
+#thinkOpts button{
+ flex:1;padding:8px 4px;border-radius:12px;font-size:12px;line-height:1.5;
  background:var(--panel2);border:1px solid var(--line);color:var(--muted);
 }
-#thinkBar button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2))}
-#thinkBar button.on.max{background:linear-gradient(135deg,#ff9d4d,#e0445a)}
-#thinkBar button:disabled{opacity:.4;cursor:not-allowed}
+#thinkOpts button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+#thinkOpts button.on.max{background:linear-gradient(135deg,#ff9d4d,#e0445a)}
+#thinkOpts button:disabled{opacity:.4;cursor:not-allowed}
 #thinkConfirm{
  position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
  padding:20px;background:#000a;
@@ -420,7 +438,11 @@ textarea::placeholder{color:var(--muted)}
 <footer>
  <div class="wrap">
   <div id="tray"></div>
-  <div id="thinkBar"></div>
+  <div id="pinMenu" hidden>
+   <button type="button" class="pin-item" id="pinFile"><span>📁</span><span>ارسال فایل یا عکس</span></button>
+   <div class="pin-title">🧠 حالت تفکر (فقط برای پیام بعدی)</div>
+   <div id="thinkOpts"></div>
+  </div>
   <form id="form">
    <button type="button" class="icon" id="attach" title="پیوست">📎</button>
    <button type="button" class="icon" id="mic" title="ورودی صوتی">🎤</button>
@@ -486,7 +508,7 @@ textarea::placeholder{color:var(--muted)}
   <label>فاصله‌ی پایین صفحه: <b id="boOut">0</b> پیکسل<br>اگر جعبه‌ی نوشتن زیر نوار سیستم رفته، این را زیاد کن.</label>
   <input type="range" id="setBottom" min="0" max="120" step="4" value="0" style="width:100%;accent-color:var(--accent)">
  </div>
- <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۱</div>
+ <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۲</div>
  <button id="closeSheet" type="button">تأیید</button>
 </div>
 
@@ -621,8 +643,9 @@ let lastThink = "low";
 function toFa(n){ return String(n).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]); }
 
 function renderThinkBar(){
- const box = $("thinkBar");
+ const box = $("thinkOpts");
  if(!box) return;
+ $("attach").classList.toggle("badge", thinkMode !== "low");
  box.innerHTML = "";
  Object.entries(THINK).forEach(([key, t]) => {
   const b = document.createElement("button");
@@ -644,6 +667,7 @@ function updateThinkBar(){
 
 async function chooseThink(key){
  if(busy) return;
+ closePin();
  if(key === thinkMode) return;
  if(key !== "low"){
   if(!canSendMessage()){ showLimitMessage(); return; }
@@ -1313,10 +1337,19 @@ function renderTray(){
  });
 }
 
-$("attach").onclick = () => {
+// دکمه‌ی 📎 یک منو باز می‌کند: ارسال فایل و انتخاب حالت تفکر.
+function closePin(){ $("pinMenu").hidden = true; }
+$("attach").onclick = () => { $("pinMenu").hidden = !$("pinMenu").hidden; };
+$("pinFile").onclick = () => {
+ closePin();
  if(!canSendMessage()){ showLimitMessage(); return; }
  fileInput.click();
 };
+document.addEventListener("click", e => {
+ if($("pinMenu").hidden) return;
+ if(e.target.closest("#pinMenu") || e.target.closest("#attach")) return;
+ closePin();
+});
 fileInput.onchange = () => { addFiles([...fileInput.files]); fileInput.value = ""; };
 
 // ======================================
