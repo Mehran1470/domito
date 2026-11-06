@@ -276,6 +276,19 @@ textarea::placeholder{color:var(--muted)}
 #quotaInfo.finished{color:var(--danger)}
 #quotaInfo a{color:var(--accent)}
 
+/* گالری عکس زیر پاسخ */
+.gallery{
+ display:grid;grid-template-columns:repeat(2,1fr);gap:6px;
+ margin-top:6px;width:min(100%,340px);
+}
+.gallery figure{margin:0;border-radius:14px;overflow:hidden;background:var(--panel2);border:1px solid var(--line)}
+.gallery a{display:block}
+.gallery img{display:block;width:100%;height:130px;object-fit:cover}
+.gallery figcaption{
+ padding:4px 8px;font-size:10.5px;line-height:1.5;color:var(--muted);
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
 /* منوی سنجاق: ارسال فایل + حالت تفکر */
 .wrap{position:relative}
 #attach{position:relative}
@@ -510,7 +523,7 @@ textarea::placeholder{color:var(--muted)}
   <label>فاصله‌ی پایین صفحه: <b id="boOut">0</b> پیکسل<br>اگر جعبه‌ی نوشتن زیر نوار سیستم رفته، این را زیاد کن.</label>
   <input type="range" id="setBottom" min="0" max="120" step="4" value="0" style="width:100%;accent-color:var(--accent)">
  </div>
- <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۳</div>
+ <div class="set" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۰۶ / ۴</div>
  <button id="closeSheet" type="button">تأیید</button>
 </div>
 
@@ -1151,6 +1164,42 @@ function makeRow(role, html, isHtml){
  return { row, msg };
 }
 
+// عکس‌های پیدا‌شده از اینترنت؛ فقط آدرس‌های https پذیرفته می‌شوند.
+function cleanImages(list){
+ if(!Array.isArray(list)) return [];
+ return list
+  .filter(x => x && /^https:\/\//i.test(x.thumb || "") && /^https:\/\//i.test(x.link || ""))
+  .slice(0, 4)
+  .map(x => ({
+   thumb:String(x.thumb), link:String(x.link),
+   title:String(x.title || "").slice(0, 80), credit:String(x.credit || "").slice(0, 60)
+  }));
+}
+
+function makeGallery(images){
+ const box = document.createElement("div");
+ box.className = "gallery";
+ images.forEach(im => {
+  const fig = document.createElement("figure");
+  const a = document.createElement("a");
+  a.href = im.link; a.target = "_blank"; a.rel = "noopener noreferrer";
+  const img = document.createElement("img");
+  img.src = im.thumb; img.alt = im.title; img.loading = "lazy";
+  img.referrerPolicy = "no-referrer";
+  img.onerror = () => { fig.remove(); if(!box.children.length) box.remove(); };
+  a.appendChild(img);
+  fig.appendChild(a);
+  const cap = (im.credit || im.title);
+  if(cap){
+   const fc = document.createElement("figcaption");
+   fc.textContent = "📷 " + cap;
+   fig.appendChild(fc);
+  }
+  box.appendChild(fig);
+ });
+ return box;
+}
+
 function actionBar(index, isLastAI){
  const bar = document.createElement("div");
  bar.className = "actions";
@@ -1183,6 +1232,7 @@ function renderConversation(){
   const isUser = m.role === "user";
   const { row, msg } = makeRow(isUser ? "user" : "ai", isUser ? m.content : render(m.content), !isUser);
   if(isUser) msg.textContent = m.content;
+  if(!isUser && m.images && m.images.length) row.appendChild(makeGallery(cleanImages(m.images)));
   row.appendChild(actionBar(i, i === lastAI && i === conv.messages.length - 1));
   chat.appendChild(row);
  });
@@ -1484,7 +1534,10 @@ async function runAssistant(reservationId, lastContent, mode, search){
   if(!answer) throw new Error("پاسخ خالی بود");
 
   abortCtrl = null;
-  conv.messages.push({ role:"assistant", content:answer, t:Date.now(), think:mode, search });
+  const found = cleanImages(data.images);
+  const reply = { role:"assistant", content:answer, t:Date.now(), think:mode, search };
+  if(found.length) reply.images = found;
+  conv.messages.push(reply);
   persistCurrent();
   success = true;
 
