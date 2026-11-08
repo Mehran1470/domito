@@ -13,6 +13,10 @@
       --shop-gold: #ffd166;
       --shop-muted: #aab1c5;
       --shop-border: rgba(255,255,255,.09);
+      --rarity-common: #9ca3af;
+      --rarity-rare: #4fd1ff;
+      --rarity-epic: #b28dff;
+      --rarity-legendary: #ffc845;
     }
 
     body {
@@ -34,14 +38,10 @@
       justify-content: space-between;
       gap: 12px;
       flex-wrap: wrap;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
 
-    .shop-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .shop-brand { display: flex; align-items: center; gap: 12px; }
 
     .shop-logo {
       display: grid;
@@ -54,17 +54,8 @@
       font-size: 26px;
     }
 
-    .shop-title {
-      margin: 0;
-      font-size: 23px;
-      font-weight: 900;
-    }
-
-    .shop-subtitle {
-      margin: 5px 0 0;
-      color: var(--shop-muted);
-      font-size: 12px;
-    }
+    .shop-title { margin: 0; font-size: 23px; font-weight: 900; }
+    .shop-subtitle { margin: 5px 0 0; color: var(--shop-muted); font-size: 12px; }
 
     .shop-wallet {
       display: inline-flex;
@@ -80,196 +71,206 @@
       white-space: nowrap;
     }
 
-    .shop-hero {
-      position: relative;
-      overflow: hidden;
-      padding: 25px 20px;
-      margin-bottom: 22px;
+    /* ظاهر فعلی */
+    .shop-me {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
       border: 1px solid var(--shop-border);
-      border-radius: 24px;
+      border-radius: 22px;
       background: linear-gradient(135deg, rgba(116,91,255,.16), rgba(255,255,255,.035));
     }
 
-    .shop-hero h2 {
-      margin: 0 0 8px;
-      font-size: 21px;
+    .shop-me-avatar {
+      flex: none;
+      width: 62px;
+      height: 62px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      font-weight: 900;
+      background: linear-gradient(145deg, var(--violet), var(--accent));
     }
 
-    .shop-hero p {
-      margin: 0;
-      color: var(--shop-muted);
-      line-height: 1.9;
+    .shop-me-name { font-size: 17px; font-weight: 900; }
+    .shop-me-hint { margin-top: 6px; color: var(--shop-muted); font-size: 11.5px; line-height: 1.7; }
+
+    /* تب‌ها */
+    .shop-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 2px 8px;
+      margin-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .shop-tabs::-webkit-scrollbar { display: none; }
+
+    .shop-tab {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--shop-border);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
       font-size: 13px;
+      font-weight: 800;
+      box-shadow: none;
     }
+    .shop-tab .tab-count { color: var(--shop-muted); font-size: 11px; font-weight: 700; }
+    .shop-tab[aria-selected="true"] {
+      background: var(--shop-gold);
+      border-color: var(--shop-gold);
+      color: #171717;
+    }
+    .shop-tab[aria-selected="true"] .tab-count { color: #4a3a10; }
 
-    .shop-section-title {
+    .shop-filters {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin: 22px 2px 13px;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 2px 14px;
     }
 
-    .shop-section-title h2 {
-      margin: 0;
-      font-size: 17px;
-    }
-
-    .shop-count {
+    .shop-chip {
+      padding: 7px 13px;
+      border-radius: 100px;
+      border: 1px solid var(--shop-border);
+      background: transparent;
       color: var(--shop-muted);
       font-size: 12px;
+      font-weight: 700;
+      box-shadow: none;
     }
+    .shop-chip[aria-pressed="true"] {
+      color: var(--shop-gold);
+      border-color: rgba(255,209,102,.5);
+      background: rgba(255,209,102,.1);
+    }
+
+    .shop-count { margin-inline-start: auto; color: var(--shop-muted); font-size: 12px; }
+
+    .shop-cat-hint { margin: 0 2px 12px; color: var(--shop-muted); font-size: 12px; }
 
     .shop-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+      margin-top: 0;
     }
 
     .shop-item {
+      position: relative;
       min-width: 0;
       padding: 13px;
       border-radius: 21px;
       border: 1px solid var(--shop-border);
       background: rgba(255,255,255,.035);
       transition: transform .18s ease, border-color .18s ease;
+      text-align: right;
     }
+    .shop-item.owned { border-color: rgba(76,217,123,.24); }
+    .shop-item.equipped { border-color: rgba(255,209,102,.6); background: rgba(255,209,102,.055); }
+    .shop-item:active { transform: scale(.985); }
 
-    .shop-item.owned {
-      border-color: rgba(76,217,123,.24);
+    .shop-rarity {
+      display: inline-block;
+      margin-bottom: 8px;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--r, var(--rarity-common));
     }
+    .shop-item[data-rarity="common"]    { --r: var(--rarity-common); }
+    .shop-item[data-rarity="rare"]      { --r: var(--rarity-rare); }
+    .shop-item[data-rarity="epic"]      { --r: var(--rarity-epic); }
+    .shop-item[data-rarity="legendary"] { --r: var(--rarity-legendary); }
 
-    .shop-item.equipped {
-      border-color: rgba(255,209,102,.6);
-      background: rgba(255,209,102,.055);
-    }
-
-    .shop-item:active {
-      transform: scale(.985);
-    }
-
-    .shop-swatch {
-      height: 82px;
-      border-radius: 15px;
-      margin-bottom: 12px;
-      border: 1px solid rgba(255,255,255,.12);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .shop-swatch::after {
-      content: "D";
+    .shop-fav {
       position: absolute;
-      inset: 0;
+      top: 9px;
+      left: 9px;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border-radius: 50%;
+      border: 0;
+      background: rgba(255,255,255,.07);
+      color: var(--shop-muted);
+      font-size: 17px;
+      box-shadow: none;
+    }
+    .shop-fav[aria-pressed="true"] { color: #ff6b9d; background: rgba(255,107,157,.14); }
+
+    .cos-preview {
       display: grid;
       place-items: center;
-      color: rgba(255,255,255,.88);
-      font-size: 35px;
-      font-weight: 1000;
-      text-shadow: 0 3px 20px rgba(0,0,0,.25);
+      height: 88px;
+      margin-bottom: 11px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(0,0,0,.18);
+      overflow: hidden;
     }
-
-    .shop-item-name {
+    .cos-sample-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 17px;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
       font-weight: 900;
-      font-size: 14px;
-      margin-bottom: 7px;
+      color: #fff;
+      background: linear-gradient(145deg, var(--violet), var(--accent));
     }
+    .cos-sample-badge { font-size: 40px; line-height: 1; }
+    .cos-sample-title { font-size: 13px; padding: 3px 12px; }
+    .cos-sample-name  { font-size: 20px; font-weight: 900; }
 
-    .shop-item-price {
-      color: var(--shop-gold);
-      font-size: 12px;
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-
-    .shop-item-state {
-      color: var(--shop-muted);
-      font-size: 11px;
-      margin-bottom: 10px;
-      min-height: 17px;
-    }
+    .shop-item-name { font-weight: 900; font-size: 14px; margin-bottom: 7px; }
+    .shop-item-price { color: var(--shop-gold); font-size: 12px; font-weight: 800; margin-bottom: 10px; }
+    .shop-item-state { color: var(--shop-muted); font-size: 11px; margin-bottom: 10px; min-height: 17px; }
 
     .shop-action {
       width: 100%;
-      min-height: 39px;
+      min-height: 41px;
       padding: 9px 8px;
       border: 0;
       border-radius: 12px;
       font-family: inherit;
-      font-size: 12px;
+      font-size: 12.5px;
       font-weight: 900;
       cursor: pointer;
       color: #171717;
       background: var(--shop-gold);
+      box-shadow: none;
     }
+    .shop-action.secondary { color: #fff; background: rgba(255,255,255,.09); border: 1px solid var(--shop-border); }
+    .shop-action.confirm { background: #ff8b5e; }
+    .shop-action:disabled { opacity: .55; cursor: not-allowed; }
 
-    .shop-action.secondary {
-      color: #fff;
-      background: rgba(255,255,255,.09);
-      border: 1px solid var(--shop-border);
-    }
+    .shop-status { min-height: 24px; margin: 16px 2px; text-align: center; font-size: 13px; line-height: 1.8; }
 
-    .shop-action:disabled {
-      opacity: .55;
-      cursor: not-allowed;
-    }
+    .shop-links { display: flex; gap: 10px; margin-top: 25px; }
+    .shop-links a { flex: 1; text-align: center; text-decoration: none; padding: 12px; border-radius: 14px; }
+    .shop-back { color: inherit; background: rgba(255,255,255,.06); border: 1px solid var(--shop-border); }
+    .shop-wallet-link { color: #171717; background: var(--shop-gold); font-weight: 900; }
 
-    .shop-status {
-      min-height: 24px;
-      margin: 16px 2px;
-      text-align: center;
-      font-size: 13px;
-      line-height: 1.8;
-    }
-
-    .shop-links {
-      display: flex;
-      gap: 10px;
-      margin-top: 25px;
-    }
-
-    .shop-links a {
-      flex: 1;
-      text-align: center;
-      text-decoration: none;
-      padding: 12px;
-      border-radius: 14px;
-    }
-
-    .shop-back {
-      color: inherit;
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--shop-border);
-    }
-
-    .shop-wallet-link {
-      color: #171717;
-      background: var(--shop-gold);
-      font-weight: 900;
-    }
-
-    .shop-loading {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 32px 12px;
-      color: var(--shop-muted);
-    }
+    .shop-loading { grid-column: 1 / -1; text-align: center; padding: 32px 12px; color: var(--shop-muted); }
 
     @media (min-width: 650px) {
-      .shop-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 15px;
-      }
-
-      .shop-swatch {
-        height: 105px;
-      }
+      .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
+      .cos-preview { height: 100px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .shop-item {
-        transition: none;
-      }
+      .shop-item { transition: none; }
     }
   </style>
 </head>
@@ -291,18 +292,24 @@
       </a>
     </header>
 
-    <section class="shop-hero">
-      <h2>استایل بعدی تو کدومه؟ 🎨</h2>
-      <p>
-        تم موردعلاقه‌ات رو انتخاب کن، با سکه بخر و روی آواتارت فعالش کن.
-        تم‌های خریداری‌شده همیشه در دسترس تو می‌مونن.
-      </p>
+    <!-- ظاهر فعلی -->
+    <section class="shop-me" id="shopMe" hidden>
+      <div class="shop-me-avatar" id="shopMeAvatar"></div>
+      <div>
+        <div class="shop-me-name" id="shopMeName"></div>
+        <div class="shop-me-hint">این همان چیزی است که بقیه در لابی و لیست دوستان می‌بینند.</div>
+      </div>
     </section>
 
-    <div class="shop-section-title">
-      <h2>🎨 تم‌های آواتار</h2>
+    <div class="shop-tabs" id="shopTabs" role="tablist" aria-label="دسته‌بندی فروشگاه"></div>
+
+    <div class="shop-filters" id="shopFilters">
+      <button type="button" class="shop-chip" id="filterOwned" aria-pressed="false">✅ خریداری‌شده‌ها</button>
+      <button type="button" class="shop-chip" id="filterFav" aria-pressed="false">❤️ علاقه‌مندی‌ها</button>
       <span class="shop-count" id="shopItemCount">در حال بارگذاری...</span>
     </div>
+
+    <p class="shop-cat-hint" id="shopCatHint"></p>
 
     <section class="shop-grid" id="shopGrid" aria-live="polite">
       <div class="shop-loading">در حال دریافت فروشگاه...</div>
@@ -323,19 +330,51 @@
       profileRef,
       onValue,
       SHOP_ITEMS,
+      SHOP_CATEGORIES,
+      RARITY_LABELS,
+      readShop,
       buyItem,
-      equipTheme,
+      equipItem,
+      unequipCategory,
+      toggleFavorite,
+      migrateShop,
       waitForUser
     } from "./js/app.js";
 
+    import {
+      injectCosmeticStyles,
+      createItemPreview,
+      renderNameBlock,
+      applyAvatarStyle,
+      setCosmeticsCache
+    } from "./js/cosmetics.js";
+
+    injectCosmeticStyles();
+
+    // خریدهای گران‌تر از این مقدار قبل از کسر سکه یک بار تأیید می‌خواهند.
+    const CONFIRM_FROM_PRICE = 500;
+
     const grid = document.getElementById("shopGrid");
+    const tabsEl = document.getElementById("shopTabs");
     const coinsEl = document.getElementById("shopCoins");
     const statusEl = document.getElementById("shopStatus");
     const countEl = document.getElementById("shopItemCount");
+    const hintEl = document.getElementById("shopCatHint");
+    const meBox = document.getElementById("shopMe");
+    const meAvatar = document.getElementById("shopMeAvatar");
+    const meName = document.getElementById("shopMeName");
+    const filterOwnedBtn = document.getElementById("filterOwned");
+    const filterFavBtn = document.getElementById("filterFav");
 
     let myName = "";
     let currentProfile = {};
-    let busyItems = new Set();
+    let shop = { purchased: {}, equipped: {}, favorites: {} };
+    let activeCategory = SHOP_CATEGORIES[0].id;
+    let onlyOwned = false;
+    let onlyFav = false;
+    let confirmItemId = null;
+    let confirmTimer = null;
+    const busyItems = new Set();
 
     function faNumber(value) {
       return Number(value || 0).toLocaleString("fa-IR");
@@ -346,20 +385,84 @@
       statusEl.style.color = isError ? "#ff8b8b" : "#7fe5a0";
     }
 
+    function clearConfirm() {
+      confirmItemId = null;
+      clearTimeout(confirmTimer);
+    }
+
+    // ---------- بالای صفحه ----------
+
+    function renderMe() {
+      meBox.hidden = false;
+      meAvatar.textContent = myName.trim()[0]?.toUpperCase() || "?";
+      applyAvatarStyle(meAvatar, shop.equipped);
+      renderNameBlock(meName, myName, shop.equipped);
+    }
+
+    function renderTabs() {
+      tabsEl.replaceChildren();
+
+      for (const cat of SHOP_CATEGORIES) {
+        const items = SHOP_ITEMS.filter((i) => i.category === cat.id);
+        const ownedCount = items.filter((i) => shop.purchased[i.id] !== undefined).length;
+
+        const tab = document.createElement("button");
+        tab.type = "button";
+        tab.className = "shop-tab";
+        tab.setAttribute("role", "tab");
+        tab.setAttribute("aria-selected", String(cat.id === activeCategory));
+
+        const label = document.createElement("span");
+        label.textContent = `${cat.icon} ${cat.label}`;
+
+        const count = document.createElement("span");
+        count.className = "tab-count";
+        count.textContent = `${faNumber(ownedCount)}/${faNumber(items.length)}`;
+
+        tab.append(label, count);
+
+        tab.addEventListener("click", () => {
+          activeCategory = cat.id;
+          clearConfirm();
+          renderShop();
+        });
+
+        tabsEl.appendChild(tab);
+      }
+    }
+
+    // ---------- کارت آیتم ----------
+
     function createItem(item) {
-      const owned = (currentProfile.purchased || []).includes(item.id);
-      const equipped = currentProfile.equippedTheme === item.id;
+      const owned = shop.purchased[item.id] !== undefined;
+      const equipped = shop.equipped[item.category] === item.id;
+      const favorite = shop.favorites[item.id] === true;
       const busy = busyItems.has(item.id);
+      const coins = Number(currentProfile.coins || 0);
+      const missing = Math.max(0, item.price - coins);
+      const awaitingConfirm = confirmItemId === item.id;
 
       const card = document.createElement("article");
-      card.className = "shop-item" +
-        (owned ? " owned" : "") +
-        (equipped ? " equipped" : "");
+      card.className = "shop-item" + (owned ? " owned" : "") + (equipped ? " equipped" : "");
+      card.dataset.rarity = item.rarity;
 
-      const swatch = document.createElement("div");
-      swatch.className = "shop-swatch";
-      swatch.style.background =
-        `linear-gradient(135deg, ${item.colors[0]}, ${item.colors[1]})`;
+      const fav = document.createElement("button");
+      fav.type = "button";
+      fav.className = "shop-fav";
+      fav.setAttribute("aria-pressed", String(favorite));
+      fav.setAttribute("aria-label", favorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها");
+      fav.textContent = favorite ? "❤️" : "🤍";
+      fav.disabled = busy;
+      fav.addEventListener("click", async () => {
+        if (busyItems.has(item.id)) return;
+        await runAction(item, () => toggleFavorite(myName, item.id), () => "");
+      });
+
+      const rarity = document.createElement("div");
+      rarity.className = "shop-rarity";
+      rarity.textContent = RARITY_LABELS[item.rarity] || "";
+
+      const preview = createItemPreview(item);
 
       const name = document.createElement("div");
       name.className = "shop-item-name";
@@ -375,85 +478,141 @@
         ? "✨ همین الان فعاله"
         : owned
           ? "✅ خریداری شده"
-          : "برای تغییر ظاهر آواتار";
+          : missing > 0
+            ? `${faNumber(missing)} سکه کم داری`
+            : "آماده خرید";
 
       const button = document.createElement("button");
       button.className = "shop-action";
       button.type = "button";
-      button.disabled = busy || equipped;
-      button.textContent = busy
-        ? "در حال انجام..."
-        : equipped
-          ? "تم فعال"
-          : owned
-            ? "فعال کردن"
-            : "خرید تم";
+      button.disabled = busy;
 
-      if (owned && !equipped) {
+      if (busy) {
+        button.textContent = "در حال انجام...";
+      } else if (equipped) {
+        button.textContent = "برداشتن";
         button.classList.add("secondary");
+      } else if (owned) {
+        button.textContent = "فعال کردن";
+        button.classList.add("secondary");
+      } else if (awaitingConfirm) {
+        button.textContent = `تأیید خرید (${faNumber(item.price)} 🪙)`;
+        button.classList.add("confirm");
+      } else {
+        button.textContent = "خرید";
+        button.disabled = missing > 0;
       }
 
       button.addEventListener("click", async () => {
         if (busyItems.has(item.id)) return;
 
-        busyItems.add(item.id);
-        setStatus("");
-
-        // تا رسیدن نتیجه، دکمه قفل می‌شود.
-        renderShop();
-
-        try {
-          if (owned) {
-            const result = await equipTheme(myName, item.id);
-
-            if (result && result.ok === false) {
-              setStatus("فعال‌کردن تم انجام نشد.", true);
-            } else {
-              setStatus(`✨ تم «${item.name}» فعال شد!`);
-            }
-          } else {
-            const result = await buyItem(myName, item.id);
-
-            if (result && result.ok) {
-              setStatus(`🎉 تم «${item.name}» خریداری شد!`);
-            } else if (result?.reason === "insufficient") {
-              setStatus("سکه‌هات برای خرید این تم کافی نیست. 🪙", true);
-            } else if (result?.reason === "owned") {
-              setStatus("این تم از قبل خریداری شده است.");
-            } else {
-              setStatus("خرید انجام نشد. دوباره تلاش کن.", true);
-            }
-          }
-        } catch (error) {
-          console.error("Shop action failed:", error);
-          setStatus("ارتباط با فروشگاه برقرار نشد. دوباره امتحان کن.", true);
-        } finally {
-          busyItems.delete(item.id);
-          renderShop();
+        if (equipped) {
+          await runAction(item, () => unequipCategory(myName, item.category),
+            () => `«${item.name}» برداشته شد.`);
+          return;
         }
+
+        if (owned) {
+          await runAction(item, () => equipItem(myName, item.id),
+            (r) => r.ok ? `✨ «${item.name}» فعال شد!` : "فعال‌کردن انجام نشد.");
+          return;
+        }
+
+        if (item.price >= CONFIRM_FROM_PRICE && confirmItemId !== item.id) {
+          clearConfirm();
+          confirmItemId = item.id;
+          confirmTimer = setTimeout(() => { clearConfirm(); renderShop(); }, 4000);
+          setStatus(`برای خرید «${item.name}» دوباره روی دکمه بزن.`);
+          renderShop();
+          return;
+        }
+
+        clearConfirm();
+        await runAction(item, () => buyItem(myName, item.id), (r) => {
+          if (r.ok) return `🎉 «${item.name}» خریداری شد!`;
+          if (r.reason === "insufficient") return "سکه‌هات کافی نیست. 🪙";
+          if (r.reason === "owned") return "این آیتم از قبل خریداری شده است.";
+          return "خرید انجام نشد. دوباره تلاش کن.";
+        });
       });
 
-      card.append(swatch, name, price, state, button);
+      card.append(fav, rarity, preview, name, price, state, button);
       return card;
     }
 
+    async function runAction(item, action, messageFor) {
+      busyItems.add(item.id);
+      setStatus("");
+      renderShop();
+
+      try {
+        const result = await action();
+        const message = messageFor(result || {});
+        if (message) setStatus(message, !(result && result.ok));
+      } catch (error) {
+        console.error("Shop action failed:", error);
+        setStatus("ارتباط با فروشگاه برقرار نشد. دوباره امتحان کن.", true);
+      } finally {
+        busyItems.delete(item.id);
+        renderShop();
+      }
+    }
+
+    // ---------- لیست ----------
+
     function renderShop() {
+      renderTabs();
+
+      filterOwnedBtn.setAttribute("aria-pressed", String(onlyOwned));
+      filterFavBtn.setAttribute("aria-pressed", String(onlyFav));
+
+      const cat = SHOP_CATEGORIES.find((c) => c.id === activeCategory);
+      hintEl.textContent = cat ? `${cat.icon} ${cat.label}: ${cat.hint}` : "";
+
       grid.replaceChildren();
 
-      if (!Array.isArray(SHOP_ITEMS) || SHOP_ITEMS.length === 0) {
+      let items = SHOP_ITEMS
+        .filter((i) => i.category === activeCategory)
+        .sort((a, b) => a.price - b.price);
+
+      if (onlyOwned) items = items.filter((i) => shop.purchased[i.id] !== undefined);
+      if (onlyFav) items = items.filter((i) => shop.favorites[i.id] === true);
+
+      countEl.textContent = `${faNumber(items.length)} آیتم`;
+
+      if (items.length === 0) {
         const empty = document.createElement("div");
         empty.className = "shop-loading";
-        empty.textContent = "فعلاً تمی در فروشگاه موجود نیست.";
+        empty.textContent = onlyOwned || onlyFav
+          ? "چیزی با این فیلتر پیدا نشد."
+          : "فعلاً آیتمی در این دسته نیست.";
         grid.appendChild(empty);
-        countEl.textContent = "۰ تم";
         return;
       }
 
-      countEl.textContent = `${faNumber(SHOP_ITEMS.length)} تم`;
+      for (const item of items) grid.appendChild(createItem(item));
+    }
 
-      for (const item of SHOP_ITEMS) {
-        grid.appendChild(createItem(item));
-      }
+    filterOwnedBtn.addEventListener("click", () => {
+      onlyOwned = !onlyOwned;
+      clearConfirm();
+      renderShop();
+    });
+
+    filterFavBtn.addEventListener("click", () => {
+      onlyFav = !onlyFav;
+      clearConfirm();
+      renderShop();
+    });
+
+    // ---------- شروع ----------
+
+    function showMessage(text) {
+      grid.replaceChildren();
+      const message = document.createElement("div");
+      message.className = "shop-loading";
+      message.textContent = text;
+      grid.appendChild(message);
     }
 
     async function startShop() {
@@ -462,19 +621,23 @@
         myName = getSavedName();
 
         if (!user || !myName) {
-          grid.innerHTML = "";
-          const message = document.createElement("div");
-          message.className = "shop-loading";
-          message.textContent = "برای استفاده از فروشگاه، ابتدا وارد دومیتو شو.";
-          grid.appendChild(message);
+          showMessage("برای استفاده از فروشگاه، ابتدا وارد دومیتو شو.");
           countEl.textContent = "نیازمند ورود";
           setStatus("از صفحه اصلی وارد حساب خودت شو.", true);
           return;
         }
 
+        // انتقال بی‌خطر خریدهای قبلی به ساختار جدید (داده قدیمی پاک نمی‌شود)
+        migrateShop(myName).catch((error) => {
+          console.warn("Shop migration skipped:", error);
+        });
+
         onValue(profileRef(myName), (snapshot) => {
           currentProfile = snapshot.val() || {};
+          shop = readShop(currentProfile);
+          setCosmeticsCache(myName, shop.equipped);
           coinsEl.textContent = faNumber(currentProfile.coins || 0);
+          renderMe();
           renderShop();
         }, (error) => {
           console.error("Profile listener failed:", error);
@@ -482,15 +645,12 @@
         });
       } catch (error) {
         console.error("Shop initialization failed:", error);
-        grid.innerHTML = "";
-        const message = document.createElement("div");
-        message.className = "shop-loading";
-        message.textContent = "بارگذاری فروشگاه ناموفق بود. صفحه را دوباره باز کن.";
-        grid.appendChild(message);
+        showMessage("بارگذاری فروشگاه ناموفق بود. صفحه را دوباره باز کن.");
         setStatus("خطا در اتصال به حساب کاربری.", true);
       }
     }
 
+    renderTabs();
     startShop();
   </script>
 </body>

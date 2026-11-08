@@ -252,6 +252,16 @@ import {
 } from "./js/app.js";
 
 
+import {
+  injectCosmeticStyles,
+  primeCosmetics,
+  getCachedCosmetics,
+  renderNameBlock
+} from "./js/cosmetics.js";
+
+injectCosmeticStyles();
+
+
 const noNameCard =
   document.getElementById(
     "noNameCard"
@@ -771,6 +781,27 @@ waitForUser().then(
           "";
 
 
+        // ظاهر فروشگاه دوستان (بعد از رسیدن داده، فقط نام‌ها به‌روز می‌شوند)
+        primeCosmetics(
+          list.map((f) => f.name),
+          () => {
+
+            friendList
+              .querySelectorAll(".friend-name-link")
+              .forEach((a) => {
+
+                renderNameBlock(
+                  a,
+                  a.dataset.name,
+                  getCachedCosmetics(a.dataset.name)
+                );
+
+              });
+
+          }
+        );
+
+
         // آنلاین‌ها اول
         list.sort(
           (a, b) => {
@@ -814,8 +845,14 @@ waitForUser().then(
             nameLink.className =
               "friend-name-link";
 
-            nameLink.textContent =
+            nameLink.dataset.name =
               f.name;
+
+            renderNameBlock(
+              nameLink,
+              f.name,
+              getCachedCosmetics(f.name)
+            );
 
 
             row.appendChild(

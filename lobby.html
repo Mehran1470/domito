@@ -151,6 +151,17 @@
     } from "./js/chat.js";
 
 
+    import {
+      injectCosmeticStyles,
+      primeCosmetics,
+      getCachedCosmetics,
+      renderNameBlock,
+      applyAvatarStyle
+    } from "./js/cosmetics.js";
+
+    injectCosmeticStyles();
+
+
     // ============================================================
     // اطلاعات کاربر و اتاق
     // ============================================================
@@ -252,7 +263,52 @@
     // نمایش بازیکنان
     // ============================================================
 
+    function decoratePlayer(el, name, isMe) {
+
+      const equipped =
+        getCachedCosmetics(name);
+
+      applyAvatarStyle(
+        el.querySelector(".room-avatar"),
+        equipped
+      );
+
+      const pname =
+        el.querySelector(".pname");
+
+      renderNameBlock(
+        pname,
+        name,
+        equipped
+      );
+
+      if (isMe) {
+        pname.appendChild(
+          document.createTextNode(" (تو)")
+        );
+      }
+
+    }
+
+
+    function decorateFriendRow(row, name) {
+
+      renderNameBlock(
+        row.querySelector(".txt"),
+        name,
+        getCachedCosmetics(name)
+      );
+
+    }
+
+
     function renderPlayers() {
+
+      primeCosmetics(
+        Object.values(players).map(p => p.name),
+        renderPlayers
+      );
+
 
       playerCount.textContent =
         Object.keys(players).length;
@@ -296,7 +352,7 @@
               </div>
 
               <div class="pname">
-                ${p.name}
+                
 
                 ${
                   uid === myUid
@@ -307,6 +363,9 @@
               </div>
 
             `;
+
+
+            decoratePlayer(el, p.name, uid === myUid);
 
 
             playerGrid.appendChild(
@@ -565,6 +624,12 @@
 
     function renderInviteFriends() {
 
+      primeCosmetics(
+        friends.map(f => f.name),
+        renderInviteFriends
+      );
+
+
       inviteFriendsList.innerHTML =
         "";
 
@@ -620,7 +685,7 @@
               ></span>
 
               <span class="txt">
-                ${friend.name}
+                
               </span>
 
             </div>
@@ -719,6 +784,9 @@
           row.appendChild(
             actions
           );
+
+
+          decorateFriendRow(row, friend.name);
 
 
           inviteFriendsList

@@ -303,8 +303,18 @@ import {
   logoutUser,
   getPublicProfile,
   sendFriendRequest,
-  getFriendStatus
+  getFriendStatus,
+  readShop
 } from "./js/app.js";
+
+import {
+  injectCosmeticStyles,
+  renderNameBlock,
+  applyAvatarStyle,
+  setCosmeticsCache
+} from "./js/cosmetics.js";
+
+injectCosmeticStyles();
 
 const params = new URLSearchParams(location.search);
 const viewedUser = params.get("user");
@@ -526,10 +536,18 @@ waitForUser().then(async (user) => {
     // AVATAR
     const avatarBox = document.getElementById("avatarBox");
 
-    if (!avatarBox.dataset.customized) {
-      avatarBox.textContent = targetName.trim()[0]?.toUpperCase() || "?";
-      avatarBox.style.background = "";
-    }
+    // ظاهر فروشگاه: تم و قاب روی آواتار، نشان/عنوان/افکت روی نام
+    const equipped = readShop(p).equipped;
+    setCosmeticsCache(targetName, equipped);
+
+    avatarBox.textContent = targetName.trim()[0]?.toUpperCase() || "?";
+    applyAvatarStyle(avatarBox, equipped);
+
+    renderNameBlock(
+      document.getElementById("nameText"),
+      targetName,
+      equipped
+    );
 
     // PER-GAME STATS
     const board = document.getElementById("perGameBoard");

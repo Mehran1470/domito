@@ -28,6 +28,22 @@ import {
   firebaseConfig
 } from "./firebase-config.js";
 
+import {
+  SHOP_ITEMS,
+  SHOP_CATEGORIES,
+  MAX_ITEM_PRICE,
+  SHOP_VERSION,
+  ITEM_BY_ID,
+  RARITY_LABELS,
+  itemsOf,
+  readShop,
+  migrateProfile,
+  applyPurchase,
+  applyEquip,
+  applyUnequip,
+  applyFavorite
+} from "./shop-core.js";
+
 
 // ============================================================
 // Firebase
@@ -1939,144 +1955,28 @@ export async function recordRoundResult(
 
 // ============================================================
 // فروشگاه
+// کاتالوگ و منطق خالص در shop-core.js است؛ اینجا فقط تراکنش‌های Firebase.
 // ============================================================
 
-export const SHOP_ITEMS = [
-
-  {
-    id: "theme-sunset",
-    name: "تم غروب",
-    price: 30,
-    colors: [
-      "#FF7A59",
-      "#FFC845"
-    ]
-  },
-
-  {
-    id: "theme-ocean",
-    name: "تم اقیانوس",
-    price: 30,
-    colors: [
-      "#4FD1FF",
-      "#7C4DFF"
-    ]
-  },
-
-  {
-    id: "theme-forest",
-    name: "تم جنگل",
-    price: 30,
-    colors: [
-      "#4CD97B",
-      "#1F9E56"
-    ]
-  },
-
-  {
-    id: "theme-gold",
-    name: "تم طلایی",
-    price: 60,
-    colors: [
-      "#FFD700",
-      "#FF8C00"
-    ]
-  },
-
-  {
-    id: "theme-neon",
-    name: "تم نئون",
-    price: 80,
-    colors: [
-      "#39FF14",
-      "#00E5FF"
-    ]
-  },
-
-  {
-    id: "theme-galaxy",
-    name: "تم کهکشانی",
-    price: 120,
-    colors: [
-      "#7C4DFF",
-      "#FF4F81"
-    ]
-  },
-
-  {
-    id: "theme-fire",
-    name: "تم آتشین",
-    price: 150,
-    colors: [
-      "#FF3D00",
-      "#FFC107"
-    ]
-  },
-
-  {
-    id: "theme-royal",
-    name: "تم سلطنتی",
-    price: 250,
-    colors: [
-      "#5B2C82",
-      "#D4AF37"
-    ]
-  },
-
-  {
-    id: "theme-diamond",
-    name: "تم الماس",
-    price: 500,
-    colors: [
-      "#B9F2FF",
-      "#5FD3F3"
-    ]
-  },
-
-  {
-    id: "theme-legend",
-    name: "تم افسانه‌ای",
-    price: 1000,
-    colors: [
-      "#FFD700",
-      "#FF1744"
-    ]
-  }
-
-];
+export {
+  SHOP_ITEMS,
+  SHOP_CATEGORIES,
+  MAX_ITEM_PRICE,
+  ITEM_BY_ID,
+  RARITY_LABELS,
+  itemsOf,
+  readShop
+};
 
 
-// ============================================================
-// خرید
-// ============================================================
-
-export async function buyItem(
+async function shopTransaction(
   name,
-  itemId
+  operation
 ) {
 
-  const item =
-    SHOP_ITEMS.find(
-      i => i.id === itemId
-    );
-
-
-  if (!item) {
-
-    return {
-      ok: false,
-      reason: "not-found"
-    };
-
-  }
-
-
   let result = {
-
     ok: false,
-
     reason: "unknown"
-
   };
 
 
@@ -2084,97 +1984,103 @@ export async function buyItem(
     profileRef(name),
     curr => {
 
-      curr =
-        curr ||
-        blankProfile();
-
-
-      curr.purchased =
-        curr.purchased || [];
-
-
-      curr.coins =
-        Number(
-          curr.coins || 0
+      const outcome =
+        operation(
+          curr || blankProfile()
         );
 
+      result =
+        outcome.result;
 
-      if (
-        curr.purchased.includes(
-          itemId
-        )
-      ) {
-
-        result = {
-
-          ok: false,
-
-          reason: "owned"
-
-        };
-
-
-        return curr;
-
-      }
-
-
-      if (
-        curr.coins <
-        item.price
-      ) {
-
-        result = {
-
-          ok: false,
-
-          reason: "insufficient"
-
-        };
-
-
-        return curr;
-
-      }
-
-
-      curr.coins -=
-        item.price;
-
-
-      curr.purchased.push(
-        itemId
-      );
-
-
-      result = {
-        ok: true
-      };
-
-
-      return curr;
+      return outcome.profile;
 
     }
   );
 
 
+  return result;
+
+}
+
+
+// ---------- مهاجرت داده‌های قدیمی (یک‌بار، بی‌خطر) ----------
+
+export async function migrateShop(
+  name
+) {
+
+  await runTransaction(
+    profileRef(name),
+    curr => {
+
+      if (!curr) {
+        return curr;
+      }
+
+      const before =
+        curr.shop &&
+        curr.shop.version;
+
+      if (before === SHOP_VERSION) {
+        return curr;
+      }
+
+      return migrateProfile(curr);
+
+    }
+  );
+
+}
+
+
+// ---------- خرید ----------
+
+export async function buyItem(
+  name,
+  itemId
+) {
+
+  const result =
+    await shopTransaction(
+      name,
+      curr =>
+        applyPurchase(
+          curr,
+          itemId
+        )
+    );
+
+
   if (result.ok) {
 
-    await logTransaction(
-      name,
-      {
+    const item =
+      ITEM_BY_ID[itemId];
 
-        type:
-          "purchase",
+    try {
 
-        amount:
-          -item.price,
+      await logTransaction(
+        name,
+        {
+          type:
+            "purchase",
 
-        note:
-          `خرید ${item.name}`
+          amount:
+            -item.price,
 
-      }
-    );
+          note:
+            `خرید ${item.name}`
+        }
+      );
+
+    } catch (err) {
+
+      // خرید انجام شده؛ ثبت تاریخچه نباید آن را خراب کند.
+      console.warn(
+        "ثبت تراکنش خرید ناموفق بود:",
+        err
+      );
+
+    }
 
   }
 
@@ -2184,34 +2090,74 @@ export async function buyItem(
 }
 
 
-// ============================================================
-// انتخاب تم
-// ============================================================
+// ---------- فعال‌سازی / غیرفعال‌سازی ----------
 
-export async function equipTheme(
+export function equipItem(
   name,
   itemId
 ) {
 
-  await runTransaction(
-    profileRef(name),
-    curr => {
-
-      curr =
-        curr ||
-        blankProfile();
-
-
-      curr.equippedTheme =
-        itemId;
-
-
-      return curr;
-
-    }
+  return shopTransaction(
+    name,
+    curr =>
+      applyEquip(
+        curr,
+        itemId
+      )
   );
 
 }
+
+
+export function unequipCategory(
+  name,
+  categoryId
+) {
+
+  return shopTransaction(
+    name,
+    curr =>
+      applyUnequip(
+        curr,
+        categoryId
+      )
+  );
+
+}
+
+
+// سازگاری با نام قدیمی
+export function equipTheme(
+  name,
+  itemId
+) {
+
+  return equipItem(
+    name,
+    itemId
+  );
+
+}
+
+
+// ---------- علاقه‌مندی‌ها ----------
+
+export function toggleFavorite(
+  name,
+  itemId
+) {
+
+  return shopTransaction(
+    name,
+    curr =>
+      applyFavorite(
+        curr,
+        itemId
+      )
+  );
+
+}
+
 
 
 // ============================================================
