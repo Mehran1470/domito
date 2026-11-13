@@ -101,6 +101,21 @@ export function appearanceText(profile) {
   return parts.length ? parts.join("، ") : "پیش‌فرض";
 }
 
+// هم‌خوان با listenFriends در app.js: اگر اتصال‌ها ثبت شده باشند، یکی از آن‌ها آنلاین بودن را تعیین می‌کند.
+export function isPresenceOnline(presence) {
+  const p = presence && typeof presence === "object" ? presence : {};
+  const connections =
+    p.connections && typeof p.connections === "object" ? Object.values(p.connections) : [];
+  if (connections.length === 0) return p.online === true;
+  return connections.some((c) => c && c.online === true);
+}
+
+// دوستی در Firebase دوطرفه نوشته می‌شود؛ اگر یک طرف حذف شده باشد، چیزی نمی‌گوییم.
+export function isMutualFriend(viewerName, profile) {
+  const friends = profile && typeof profile === "object" ? profile.friends : null;
+  return !!(friends && typeof friends === "object" && viewerName && friends[viewerName]);
+}
+
 // فقط فیلدهای مجاز را می‌خواند؛ بقیه‌ی پروفایل هیچ‌وقت به مدل نمی‌رسد.
 export function describeFriend(name, profile, now = Date.now()) {
   const safeName = cleanText(name, 30);
@@ -127,7 +142,7 @@ export function describeFriend(name, profile, now = Date.now()) {
     profile.presence && typeof profile.presence === "object" ? profile.presence : {};
 
   let seen;
-  if (presence.online === true) {
+  if (isPresenceOnline(presence)) {
     seen = "الان آنلاین است";
   } else {
     const rel = relativeTime(presence.lastSeen || profile.lastLogin, now);
@@ -156,6 +171,44 @@ export function describeSelf(name, profile) {
     `باخت ${safeInt(profile.losses)}، تعداد بازی ${safeInt(profile.gamesPlayed)}، ` +
     `آیتم‌های خریداری‌شده ${Object.keys(purchased).length} از ${SHOP_ITEMS.length}، ` +
     `ظاهر فعلی: ${appearanceText(profile)}`
+  );
+}
+
+// ------------------------------------------------------------
+// تشخیص این‌که پیام درباره‌ی دوستان یا آمار خود کاربر است
+// (فقط برای صرفه‌جویی: داده‌ای که لازم نیست از Firebase خوانده نمی‌شود)
+// ------------------------------------------------------------
+
+function tokensOf(text) {
+  return normalizeText(text).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
+const FRIEND_TOKENS = new Set([
+  "دوست", "دوستا", "دوستان", "دوستام", "دوستهام", "دوستای", "دوستامو",
+  "رفیق", "رفیقا", "رفیقام", "رفیقان"
+]);
+const FRIEND_INFO_EXACT = new Set([
+  "کی", "کیا", "کیه", "کدوم", "لیست", "فهرست", "برد", "باخت", "امتیاز", "آمار",
+  "وضعیت", "ظاهر", "تم", "قاب", "سکه", "حضور", "online", "آخرین"
+]);
+
+// «دوستام کی آنلاینه؟»، «آمار دوستام رو بگو» و مثل این‌ها
+export function asksAboutFriends(texts) {
+  return (Array.isArray(texts) ? texts : [texts]).some((text) => {
+    const tokens = tokensOf(text);
+    if (!tokens.some((t) => FRIEND_TOKENS.has(t))) return false;
+    return tokens.some(
+      (t) => FRIEND_INFO_EXACT.has(t) || t.startsWith("آنلاین") || t.startsWith("انلاین")
+    );
+  });
+}
+
+const SELF_PREFIXES = ["سکه", "سکم", "برد", "باخت", "آمار", "پروفایل", "امتیاز", "موجودی"];
+
+// سؤال درباره‌ی سکه، برد و باخت یا پروفایل خود کاربر
+export function needsSelfInfo(texts) {
+  return (Array.isArray(texts) ? texts : [texts]).some((text) =>
+    tokensOf(text).some((t) => SELF_PREFIXES.some((p) => t.startsWith(p)))
   );
 }
 

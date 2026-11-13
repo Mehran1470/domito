@@ -115,6 +115,42 @@
   margin-top: 4px;
 }
 
+/* ASSISTANT PRIVACY */
+.priv-description {
+  line-height: 1.9;
+  margin: 8px 0 12px;
+}
+
+.priv-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,.08);
+  cursor: pointer;
+}
+
+.priv-row input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  accent-color: #5b8cff;
+}
+
+.priv-row b {
+  display: block;
+  font-size: 14px;
+}
+
+.priv-row small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.8;
+  opacity: .7;
+}
+
 /* MAIN SHOP LINK */
 .main-shop-description {
   line-height: 1.9;
@@ -224,6 +260,34 @@
       <div class="score-board" id="perGameBoard"></div>
     </div>
 
+    <!-- ASSISTANT PRIVACY -->
+    <div class="card" id="assistantPrivacyCard" style="display:none;">
+      <h2>🤖 حریم خصوصی دستیار</h2>
+
+      <p class="muted priv-description">
+        مشخص کن دستیار دومیتو درباره‌ی تو به دوستانت چه چیزهایی بگوید.
+        هر دو تیک به‌صورت پیش‌فرض خاموش است.
+      </p>
+
+      <label class="priv-row">
+        <input type="checkbox" id="privShare">
+        <span>
+          <b>نمایش اطلاعات من به دوستانم</b>
+          <small>اسم، ظاهر (تم و قاب)، برد و باخت و آخرین حضور؛ فقط به دوستانم گفته می‌شود.</small>
+        </span>
+      </label>
+
+      <label class="priv-row">
+        <input type="checkbox" id="privCoins">
+        <span>
+          <b>نمایش سکه‌های من</b>
+          <small>موجودی سکه‌ام هم گفته شود؛ فقط وقتی تیک بالا روشن باشد کار می‌کند.</small>
+        </span>
+      </label>
+
+      <p class="status-line" id="privStatus"></p>
+    </div>
+
     <!-- MAIN SHOP -->
     <div class="card" id="fullShopLinkCard" style="display:none;">
       <h2>🛍️ فروشگاه دومیتو</h2>
@@ -304,7 +368,9 @@ import {
   getPublicProfile,
   sendFriendRequest,
   getFriendStatus,
-  readShop
+  readShop,
+  readAssistantPrivacy,
+  setAssistantPrivacy
 } from "./js/app.js";
 
 import {
@@ -333,6 +399,42 @@ waitForUser().then(async (user) => {
   const isOwnProfile = !viewedUser || viewedUser === myName;
   const targetName = isOwnProfile ? myName : viewedUser;
 
+  // ASSISTANT PRIVACY (فقط برای پروفایل خود کاربر نمایش داده می‌شود)
+  const privCard = document.getElementById("assistantPrivacyCard");
+  const privShare = document.getElementById("privShare");
+  const privCoins = document.getElementById("privCoins");
+  const privStatus = document.getElementById("privStatus");
+  let privSaving = false;
+
+  async function savePrivacy(patch, input) {
+
+    if (privSaving) {
+      input.checked = !input.checked;
+      return;
+    }
+
+    privSaving = true;
+    privShare.disabled = true;
+    privCoins.disabled = true;
+    privStatus.textContent = "⏳ در حال ذخیره...";
+
+    try {
+      const saved = await setAssistantPrivacy(patch);
+      privShare.checked = saved.share;
+      privCoins.checked = saved.coins;
+      privStatus.textContent = "✅ ذخیره شد";
+    } catch (error) {
+      console.error("Assistant privacy error:", error);
+      input.checked = !input.checked;
+      privStatus.textContent = "❌ ذخیره نشد. دوباره امتحان کن.";
+    } finally {
+      privSaving = false;
+      privShare.disabled = false;
+      privCoins.disabled = false;
+    }
+
+  }
+
   // USER EXISTS
   if (!isOwnProfile) {
     const exists = await getPublicProfile(targetName);
@@ -355,6 +457,16 @@ waitForUser().then(async (user) => {
 
     document.getElementById("fullShopLinkCard").style.display = "block";
     document.getElementById("logoutBtn").style.display = "block";
+
+    privCard.style.display = "block";
+
+    privShare.addEventListener("change", () => {
+      savePrivacy({ share: privShare.checked }, privShare);
+    });
+
+    privCoins.addEventListener("change", () => {
+      savePrivacy({ coins: privCoins.checked }, privCoins);
+    });
 
     const logoutBtn = document.getElementById("logoutBtn");
     const logoutModal = document.getElementById("logoutModal");
@@ -531,6 +643,13 @@ waitForUser().then(async (user) => {
           🪙 ${Number(p.coins || 0)} سکه ←
         </a>
       `;
+
+      // تیک‌های حریم دستیار؛ وسط ذخیره‌شدن دست نمی‌زنیم تا تیک نپرد.
+      if (!privSaving) {
+        const privacy = readAssistantPrivacy(p);
+        privShare.checked = privacy.share;
+        privCoins.checked = privacy.coins;
+      }
     }
 
     // AVATAR

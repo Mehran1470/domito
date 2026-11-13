@@ -317,11 +317,11 @@ textarea::placeholder{color:var(--muted)}
 #thinkOpts button.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2))}
 #thinkOpts button.on.max{background:linear-gradient(135deg,#ff9d4d,#e0445a)}
 #thinkOpts button:disabled{opacity:.4;cursor:not-allowed}
-#thinkConfirm{
+#thinkConfirm,#buyConfirm{
  position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
  padding:20px;background:#000a;
 }
-#thinkConfirm[hidden]{display:none}
+#thinkConfirm[hidden],#buyConfirm[hidden]{display:none}
 .tc-card{
  width:100%;max-width:360px;max-height:90dvh;overflow-y:auto;padding:20px 18px 16px;
  border-radius:22px;background:var(--panel);border:1px solid var(--line);
@@ -339,6 +339,46 @@ textarea::placeholder{color:var(--muted)}
 #tcNo{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
 #tcYes{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
 #tcYes.max{background:linear-gradient(135deg,#ff9d4d,#e0445a)}
+#bcNo{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+#bcYes{color:#fff;background:linear-gradient(135deg,#2fb27a,#1f8f9e)}
+#bcYes:disabled{opacity:.5}
+
+/* پنجره‌ی تأیید خرید */
+.bc-box{
+ margin:0 0 10px;padding:4px 12px;border-radius:14px;
+ background:var(--panel2);border:1px solid var(--line);
+}
+.bc-row{
+ display:flex;justify-content:space-between;gap:10px;padding:8px 0;
+ border-top:1px solid var(--line);font-size:13.5px;
+}
+.bc-row:first-child{border-top:0}
+.bc-row span:first-child{color:var(--muted)}
+.bc-row b{text-align:left}
+
+/* فهرست فروشگاه داخل چت */
+.shopbox{
+ width:min(100%,340px);margin-top:6px;padding:10px 12px;border-radius:16px;
+ background:var(--panel);border:1px solid var(--line);
+}
+.shopbox h4{margin:0 0 4px;font-size:13.5px}
+.shopbox .it{
+ display:flex;align-items:center;gap:8px;padding:7px 0;
+ border-top:1px solid var(--line);font-size:13px;
+}
+.shopbox h4 + .it{border-top:0}
+.shopbox .sw{
+ flex:none;width:28px;height:28px;border-radius:50%;
+ display:flex;align-items:center;justify-content:center;font-size:15px;
+ border:1px solid var(--line);
+}
+.shopbox .nm{flex:1;min-width:0}
+.shopbox .pr{flex:none;color:var(--muted);font-size:12px;white-space:nowrap}
+.shopbox .own{color:var(--ok)}
+.shopbox .hint{margin:6px 0 0;font-size:11.5px;line-height:1.8;color:var(--muted)}
+
+/* یادداشت کوتاه سیستم زیر چت (خرید لغو شد، سکه کافی نیست و ...) */
+.ai .msg.note{font-size:13px;color:var(--muted);padding:8px 13px}
 
 /* منو و تنظیمات */
 #scrim{
@@ -551,14 +591,34 @@ textarea::placeholder{color:var(--muted)}
  </div>
 </div>
 
+<div id="buyConfirm" hidden>
+ <div class="tc-card" role="dialog" aria-modal="true">
+  <h3 id="bcTitle"></h3>
+  <p id="bcAsk"></p>
+  <div class="bc-box" id="bcBox"></div>
+  <p class="tc-desc" id="bcNote"></p>
+  <div class="tc-btns">
+   <button type="button" id="bcNo">انصراف</button>
+   <button type="button" id="bcYes">تأیید و خرید</button>
+  </div>
+ </div>
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
 import {
  waitForUser, getSavedName, currentUid, logoutUser,
  getAIQuota, reserveAIQuestion, finishAIQuestion,
- getAIShopInfo, buyAIQuestionWithCoins
+ getAIShopInfo, buyAIQuestionWithCoins,
+ GAMES, getPublicProfile, getFriendNames, buyItem,
+ readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf
 } from "./js/app.js";
+import {
+ cleanText, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
+ buildCatalogText, needsCatalog, needsSelfInfo, asksAboutFriends,
+ extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
+} from "./js/assistant-tools.js";
 
 // ======================================
 // ارتفاع واقعی ناحیه‌ی قابل‌دیدن (برای مرورگرهایی که 100dvh را درست حساب نمی‌کنند)
@@ -793,6 +853,9 @@ function inline(s){
  return s.split(/(`[^`\n]+`)/g).map((part, i) => {
   if(i % 2 === 1) return '<code class="inl">' + part.slice(1, -1) + "</code>";
   return part
+   // لینک بازی‌های خود دومیتو (فقط همین الگوی امن)؛ در همین تب باز می‌شود
+   .replace(/\[([^\]\n]+)\]\((\.\/games\/[a-z0-9_-]+\.html(?:\?solo=1)?)\)/gi,
+    '<a href="$2">$1</a>')
    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,
     '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
    .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
@@ -1246,6 +1309,293 @@ function makeGallery(images){
  return box;
 }
 
+// ======================================
+// زمینه‌ی دومیتو برای دستیار (دوستان، فروشگاه، بازی‌ها)
+// دستیار فقط متن می‌نویسد؛ هر اثری (خرید) فقط با دکمه‌ی تأیید خود کاربر انجام می‌شود.
+// ======================================
+
+const CONTEXT_WAIT = 4500;
+let myProfile = null;
+let friendNamesCache = { at: 0, names: [] };
+let turnContext = "";
+
+function withTimeout(promise, ms){
+ return Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))
+ ]);
+}
+
+async function refreshMyProfile(){
+ try{
+  const p = await withTimeout(getPublicProfile(userName), CONTEXT_WAIT);
+  if(p) myProfile = p;
+ }catch(e){ /* پروفایل قبلی می‌ماند */ }
+ return myProfile;
+}
+
+async function loadFriendNames(){
+ if(Date.now() - friendNamesCache.at < 60000) return friendNamesCache.names;
+ try{
+  const names = await withTimeout(getFriendNames(userName), CONTEXT_WAIT);
+  friendNamesCache = { at:Date.now(), names };
+ }catch(e){ /* همان فهرست قبلی */ }
+ return friendNamesCache.names;
+}
+
+function lastAssistantShowedShop(){
+ for(let i = conv.messages.length - 1; i >= 0; i--){
+  if(conv.messages[i].role === "assistant") return Array.isArray(conv.messages[i].shop);
+ }
+ return false;
+}
+
+// هر مرحله جدا try/catch دارد تا خطای شبکه هیچ‌وقت جلوی پاسخ را نگیرد.
+async function buildTurnContext(){
+ const dataLines = [];
+ let catalog = "";
+ try{
+  const userTexts = conv.messages.filter(m => m.role === "user").slice(-2).map(m => String(m.content));
+  const wantsCatalog = needsCatalog(lastAssistantShowedShop() ? [...userTexts, "فروشگاه"] : userTexts);
+  const wantsSelf = wantsCatalog || needsSelfInfo(userTexts);
+
+  if(wantsSelf){
+   const me = await refreshMyProfile();
+   dataLines.push(describeSelf(userName, me));
+   if(wantsCatalog) catalog = buildCatalogText(me);
+  }
+
+  const names = await loadFriendNames();
+  let targets = matchFriendNames(userTexts.join(" "), names, 3);
+  const wantsFriends = asksAboutFriends(userTexts);
+  if(!targets.length && wantsFriends) targets = names.slice(0, 8);
+
+  if(targets.length || wantsFriends){
+   if(!names.length){
+    dataLines.push("- کاربر هنوز دوستی در دومیتو ندارد.");
+   }else{
+    dataLines.push("- دوستان کاربر: " + names.slice(0, 30).map(n => cleanText(n, 30)).join("، "));
+   }
+  }
+
+  for(const name of targets){
+   try{
+    const p = await withTimeout(getPublicProfile(name), CONTEXT_WAIT);
+    // دوستی باید از هر دو طرف ثبت شده باشد؛ وگرنه مثل غریبه حساب می‌شود.
+    if(!isMutualFriend(userName, p)) continue;
+    dataLines.push(describeFriend(name, p).line);
+   }catch(e){
+    dataLines.push("- " + cleanText(name, 30) + ": خواندن اطلاعات ممکن نشد.");
+   }
+  }
+ }catch(e){
+  console.warn("Assistant context:", e);
+ }
+ return buildDomitoContext({
+  rules:buildAssistantRules(),
+  games:buildGameGuide(GAMES),
+  dataLines,
+  catalog
+ });
+}
+
+// ======================================
+// فهرست فروشگاه داخل چت
+// ======================================
+
+const HEX = /^#[0-9a-f]{3,8}$/i;
+
+function swatchFor(item){
+ const s = document.createElement("span");
+ s.className = "sw";
+ const c = item.colors;
+ if(c && HEX.test(c[0]) && HEX.test(c[1])){
+  s.style.background = "linear-gradient(135deg," + c[0] + "," + c[1] + ")";
+ }else{
+  s.style.background = "var(--panel2)";
+ }
+ if(item.emoji) s.textContent = item.emoji;
+ else if(item.category === "title") s.textContent = "👑";
+ else if(item.category === "effect") s.textContent = "✨";
+ return s;
+}
+
+function makeShopBlock(categoryId){
+ const cat = SHOP_CATEGORIES.find(c => c.id === categoryId);
+ const box = document.createElement("div");
+ box.className = "shopbox";
+ if(!cat) return box;
+ const owned = readShop(myProfile || {}).purchased;
+ const h = document.createElement("h4");
+ h.textContent = cat.icon + " " + cat.label + "‌های فروشگاه";
+ box.appendChild(h);
+ itemsOf(cat.id).forEach(item => {
+  const row = document.createElement("div");
+  row.className = "it";
+  const nm = document.createElement("span");
+  nm.className = "nm";
+  nm.textContent = item.name;
+  const pr = document.createElement("span");
+  pr.className = "pr";
+  if(owned[item.id]){
+   pr.classList.add("own");
+   pr.textContent = "✅ داری";
+  }else{
+   pr.textContent = toFa(item.price) + " 🪙";
+  }
+  row.append(swatchFor(item), nm, pr);
+  box.appendChild(row);
+ });
+ const hint = document.createElement("p");
+ hint.className = "hint";
+ hint.textContent = "برای خرید بنویس مثلاً «" + itemsOf(cat.id)[0].name + " رو بخر»؛ قبل از کم‌شدن سکه، پنجره‌ی تأیید باز می‌شه.";
+ box.appendChild(hint);
+ return box;
+}
+
+// ======================================
+// خرید با تأیید: فقط با زدن دکمه‌ی خود کاربر انجام می‌شود
+// ======================================
+
+let purchasing = false;
+
+function confirmBuy({ title, ask, rows, note }){
+ return new Promise(resolve => {
+  const box = $("buyConfirm");
+  $("bcTitle").textContent = title;
+  $("bcAsk").textContent = ask;
+  $("bcNote").textContent = note || "";
+  const list = $("bcBox");
+  list.textContent = "";
+  rows.forEach(([label, value]) => {
+   const r = document.createElement("div");
+   r.className = "bc-row";
+   const a = document.createElement("span");
+   a.textContent = label;
+   const b = document.createElement("b");
+   b.textContent = value;
+   r.append(a, b);
+   list.appendChild(r);
+  });
+  box.hidden = false;
+  const close = v => {
+   box.hidden = true;
+   $("bcYes").onclick = null;
+   $("bcNo").onclick = null;
+   box.onclick = null;
+   resolve(v);
+  };
+  $("bcYes").onclick = e => { if(e.isTrusted) close(true); };
+  $("bcNo").onclick = () => close(false);
+  box.onclick = e => { if(e.target === box) close(false); };
+ });
+}
+
+function addNote(text){
+ const { row, msg } = makeRow("ai", text, false);
+ msg.classList.add("note");
+ chat.appendChild(row);
+ scrollDown(true);
+}
+
+async function proposeItem(itemId){
+ const item = ITEM_BY_ID[itemId];
+ if(!item) return;
+ const profile = await refreshMyProfile();
+ if(!profile){ addNote("پروفایلت خوانده نشد؛ دوباره امتحان کن."); return; }
+ if(readShop(profile).purchased[item.id]){
+  addNote("«" + item.name + "» رو از قبل داری.");
+  return;
+ }
+ const coins = Math.max(0, Math.floor(Number(profile.coins) || 0));
+ if(coins < item.price){
+  addNote("سکه‌ات برای «" + item.name + "» کافی نیست؛ " + toFa(coins) + " سکه داری و " + toFa(item.price) + " لازمه.");
+  return;
+ }
+ const ok = await confirmBuy({
+  title:"🛒 تأیید خرید",
+  ask:"می‌خوای «" + item.name + "» رو بخری؟",
+  rows:[
+   ["قیمت", toFa(item.price) + " 🪙"],
+   ["سکه‌ی فعلی", toFa(coins) + " 🪙"],
+   ["بعد از خرید", toFa(coins - item.price) + " 🪙"]
+  ],
+  note:"با زدن «تأیید و خرید» سکه از حسابت کم می‌شه."
+ });
+ if(!ok){ addNote("خرید لغو شد."); return; }
+ purchasing = true;
+ try{
+  const r = await buyItem(userName, item.id);
+  if(r.ok){
+   await refreshMyProfile();
+   renderConversation(); // تا فهرست‌های بالا هم «✅ داری» را نشان بدهند
+   toast("🛒 «" + item.name + "» خریده شد");
+   addNote("✅ «" + item.name + "» رو خریدی. می‌تونی از پروفایل یا فروشگاه فعالش کنی.");
+  }else{
+   const msg = { owned:"این آیتم رو از قبل داری.", insufficient:"سکه‌ات کافی نیست.", "not-found":"این آیتم پیدا نشد." };
+   addNote(msg[r.reason] || "خرید انجام نشد.");
+  }
+ }catch(e){
+  console.error("Assistant buy item:", e);
+  addNote("خرید انجام نشد. دوباره تلاش کن.");
+ }
+ purchasing = false;
+}
+
+async function proposeQuestion(){
+ if(quotaState && quotaState.unlimited){
+  addNote("حساب نامحدود نیازی به خرید سؤال نداره.");
+  return;
+ }
+ let s;
+ try{
+  s = await withTimeout(getAIShopInfo(), 6000);
+ }catch(e){
+  addNote("خواندن سکه‌ها ممکن نشد؛ دوباره امتحان کن.");
+  return;
+ }
+ if(s.bought >= s.max){ addNote("سقف خرید امروز (" + toFa(s.max) + " بار) تموم شده."); return; }
+ if(s.coins < s.price){
+  addNote("سکه‌ات برای خرید سؤال کافی نیست؛ " + toFa(s.coins) + " سکه داری و " + toFa(s.price) + " لازمه.");
+  return;
+ }
+ const ok = await confirmBuy({
+  title:"🛒 تأیید خرید سؤال",
+  ask:"می‌خوای ۱ سؤال با سکه بخری؟",
+  rows:[
+   ["قیمت", toFa(s.price) + " 🪙"],
+   ["سکه‌ی فعلی", toFa(s.coins) + " 🪙"],
+   ["بعد از خرید", toFa(s.coins - s.price) + " 🪙"],
+   ["خرید امروز", toFa(s.bought + 1) + " از " + toFa(s.max)]
+  ],
+  note:"با زدن «تأیید و خرید» سکه از حسابت کم می‌شه."
+ });
+ if(!ok){ addNote("خرید لغو شد."); return; }
+ purchasing = true;
+ try{
+  const r = await buyAIQuestionWithCoins();
+  if(r.ok){
+   quotaState = r.quota;
+   updateQuotaDisplay();
+   toast("🪙 یک سؤال خریدی؛ " + toFa(r.quota.remaining) + " سؤال باقی مانده");
+   addNote("✅ یک سؤال خریدی. " + toFa(r.quota.remaining) + " سؤال باقی مانده.");
+  }else{
+   const msg = { insufficient:"سکه‌ات کافی نیست.", "daily-cap":"سقف خرید امروز تموم شده.", "no-profile":"پروفایل پیدا نشد." };
+   addNote(msg[r.reason] || "خرید انجام نشد.");
+  }
+ }catch(e){
+  console.error("Assistant buy question:", e);
+  addNote("خرید انجام نشد. دوباره تلاش کن.");
+ }
+ purchasing = false;
+}
+
+async function handleProposal(action){
+ if(purchasing || !action) return;
+ if(action.type === "buy") await proposeItem(action.itemId);
+ else if(action.type === "buyq") await proposeQuestion();
+}
+
 function actionBar(index, isLastAI){
  const bar = document.createElement("div");
  bar.className = "actions";
@@ -1279,6 +1629,10 @@ function renderConversation(){
   const { row, msg } = makeRow(isUser ? "user" : "ai", isUser ? m.content : render(m.content), !isUser);
   if(isUser) msg.textContent = m.content;
   if(!isUser && m.images && m.images.length) row.appendChild(makeGallery(cleanImages(m.images)));
+  if(!isUser && Array.isArray(m.shop)){
+   m.shop.filter(c => SHOP_CATEGORIES.some(x => x.id === c)).slice(0, 2)
+    .forEach(c => row.appendChild(makeShopBlock(c)));
+  }
   row.appendChild(actionBar(i, i === lastAI && i === conv.messages.length - 1));
   chat.appendChild(row);
  });
@@ -1481,6 +1835,7 @@ function systemMessage(){
  const p = PERSONAS[conv?.persona] || PERSONAS.friend;
  let content = BASE_PROMPT + " " + p.prompt + " " + (LENGTHS[settings.length] || LENGTHS.normal);
  if(userName) content += " نام کاربر: " + userName + ".";
+ if(turnContext) content += "\n\n" + turnContext;
  return { role:"system", content };
 }
 
@@ -1554,6 +1909,9 @@ async function runAssistant(reservationId, lastContent, mode, search){
  if(mode !== "low") setStatus("در حال فکر کردن...", "busy");
  if(search) setStatus("در حال جستجو در وب...", "busy");
  const { row, msg } = addTyping();
+ // اطلاعات دوستان، فروشگاه و بازی‌ها؛ اگر خواندنشان خراب شود پاسخ بدون آن‌ها هم کار می‌کند.
+ turnContext = await buildTurnContext();
+ let proposal = null;
  const ctrl = new AbortController();
  abortCtrl = ctrl;
  const limitMs = (mode === "max" ? 130000 : mode === "medium" ? 100000 : 70000) + (search ? 20000 : 0);
@@ -1576,13 +1934,24 @@ async function runAssistant(reservationId, lastContent, mode, search){
   const data = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error(data.error || "HTTP " + res.status);
 
-  const answer = (data.choices?.[0]?.message?.content || "").trim();
+  const rawAnswer = (data.choices?.[0]?.message?.content || "").trim();
+  if(!rawAnswer) throw new Error("پاسخ خالی بود");
+
+  // برچسب‌های [[SHOP]] و [[BUY]] از متن جدا می‌شوند و هیچ‌وقت نمایش یا ذخیره نمی‌شوند.
+  const parsed = extractActions(rawAnswer);
+  const answer = parsed.text || fallbackTextFor(parsed.actions);
   if(!answer) throw new Error("پاسخ خالی بود");
 
   abortCtrl = null;
   const found = cleanImages(data.images);
   const reply = { role:"assistant", content:answer, t:Date.now(), think:mode, search };
   if(found.length) reply.images = found;
+  const shopCategories = parsed.actions.filter(a => a.type === "shop").map(a => a.category);
+  if(shopCategories.length){
+   reply.shop = shopCategories;
+   await refreshMyProfile(); // تا «✅ داری» در فهرست درست باشد
+  }
+  proposal = parsed.actions.find(a => a.type === "buy" || a.type === "buyq") || null;
   conv.messages.push(reply);
   persistCurrent();
   success = true;
@@ -1614,6 +1983,8 @@ async function runAssistant(reservationId, lastContent, mode, search){
  setBusy(false);
  if(success) renderConversation();
  if(failedStatus) setStatus("خطا در اتصال", "err");
+ // پیشنهاد خرید دستیار: پنجره‌ی تأیید باز می‌شود و فقط با دکمه‌ی خود کاربر خرید انجام می‌شود.
+ if(success && proposal) await handleProposal(proposal);
  input.focus();
 }
 
@@ -1751,6 +2122,8 @@ async function initializeDomitoAccount(){
   newConv();
   renderConversation();
   updateSendButton();
+  // برای نشان‌دادن «✅ داری» در فهرست فروشگاه؛ منتظرش نمی‌مانیم.
+  refreshMyProfile();
   await refreshQuota();
  }catch(error){
   console.error("Domito account/quota init:", error);

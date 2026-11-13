@@ -1645,6 +1645,122 @@ export function listenProfile(
 
 
 // ============================================================
+// حریم دستیار
+// profiles/{name}/assistantPrivacy = { share: true/false, coins: true/false }
+//   share: دستیار اسم، ظاهر، برد و باخت و آخرین حضور من را فقط به دوستانم بگوید.
+//   coins: دستیار موجودی سکه‌ی مرا هم (فقط به دوستانم) بگوید.
+// پیش‌فرض هر دو خاموش است. این فقط تنظیم رفتار دستیار است، نه قفل دیتابیس.
+// ============================================================
+
+export function readAssistantPrivacy(profile) {
+
+  const raw =
+    profile &&
+    profile.assistantPrivacy &&
+    typeof profile.assistantPrivacy === "object"
+      ? profile.assistantPrivacy
+      : {};
+
+  return {
+    share: raw.share === true,
+    coins: raw.coins === true
+  };
+
+}
+
+
+export async function getAssistantPrivacy(
+  name = getSavedName()
+) {
+
+  if (!name) {
+    return readAssistantPrivacy(null);
+  }
+
+  const snap =
+    await get(
+      profileRef(name, "assistantPrivacy")
+    );
+
+  return readAssistantPrivacy({
+    assistantPrivacy: snap.val()
+  });
+
+}
+
+
+// فقط صاحب حساب برای خودش می‌نویسد؛ فقط کلیدهای share و coins پذیرفته می‌شوند.
+export async function setAssistantPrivacy(
+  patch
+) {
+
+  const name = getSavedName();
+
+  if (!currentUid() || !name) {
+
+    const error =
+      new Error(
+        "برای تغییر این تنظیم باید وارد حساب دومیتو شوی."
+      );
+
+    error.code = "not-authenticated";
+
+    throw error;
+
+  }
+
+  const next = {};
+
+  if (patch && typeof patch.share === "boolean") {
+    next.share = patch.share;
+  }
+
+  if (patch && typeof patch.coins === "boolean") {
+    next.coins = patch.coins;
+  }
+
+  if (Object.keys(next).length) {
+
+    await update(
+      profileRef(name, "assistantPrivacy"),
+      next
+    );
+
+  }
+
+  return getAssistantPrivacy(name);
+
+}
+
+
+// اسم دوستان خود کاربر (برای پیدا کردن اسم دوست داخل پیام به دستیار)
+export async function getFriendNames(
+  myName = getSavedName()
+) {
+
+  if (!myName) {
+    return [];
+  }
+
+  const snap =
+    await get(
+      profileRef(myName, "friends")
+    );
+
+  const val = snap.val();
+
+  if (!val || typeof val !== "object") {
+    return [];
+  }
+
+  return Object.keys(val).filter(
+    key => val[key]
+  );
+
+}
+
+
+// ============================================================
 // نتیجه بازی
 // ============================================================
 
