@@ -1939,8 +1939,11 @@ async function runAssistant(reservationId, lastContent, mode, search){
 
   // برچسب‌های [[SHOP]] و [[BUY]] از متن جدا می‌شوند و هیچ‌وقت نمایش یا ذخیره نمی‌شوند.
   const parsed = extractActions(rawAnswer);
-  const answer = parsed.text || fallbackTextFor(parsed.actions);
-  if(!answer) throw new Error("پاسخ خالی بود");
+  // فروشگاه و خرید فقط وقتی اجرا می‌شوند که کاربر در آخرین پیامش خودش از فروشگاه یا خرید حرف زده باشد؛
+  // اگر مدل بی‌جا برچسب گذاشت (مثلاً برای درخواست بازی)، نادیده گرفته می‌شود.
+  const lastUser = [...conv.messages].reverse().find(m => m.role === "user");
+  if(!needsCatalog([lastUser ? String(lastUser.content) : ""])) parsed.actions = [];
+  const answer = parsed.text || fallbackTextFor(parsed.actions) || "منظورت رو متوجه نشدم؛ دوباره بگو.";
 
   abortCtrl = null;
   const found = cleanImages(data.images);

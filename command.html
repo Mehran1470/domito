@@ -488,7 +488,9 @@
 
       joinRoomByCode,
 
-      leaveLobby
+      leaveLobby,
+
+      isAdminUser
 
     } from "./js/app.js";
 
@@ -672,7 +674,21 @@
     // اجرای دستور
     // ==========================================================
 
+    // فقط حساب‌هایی که زیر admins/{uid} = true هستند اجازه‌ی اجرای دستور دارند.
+    let adminOk = false;
+
     async function runCommand() {
+
+      if (!adminOk) {
+
+        showMessage(
+          "⛔ این پنل فقط برای ادمین است."
+        );
+
+        return;
+
+      }
+
 
 
       const command =
@@ -1990,7 +2006,7 @@
     waitForUser()
 
       .then(
-        user => {
+        async user => {
 
           if (!user) {
 
@@ -2001,6 +2017,40 @@
 
           }
 
+
+          input.disabled = true;
+
+          runButton.disabled = true;
+
+
+          adminOk =
+            await isAdminUser();
+
+
+          if (!adminOk) {
+
+            showMessage(
+              "⛔ این پنل فقط برای ادمین است."
+            );
+
+            setTimeout(
+              () => {
+
+                window.location.href =
+                  "index.html";
+
+              },
+              1800
+            );
+
+            return;
+
+          }
+
+
+          input.disabled = false;
+
+          runButton.disabled = false;
 
           input.focus();
 

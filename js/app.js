@@ -4558,6 +4558,11 @@ async function aiIsUnlimited() {
   aiUnlimitedCache = { uid, value };
   return value;
 }
+// ادمین بودن حساب فعلی (همان چک سؤال نامحدود). اگر خواندن ممنوع یا ناموفق باشد، false برمی‌گردد.
+export async function isAdminUser() {
+  return aiIsUnlimited();
+}
+
 function aiUnlimitedQuota() {
   return { day: aiDayKey(), used: 0, bonus: 0, limit: 999999, pending: 0, remaining: 999999, unlimited: true };
 }
