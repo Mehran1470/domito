@@ -373,8 +373,8 @@ function updateHudRoom() {
   cargoP1El.textContent = me.cargo;
   othersHud.innerHTML = Object.values(others).map((o) => `
     <div class="astra-hud-chip">
-      <div class="name" style="color:${o.color};">🚀 ${o.name}</div>
-      <div class="mini-bar"><div class="mini-fill" style="width:${o.fuel || 0}%; background:${o.color};"></div></div>
+      <div class="name" style="color:${safeColor(o.color)};">🚀 ${escapeHtml(o.name)}</div>
+      <div class="mini-bar"><div class="mini-fill" style="width:${Math.max(0, Math.min(100, Number(o.fuel) || 0))}%; background:${safeColor(o.color)};"></div></div>
     </div>
   `).join("");
 }
@@ -606,3 +606,6 @@ init();
 window.addEventListener("beforeunload", () => {
   if (!isSolo && myUid) remove(A(`players/${myUid}`));
 });
+
+function escapeHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function safeColor(c){return /^#[0-9a-fA-F]{3,8}$/.test(String(c))?String(c):"#9B5CFF";}

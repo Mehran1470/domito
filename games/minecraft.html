@@ -1055,7 +1055,7 @@ function renderSlots(){
   const d=readSave(s),card=document.createElement('div');card.className='slotCard'+(d?'':' empty');
   if(d){
    const mins=Math.floor((d.pt||0)/60),dt=new Date(d.ts).toLocaleDateString('fa-IR');
-   card.innerHTML='<div class="meta"><b>'+(d.name||'دنیا')+'</b><small>'+(d.mode==='creative'?'🪽 خلاقانه':'❤️ بقا')+' • '+fa(mins)+' دقیقه • '+dt+'</small></div>';
+   card.innerHTML='<div class="meta"><b>'+esc2(d.name||'دنیا')+'</b><small>'+(d.mode==='creative'?'🪽 خلاقانه':'❤️ بقا')+' • '+fa(mins)+' دقیقه • '+dt+'</small></div>';
    const play=document.createElement('button');play.textContent='▶ ادامه';play.onclick=()=>startWorld({slot:s,seed:d.seed,mode:d.mode,skin:d.skin,name:d.name,data:d});
    const del=document.createElement('button');del.className='del';del.textContent='🗑';del.onclick=()=>{if(del.dataset.s){localStorage.removeItem(SAVE_KEY(s));renderSlots()}else{del.dataset.s=1;del.textContent='؟ حذف';setTimeout(()=>{del.dataset.s='';del.textContent='🗑'},2500)}};
    card.append(play,del);

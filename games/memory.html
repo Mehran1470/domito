@@ -32,6 +32,8 @@
   </div>
 
 <script type="module">
+function escapeHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+
   import {
     roomRef, getSavedRoom, onValue, waitForUser, currentUid, getSavedName,
     submitResult, resetSessionForNextRound, recordRoundResult, soloWon
@@ -140,7 +142,7 @@
       Object.entries(results).sort((a, b) => b[1].score - a[1].score).forEach(([uid, r]) => {
         const row = document.createElement("div");
         row.className = "score-row" + (r.score === maxScore ? " winner" : "");
-        row.innerHTML = `<span>${r.name}</span><span class="points">${r.score}</span>`;
+        row.innerHTML = `<span>${escapeHtml(r.name)}</span><span class="points">${r.score}</span>`;
         board.appendChild(row);
       });
       setTimeout(async () => { await resetSessionForNextRound(); window.location.href = "../lobby.html"; }, 4000);

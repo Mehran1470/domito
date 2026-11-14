@@ -555,6 +555,15 @@ export async function registerUser(
 
   }
 
+  // فقط حرف، عدد، فاصله، _ و - ؛ بدون نویسه‌های HTML و کنترلی
+  if (!/^[\p{L}\p{N}_\- ]{2,20}$/u.test(username)) {
+
+    throw new Error(
+      "invalid-username"
+    );
+
+  }
+
 
   const cred =
     await createUserWithEmailAndPassword(

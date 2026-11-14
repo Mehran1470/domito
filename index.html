@@ -433,6 +433,8 @@
 
 <!-- APP -->
 <script type="module">
+function escapeHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+
 import {
   registerUser,
   loginUser,
@@ -515,6 +517,9 @@ authBtn.addEventListener("click", async () => {
     if (e.code === "auth/email-already-in-use") {
       authStatus.textContent =
         "این نام‌کاربری قبلاً گرفته شده. برو تب ورود.";
+    } else if (e.message === "invalid-username") {
+      authStatus.textContent =
+        "نام‌کاربری باید ۲ تا ۲۰ کاراکتر و فقط حرف، عدد، فاصله، _ یا - باشد.";
     } else if (
       e.code === "auth/invalid-credential" ||
       e.code === "auth/wrong-password"
@@ -767,7 +772,7 @@ async function renderLeaderboard() {
         <a
           href="profile.html?user=${encodeURIComponent(p.name)}"
           class="who friend-name-link"
-        >${p.name}</a>
+        >${escapeHtml(p.name)}</a>
 
         <span class="score">${p.wins} برد</span>
       </div>

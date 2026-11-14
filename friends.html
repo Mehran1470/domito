@@ -230,6 +230,8 @@
 
 
 <script type="module">
+function escapeHtml(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+
 
 import {
 
@@ -626,7 +628,7 @@ waitForUser().then(
 
             row.innerHTML = `
               <span class="txt">
-                👤 ${fromName}
+                👤 ${escapeHtml(fromName)}
               </span>
             `;
 
