@@ -611,14 +611,14 @@ import {
  waitForUser, getSavedName, currentUid, logoutUser,
  getAIQuota, reserveAIQuestion, finishAIQuestion,
  getAIShopInfo, buyAIQuestionWithCoins, isAdminUser,
- getMyAccess, getUserAccess, setUserAccess, resetUserAccess,
+ getMyAccess, getUserAccess, setUserAccess, resetUserAccess, createRoom,
  GAMES, getPublicProfile, getFriendNames, buyItem,
  readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf
 } from "./js/app.js";
 import {
  cleanText, describeAdmin, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
  buildCatalogText, needsCatalog, needsSelfInfo, asksAboutFriends,
- asksAccessChange, extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
+ asksAccessChange, detectIntent, intentFallback, intentHint, extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
 } from "./js/assistant-tools.js";
 import {
  readAccess, assistantGate, describeAccess, describeChange
@@ -1325,6 +1325,7 @@ function makeGallery(images){
 
 let myAccess = readAccess(null);
 let turnIsAdmin = false;
+let turnIntent = null; // قصد کاربر در همین نوبت: فروشگاه، باز کردن جایی یا ساخت اتاق
 
 function isAdminNow(){ return !!(quotaState && quotaState.unlimited); }
 function can(what){ return isAdminNow() || (myAccess[what] && !myAccess.blocked); }
@@ -1399,7 +1400,14 @@ async function buildTurnContext(){
  let catalog = "";
  try{
   const userTexts = conv.messages.filter(m => m.role === "user").slice(-2).map(m => String(m.content));
-  const wantsCatalog = needsCatalog(lastAssistantShowedShop() ? [...userTexts, "فروشگاه"] : userTexts);
+  const lastText = userTexts[userTexts.length - 1] || "";
+  // فهرست آیتم‌ها فقط وقتی به مدل داده می‌شود که کاربر خودش از فروشگاه/خرید گفته؛
+  // بعد از نمایش فهرست هم فقط برای جمله‌های خرید («اولی رو بخر»).
+  const wantsCatalog = needsCatalog([lastText]) ||
+   (lastAssistantShowedShop() && /(بخر|بگیر|اولی|دومی|سومی|همین|اون)/.test(lastText));
+  turnIntent = detectIntent(lastText, GAMES);
+  const hint = intentHint(turnIntent);
+  if(hint) dataLines.push(hint);
   const wantsSelf = wantsCatalog || needsSelfInfo(userTexts);
   turnIsAdmin = false;
 
@@ -1469,7 +1477,7 @@ function swatchFor(item){
  return s;
 }
 
-function makeShopBlock(categoryId){
+function makeShopBlock(categoryId, withHint = true){
  const cat = SHOP_CATEGORIES.find(c => c.id === categoryId);
  const box = document.createElement("div");
  box.className = "shopbox";
@@ -1495,6 +1503,7 @@ function makeShopBlock(categoryId){
   row.append(swatchFor(item), nm, pr);
   box.appendChild(row);
  });
+ if(!withHint) return box;
  const hint = document.createElement("p");
  hint.className = "hint";
  hint.textContent = "برای خرید بنویس مثلاً «" + itemsOf(cat.id)[0].name + " رو بخر»؛ قبل از کم‌شدن سکه، پنجره‌ی تأیید باز می‌شه.";
@@ -1685,6 +1694,45 @@ async function proposeAccess(action){
  purchasing = false;
 }
 
+// باز کردن صفحه‌های خود دومیتو (فقط فهرست امن بالا) و ساخت اتاق با تأیید.
+let opening = false;
+
+function openPlace(intent){
+ if(opening) return;
+ const ok = /^\.\/(profile|friends|wallet|index|lobby|shop)\.html$|^\.\/games\/[a-z0-9_-]+\.html(\?solo=1)?$/i.test(intent.url);
+ if(!ok) return; // پنل دستورات و هر آدرس دیگر هرگز باز نمی‌شود
+ opening = true;
+ addNote("🚪 در حال باز کردن «" + intent.label + "»...");
+ setTimeout(() => { location.href = intent.url; }, 900);
+}
+
+async function proposeCreateRoom(){
+ const ok = await confirmBuy({
+  title:"➕ ساخت اتاق",
+  ask:"یه اتاق جدید بسازم؟",
+  rows:[["کار","ساخت اتاق جدید و رفتن به لابی"]],
+  note:"فقط با زدن «بساز» اتاق ساخته می‌شه.",
+  yes:"بساز"
+ });
+ if(!ok){ addNote("ساخت اتاق لغو شد."); return; }
+ purchasing = true;
+ try{
+  await createRoom();
+  addNote("✅ اتاق ساخته شد؛ می‌برمت به لابی...");
+  setTimeout(() => { location.href = "./lobby.html"; }, 900);
+ }catch(e){
+  console.error("Assistant create room:", e);
+  addNote("ساخت اتاق انجام نشد. دوباره تلاش کن.");
+ }
+ purchasing = false;
+}
+
+async function runIntent(intent){
+ if(!intent) return;
+ if(intent.kind === "open") openPlace(intent);
+ else if(intent.kind === "create-room" && !purchasing) await proposeCreateRoom();
+}
+
 async function handleProposal(action){
  if(purchasing || !action) return;
  if(action.type === "buy") await proposeItem(action.itemId);
@@ -1726,8 +1774,8 @@ function renderConversation(){
   if(isUser) msg.textContent = m.content;
   if(!isUser && m.images && m.images.length) row.appendChild(makeGallery(cleanImages(m.images)));
   if(!isUser && Array.isArray(m.shop)){
-   m.shop.filter(c => SHOP_CATEGORIES.some(x => x.id === c)).slice(0, 2)
-    .forEach(c => row.appendChild(makeShopBlock(c)));
+   m.shop.filter(c => SHOP_CATEGORIES.some(x => x.id === c)).slice(0, SHOP_CATEGORIES.length)
+    .forEach((c, idx, arr) => row.appendChild(makeShopBlock(c, idx === arr.length - 1)));
   }
   row.appendChild(actionBar(i, i === lastAI && i === conv.messages.length - 1));
   chat.appendChild(row);
@@ -2043,19 +2091,22 @@ async function runAssistant(reservationId, lastContent, mode, search){
   // اگر مدل بی‌جا برچسب گذاشت (مثلاً برای درخواست بازی)، نادیده گرفته می‌شود.
   const lastUser = [...conv.messages].reverse().find(m => m.role === "user");
   const lastText = lastUser ? String(lastUser.content) : "";
-  const shopOk = needsCatalog([lastText]);
+  const shopOk = needsCatalog([lastText]) && /(بخر|خرید)/.test(lastText);
   // تغییر دسترسی: فقط وقتی خود برنامه ادمین بودن را تأیید کرده و پیام کاربر درباره‌ی دسترسی بوده.
   const accessOk = turnIsAdmin && asksAccessChange(lastText);
+  // برچسب فروشگاه مدل نادیده گرفته می‌شود؛ فهرست فقط با قصد خود کاربر (turnIntent) نمایش داده می‌شود.
   parsed.actions = parsed.actions.filter(a =>
-   a.type.startsWith("access") ? accessOk : shopOk
+   a.type === "shop" ? false : a.type.startsWith("access") ? accessOk : shopOk
   );
-  const answer = parsed.text || fallbackTextFor(parsed.actions) || "منظورت رو متوجه نشدم؛ دوباره بگو.";
+  const answer = parsed.text || fallbackTextFor(parsed.actions) || intentFallback(turnIntent) || "منظورت رو متوجه نشدم؛ دوباره بگو.";
 
   abortCtrl = null;
   const found = can("images") ? cleanImages(data.images) : [];
   const reply = { role:"assistant", content:answer, t:Date.now(), think:mode, search };
   if(found.length) reply.images = found;
-  const shopCategories = parsed.actions.filter(a => a.type === "shop").map(a => a.category);
+  const shopCategories =
+   turnIntent && turnIntent.kind === "shop-all" ? SHOP_CATEGORIES.map(c => c.id) :
+   turnIntent && turnIntent.kind === "shop-cat" ? [turnIntent.category] : [];
   if(shopCategories.length){
    reply.shop = shopCategories;
    await refreshMyProfile(); // تا «✅ داری» در فهرست درست باشد
@@ -2094,6 +2145,7 @@ async function runAssistant(reservationId, lastContent, mode, search){
  if(failedStatus) setStatus("خطا در اتصال", "err");
  // پیشنهاد خرید دستیار: پنجره‌ی تأیید باز می‌شود و فقط با دکمه‌ی خود کاربر خرید انجام می‌شود.
  if(success && proposal) await handleProposal(proposal);
+ if(success) await runIntent(turnIntent);
  input.focus();
 }
 
