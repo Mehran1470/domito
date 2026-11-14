@@ -61,6 +61,8 @@ export function normalizeKey(text) {
 
 const ON_WORDS = ["on", "true", "yes", "1", "روشن", "باز", "فعال", "آزاد", "بله", "اره", "آره"];
 const OFF_WORDS = ["off", "false", "no", "خاموش", "بسته", "غیرفعال", "ببند", "قطع"];
+const UNBLOCK_WORDS = ["off", "خاموش", "رفع", "آزاد", "باز", "بازش کن", "پیش‌فرض", "پیشفرض", "default", "reset", "عادی"];
+const CLOSE_WORDS = ["on", "روشن", "ببند", "بسته", "مسدود", "بلاک", "قطع"];
 const RESET_WORDS = ["default", "reset", "پیش‌فرض", "پیشفرض", "عادی", "حذف"];
 
 // مقدار متنی را برای یک کلید به مقدار درست تبدیل می‌کند.
@@ -87,9 +89,11 @@ export function parseAccessValue(key, text) {
   }
 
   // hours
-  if (RESET_WORDS.some((w) => norm(w) === t) || OFF_WORDS.some((w) => norm(w) === t) || t === "0") {
+  // رفع مسدودی: فقط کلمه‌های روشن؛ «ببند/بسته» عمداً اینجا نیست چون یعنی مسدود کردن.
+  if (UNBLOCK_WORDS.some((w) => norm(w) === t) || t === "0") {
     return { ok: true, value: 0 };
   }
+  if (CLOSE_WORDS.some((w) => norm(w) === t)) return { ok: false, reason: "need-hours" };
   if (!/^\d{1,4}$/.test(t)) return { ok: false, reason: "bad-value" };
   const h = Number(t);
   if (h < 1) return { ok: true, value: 0 };
