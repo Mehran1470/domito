@@ -610,12 +610,12 @@ textarea::placeholder{color:var(--muted)}
 import {
  waitForUser, getSavedName, currentUid, logoutUser,
  getAIQuota, reserveAIQuestion, finishAIQuestion,
- getAIShopInfo, buyAIQuestionWithCoins,
+ getAIShopInfo, buyAIQuestionWithCoins, isAdminUser,
  GAMES, getPublicProfile, getFriendNames, buyItem,
  readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf
 } from "./js/app.js";
 import {
- cleanText, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
+ cleanText, describeAdmin, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
  buildCatalogText, needsCatalog, needsSelfInfo, asksAboutFriends,
  extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
 } from "./js/assistant-tools.js";
@@ -1358,6 +1358,11 @@ async function buildTurnContext(){
   const userTexts = conv.messages.filter(m => m.role === "user").slice(-2).map(m => String(m.content));
   const wantsCatalog = needsCatalog(lastAssistantShowedShop() ? [...userTexts, "فروشگاه"] : userTexts);
   const wantsSelf = wantsCatalog || needsSelfInfo(userTexts);
+
+  // ادمین بودن را خود برنامه از Firebase چک می‌کند، نه حرف کاربر.
+  try{
+   if(await withTimeout(isAdminUser(), CONTEXT_WAIT)) dataLines.push(describeAdmin(userName));
+  }catch(e){ /* ادمین شناخته نمی‌شود */ }
 
   if(wantsSelf){
    const me = await refreshMyProfile();
