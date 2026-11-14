@@ -611,14 +611,18 @@ import {
  waitForUser, getSavedName, currentUid, logoutUser,
  getAIQuota, reserveAIQuestion, finishAIQuestion,
  getAIShopInfo, buyAIQuestionWithCoins, isAdminUser,
+ getMyAccess, getUserAccess, setUserAccess, resetUserAccess,
  GAMES, getPublicProfile, getFriendNames, buyItem,
  readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf
 } from "./js/app.js";
 import {
  cleanText, describeAdmin, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
  buildCatalogText, needsCatalog, needsSelfInfo, asksAboutFriends,
- extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
+ asksAccessChange, extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
 } from "./js/assistant-tools.js";
+import {
+ readAccess, assistantGate, describeAccess, describeChange
+} from "./js/access-control.js";
 
 // ======================================
 // ارتفاع واقعی ناحیه‌ی قابل‌دیدن (برای مرورگرهایی که 100dvh را درست حساب نمی‌کنند)
@@ -760,6 +764,7 @@ async function chooseThink(key){
  if(busy) return;
  closePin();
  if(key === thinkMode) return;
+ if(key !== "low" && !can("think")){ toast("حالت تفکر برای حساب تو بسته است."); return; }
  if(key !== "low"){
   if(!canSendMessage()){ showLimitMessage(); return; }
   if(!quotaState.unlimited && quotaRemaining() < THINK[key].cost){
@@ -1054,7 +1059,7 @@ $("buyQ").onclick = async () => {
    updateQuotaDisplay();
    toast("🪙 یک سؤال خریدی؛ " + toFa(r.quota.remaining) + " سؤال باقی مانده");
   }else{
-   const msg = { insufficient:"سکه‌ات کافی نیست.", "daily-cap":"سقف خرید امروز تموم شده.", "no-profile":"پروفایل پیدا نشد." };
+   const msg = { insufficient:"سکه‌ات کافی نیست.", "daily-cap":"سقف خرید امروز تموم شده.", "no-profile":"پروفایل پیدا نشد.", "no-access":"خرید برای حساب تو بسته شده." };
    toast(msg[r.reason] || "خرید انجام نشد.");
   }
  }catch(e){
@@ -1314,6 +1319,44 @@ function makeGallery(images){
 // دستیار فقط متن می‌نویسد؛ هر اثری (خرید) فقط با دکمه‌ی تأیید خود کاربر انجام می‌شود.
 // ======================================
 
+// ======================================
+// دسترسی این کاربر (adminAccess از Firebase). ادمین (سهمیه‌ی نامحدود) هیچ‌وقت محدود نمی‌شود.
+// ======================================
+
+let myAccess = readAccess(null);
+let turnIsAdmin = false;
+
+function isAdminNow(){ return !!(quotaState && quotaState.unlimited); }
+function can(what){ return isAdminNow() || (myAccess[what] && !myAccess.blocked); }
+
+const GATE_TEXT = {
+ blocked:"🚫 حسابت موقتاً مسدود شده؛ بعداً دوباره امتحان کن.",
+ disabled:"🔒 دستیار فعلاً برای حساب تو بسته است."
+};
+
+async function refreshAccess(){
+ try{ myAccess = await getMyAccess(true); }catch(e){ /* آخرین وضعیت می‌ماند */ }
+ applyAccessGate();
+ return myAccess;
+}
+
+function applyAccessGate(){
+ const g = isAdminNow() ? { open:true } : assistantGate(myAccess);
+ input.disabled = !g.open;
+ input.placeholder = g.open ? "پیامت رو بنویس..." : GATE_TEXT[g.reason];
+ if(!g.open){
+  send.disabled = true;
+  pending = [];
+  renderTray();
+ }else{
+  updateSendButton();
+ }
+ if(!can("web")) searchOn = false;
+ if(!can("think")) thinkMode = "low";
+ renderThinkBar();
+ return g.open;
+}
+
 const CONTEXT_WAIT = 4500;
 let myProfile = null;
 let friendNamesCache = { at: 0, names: [] };
@@ -1358,10 +1401,11 @@ async function buildTurnContext(){
   const userTexts = conv.messages.filter(m => m.role === "user").slice(-2).map(m => String(m.content));
   const wantsCatalog = needsCatalog(lastAssistantShowedShop() ? [...userTexts, "فروشگاه"] : userTexts);
   const wantsSelf = wantsCatalog || needsSelfInfo(userTexts);
+  turnIsAdmin = false;
 
   // ادمین بودن را خود برنامه از Firebase چک می‌کند، نه حرف کاربر.
   try{
-   if(await withTimeout(isAdminUser(), CONTEXT_WAIT)) dataLines.push(describeAdmin(userName));
+   if(await withTimeout(isAdminUser(), CONTEXT_WAIT)){ turnIsAdmin = true; dataLines.push(describeAdmin(userName)); }
   }catch(e){ /* ادمین شناخته نمی‌شود */ }
 
   if(wantsSelf){
@@ -1464,12 +1508,13 @@ function makeShopBlock(categoryId){
 
 let purchasing = false;
 
-function confirmBuy({ title, ask, rows, note }){
+function confirmBuy({ title, ask, rows, note, yes }){
  return new Promise(resolve => {
   const box = $("buyConfirm");
   $("bcTitle").textContent = title;
   $("bcAsk").textContent = ask;
   $("bcNote").textContent = note || "";
+  $("bcYes").textContent = yes || "تأیید و خرید";
   const list = $("bcBox");
   list.textContent = "";
   rows.forEach(([label, value]) => {
@@ -1506,6 +1551,7 @@ function addNote(text){
 async function proposeItem(itemId){
  const item = ITEM_BY_ID[itemId];
  if(!item) return;
+ if(!can("buy")){ addNote("خرید برای حساب تو بسته شده."); return; }
  const profile = await refreshMyProfile();
  if(!profile){ addNote("پروفایلت خوانده نشد؛ دوباره امتحان کن."); return; }
  if(readShop(profile).purchased[item.id]){
@@ -1548,6 +1594,7 @@ async function proposeItem(itemId){
 }
 
 async function proposeQuestion(){
+ if(!can("buy")){ addNote("خرید برای حساب تو بسته شده."); return; }
  if(quotaState && quotaState.unlimited){
   addNote("حساب نامحدود نیازی به خرید سؤال نداره.");
   return;
@@ -1585,7 +1632,7 @@ async function proposeQuestion(){
    toast("🪙 یک سؤال خریدی؛ " + toFa(r.quota.remaining) + " سؤال باقی مانده");
    addNote("✅ یک سؤال خریدی. " + toFa(r.quota.remaining) + " سؤال باقی مانده.");
   }else{
-   const msg = { insufficient:"سکه‌ات کافی نیست.", "daily-cap":"سقف خرید امروز تموم شده.", "no-profile":"پروفایل پیدا نشد." };
+   const msg = { insufficient:"سکه‌ات کافی نیست.", "daily-cap":"سقف خرید امروز تموم شده.", "no-profile":"پروفایل پیدا نشد.", "no-access":"خرید برای حساب تو بسته شده." };
    addNote(msg[r.reason] || "خرید انجام نشد.");
   }
  }catch(e){
@@ -1595,10 +1642,54 @@ async function proposeQuestion(){
  purchasing = false;
 }
 
+// تغییر دسترسی کاربران: فقط ادمین؛ فقط با دکمه‌ی تأیید خود ادمین؛ فقط کلیدهای ایمن.
+async function proposeAccess(action){
+ if(!isAdminNow()){ addNote("فقط ادمین می‌تونه دسترسی کاربران رو عوض کنه."); return; }
+ let current;
+ try{
+  current = await withTimeout(getUserAccess(action.name), 6000);
+ }catch(e){
+  addNote("خواندن دسترسی ممکن نشد؛ دوباره امتحان کن.");
+  return;
+ }
+ if(action.type === "access-show"){
+  addNote("🔐 " + action.name + " ← " + describeAccess(current));
+  return;
+ }
+ const reset = action.type === "access-reset";
+ const ok = await confirmBuy({
+  title:"🔐 تأیید تغییر دسترسی",
+  ask:"برای «" + action.name + "» اعمال بشه؟",
+  rows:[
+   ["کاربر", action.name],
+   ["تغییر", reset ? "برگشت همه‌چیز به پیش‌فرض" : describeChange(action.key, action.value)],
+   ["وضعیت فعلی", describeAccess(current)]
+  ],
+  note:"فقط با زدن «تأیید» اعمال می‌شه. سکه و حساب کاربر دست‌نخورده می‌مونه.",
+  yes:"تأیید"
+ });
+ if(!ok){ addNote("تغییر دسترسی لغو شد."); return; }
+ purchasing = true;
+ try{
+  const r = reset ? await resetUserAccess(action.name) : await setUserAccess(action.name, action.key, action.value);
+  if(r.ok){
+   addNote("✅ " + action.name + " ← " + describeAccess(r.access));
+  }else{
+   const msg = { "no-user":"چنین کاربری پیدا نشد.", self:"روی حساب خودت نمی‌شه دستیار یا مسدودی رو عوض کرد.", "bad-name":"نام کاربر درست نیست." };
+   addNote(msg[r.reason] || "تغییر انجام نشد.");
+  }
+ }catch(e){
+  console.error("Assistant access change:", e);
+  addNote(e && e.code === "not-admin" ? "فقط ادمین می‌تونه این کار رو بکنه." : "تغییر انجام نشد. دوباره تلاش کن.");
+ }
+ purchasing = false;
+}
+
 async function handleProposal(action){
  if(purchasing || !action) return;
  if(action.type === "buy") await proposeItem(action.itemId);
  else if(action.type === "buyq") await proposeQuestion();
+ else if(action.type.startsWith("access")) await proposeAccess(action);
 }
 
 function actionBar(index, isLastAI){
@@ -1809,6 +1900,7 @@ $("pinFile").onclick = () => {
 };
 $("pinSearch").onclick = () => {
  if(busy) return;
+ if(!searchOn && !can("web")){ closePin(); toast("جستجوی وب برای حساب تو بسته است."); return; }
  searchOn = !searchOn;
  renderThinkBar();
  closePin();
@@ -1865,7 +1957,10 @@ async function tryReserve(cost){
   return r.id;
  }catch(error){
   console.error("AI quota reserve:", error);
-  if(error.code === "AI_QUOTA_EXHAUSTED"){
+  if(error.code === "ACCESS_DENIED"){
+   await refreshAccess();
+   toast(GATE_TEXT[assistantGate(myAccess).reason] || "دسترسی بسته است.");
+  }else if(error.code === "AI_QUOTA_EXHAUSTED"){
    await refreshQuota().catch(() => {});
    showLimitMessage();
   }else{
@@ -1947,11 +2042,17 @@ async function runAssistant(reservationId, lastContent, mode, search){
   // فروشگاه و خرید فقط وقتی اجرا می‌شوند که کاربر در آخرین پیامش خودش از فروشگاه یا خرید حرف زده باشد؛
   // اگر مدل بی‌جا برچسب گذاشت (مثلاً برای درخواست بازی)، نادیده گرفته می‌شود.
   const lastUser = [...conv.messages].reverse().find(m => m.role === "user");
-  if(!needsCatalog([lastUser ? String(lastUser.content) : ""])) parsed.actions = [];
+  const lastText = lastUser ? String(lastUser.content) : "";
+  const shopOk = needsCatalog([lastText]);
+  // تغییر دسترسی: فقط وقتی خود برنامه ادمین بودن را تأیید کرده و پیام کاربر درباره‌ی دسترسی بوده.
+  const accessOk = turnIsAdmin && asksAccessChange(lastText);
+  parsed.actions = parsed.actions.filter(a =>
+   a.type.startsWith("access") ? accessOk : shopOk
+  );
   const answer = parsed.text || fallbackTextFor(parsed.actions) || "منظورت رو متوجه نشدم؛ دوباره بگو.";
 
   abortCtrl = null;
-  const found = cleanImages(data.images);
+  const found = can("images") ? cleanImages(data.images) : [];
   const reply = { role:"assistant", content:answer, t:Date.now(), think:mode, search };
   if(found.length) reply.images = found;
   const shopCategories = parsed.actions.filter(a => a.type === "shop").map(a => a.category);
@@ -1959,7 +2060,7 @@ async function runAssistant(reservationId, lastContent, mode, search){
    reply.shop = shopCategories;
    await refreshMyProfile(); // تا «✅ داری» در فهرست درست باشد
   }
-  proposal = parsed.actions.find(a => a.type === "buy" || a.type === "buyq") || null;
+  proposal = parsed.actions.find(a => a.type === "buy" || a.type === "buyq" || a.type.startsWith("access")) || null;
   conv.messages.push(reply);
   persistCurrent();
   success = true;
@@ -2010,8 +2111,10 @@ $("form").addEventListener("submit", async e => {
  const text = input.value.trim();
  if(!text && !pending.length) return;
 
- const mode = thinkMode;
- const search = searchOn;
+ await refreshAccess();
+ if(!applyAccessGate()){ toast(GATE_TEXT[assistantGate(myAccess).reason]); return; }
+ const mode = can("think") ? thinkMode : "low";
+ const search = searchOn && can("web");
  const reservationId = await tryReserve(THINK[mode].cost);
  if(!reservationId) return;
  thinkMode = "low";
@@ -2133,6 +2236,7 @@ async function initializeDomitoAccount(){
   // برای نشان‌دادن «✅ داری» در فهرست فروشگاه؛ منتظرش نمی‌مانیم.
   refreshMyProfile();
   await refreshQuota();
+  await refreshAccess();
  }catch(error){
   console.error("Domito account/quota init:", error);
   if(!authReady) gate.hidden = false;

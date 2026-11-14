@@ -490,9 +490,29 @@
 
       leaveLobby,
 
-      isAdminUser
+      isAdminUser,
+
+      getUserAccess,
+
+      setUserAccess,
+
+      resetUserAccess
 
     } from "./js/app.js";
+
+    import {
+
+      ACCESS_HELP,
+
+      cleanTargetName,
+
+      parseSetCommand,
+
+      describeAccess,
+
+      describeChange
+
+    } from "./js/access-control.js";
 
 
 
@@ -1907,6 +1927,206 @@
           input.value =
             "";
 
+
+          return;
+
+        }
+
+
+
+        // ======================================================
+        // /20=نام  ← دیدن دسترسی کاربر
+        // /21=نام=کلید=مقدار  ← تغییر دسترسی
+        // /22=نام  ← برگرداندن همه‌چیز به پیش‌فرض
+        // فقط چیزهای ایمن (دستیار، وب، عکس، تفکر، خرید، سهمیه، مسدودی)؛
+        // سکه و حساب و دوستی از این مسیر عوض نمی‌شود.
+        // ======================================================
+
+        if (
+          command === "/20" ||
+          command === "/21" ||
+          command === "/22"
+        ) {
+
+          showResult(
+            ACCESS_HELP
+          );
+
+          return;
+
+        }
+
+
+        if (
+          command.startsWith("/20=")
+        ) {
+
+          const target =
+            cleanTargetName(
+              command.slice(4)
+            );
+
+          if (!target) {
+
+            showMessage(
+              "❌ نام کاربر درست نیست."
+            );
+
+            return;
+
+          }
+
+          const access =
+            await getUserAccess(
+              target
+            );
+
+          showResult(
+            `${target}\n${describeAccess(access)}`
+          );
+
+          input.value =
+            "";
+
+          return;
+
+        }
+
+
+        if (
+          command.startsWith("/21=")
+        ) {
+
+          const parsed =
+            parseSetCommand(
+              command.slice(4)
+            );
+
+          if (!parsed.ok) {
+
+            showMessage(
+              parsed.reason === "unknown-key"
+                ? "❌ کلید نامعتبر. کلیدها: دستیار، وب، عکس، تفکر، خرید، سهمیه، مسدود."
+                : parsed.reason === "too-big"
+                  ? "❌ عدد خیلی بزرگ است."
+                  : "❌ شکل درست: /21=نام=کلید=مقدار"
+            );
+
+            return;
+
+          }
+
+          const change =
+            describeChange(
+              parsed.key,
+              parsed.value
+            );
+
+          const ok =
+            confirm(
+              `برای ${parsed.name} این تغییر اعمال بشه؟\n${change}`
+            );
+
+          if (!ok) {
+
+            showMessage(
+              "❌ تغییر لغو شد."
+            );
+
+            return;
+
+          }
+
+          const result =
+            await setUserAccess(
+              parsed.name,
+              parsed.key,
+              parsed.value
+            );
+
+          if (!result.ok) {
+
+            showMessage(
+              result.reason === "no-user"
+                ? "❌ چنین کاربری پیدا نشد."
+                : result.reason === "self"
+                  ? "❌ روی حساب خودت نمی‌شود دستیار یا مسدودی را عوض کرد."
+                  : "❌ تغییر انجام نشد."
+            );
+
+            return;
+
+          }
+
+          showResult(
+            `✅ ${result.name}\n${describeAccess(result.access)}`
+          );
+
+          input.value =
+            "";
+
+          return;
+
+        }
+
+
+        if (
+          command.startsWith("/22=")
+        ) {
+
+          const target =
+            cleanTargetName(
+              command.slice(4)
+            );
+
+          if (!target) {
+
+            showMessage(
+              "❌ نام کاربر درست نیست."
+            );
+
+            return;
+
+          }
+
+          const ok =
+            confirm(
+              `همه‌ی دسترسی‌های ${target} به پیش‌فرض برگردد؟`
+            );
+
+          if (!ok) {
+
+            showMessage(
+              "❌ لغو شد."
+            );
+
+            return;
+
+          }
+
+          const result =
+            await resetUserAccess(
+              target
+            );
+
+          if (!result.ok) {
+
+            showMessage(
+              result.reason === "no-user"
+                ? "❌ چنین کاربری پیدا نشد."
+                : "❌ انجام نشد."
+            );
+
+            return;
+
+          }
+
+          showResult(
+            `✅ ${result.name}\n${describeAccess(result.access)}`
+          );
+
+          input.value =
+            "";
 
           return;
 

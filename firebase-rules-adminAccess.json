@@ -1,0 +1,19 @@
+{
+  "_توضیح": "این بخش را داخل rules → rules در کنسول Firebase کنار profiles و admins بگذار. فقط ادمین‌ها (admins/{uid} = true) می‌توانند بنویسند؛ هر کاربر واردشده می‌تواند بخواند.",
+  "adminAccess": {
+    "$name": {
+      ".read": "auth != null",
+      ".write": "root.child('admins').child(auth.uid).val() === true",
+      "assistant": { ".validate": "newData.isBoolean()" },
+      "web": { ".validate": "newData.isBoolean()" },
+      "images": { ".validate": "newData.isBoolean()" },
+      "think": { ".validate": "newData.isBoolean()" },
+      "buy": { ".validate": "newData.isBoolean()" },
+      "dailyLimit": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+      "blockedUntil": { ".validate": "newData.isNumber()" },
+      "updatedAt": { ".validate": "newData.isNumber()" },
+      "updatedBy": { ".validate": "newData.isString() && newData.val().length <= 30" },
+      "$other": { ".validate": false }
+    }
+  }
+}

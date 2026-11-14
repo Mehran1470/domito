@@ -44,6 +44,15 @@ import {
   applyFavorite
 } from "./shop-core.js";
 
+import {
+  readAccess,
+  assistantGate,
+  buildAccessPatch,
+  buildResetPatch,
+  cleanTargetName,
+  MAX_DAILY_LIMIT
+} from "./access-control.js";
+
 
 // ============================================================
 // Firebase
@@ -2155,6 +2164,14 @@ export async function buyItem(
   name,
   itemId
 ) {
+
+  if (name === getSavedName()) {
+    try {
+      await assertAllowed("buy");
+    } catch (e) {
+      return { ok: false, reason: "no-access" };
+    }
+  }
 
   const result =
     await shopTransaction(
@@ -4426,7 +4443,8 @@ export async function getLeaderboard(
 const AI_DAILY_BASE = 5;
 const MAX_GAME_BONUS = 10;   // حداکثر پاداش بازی‌های تک‌نفره در روز
 const MAX_COIN_BUY = 5;      // حداکثر سؤالی که در روز با سکه می‌شود خرید
-const AI_DAILY_MAX = AI_DAILY_BASE + MAX_GAME_BONUS + MAX_COIN_BUY;
+const AI_DAILY_MAX = MAX_DAILY_LIMIT + MAX_GAME_BONUS + MAX_COIN_BUY;
+let aiBaseOverride = null; // سهمیه‌ی پایه‌ی این کاربر (از adminAccess)؛ null یعنی پیش‌فرض
 export const AI_QUESTION_COIN_PRICE = 25;
 export const AI_MAX_COIN_BUY = MAX_COIN_BUY;
 const AI_PENDING_TTL_MS = 2 * 60 * 1000;
@@ -4499,7 +4517,8 @@ function aiCleanQuota(raw, day, now) {
 function aiLimit(quota) {
   return Math.min(
     AI_DAILY_MAX,
-    AI_DAILY_BASE + aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS) + aiSafeInt(quota.bought, 0, MAX_COIN_BUY)
+    (aiBaseOverride === null ? AI_DAILY_BASE : aiBaseOverride) +
+      aiSafeInt(quota.bonus, 0, MAX_GAME_BONUS) + aiSafeInt(quota.bought, 0, MAX_COIN_BUY)
   );
 }
 
@@ -4563,12 +4582,93 @@ export async function isAdminUser() {
   return aiIsUnlimited();
 }
 
+// ============================================================
+// کنترل دسترسی کاربران: adminAccess/{نام}
+// خواندن برای هر کاربر واردشده، نوشتن فقط برای ادمین (قوانین Firebase باید همین را اعمال کنند).
+// توجه: بدون قوانین Firebase این یک کنترل سمت برنامه است، نه قفل واقعی.
+// اگر خواندن ناموفق باشد، دسترسی پیش‌فرض (آزاد) برمی‌گردد تا خطا کسی را قفل نکند.
+// ============================================================
+
+function accessRef(name) {
+  return ref(db, `adminAccess/${encodeURIComponent(String(name || ""))}`);
+}
+
+let myAccessCache = { uid: "", at: 0, value: readAccess(null) };
+
+export async function getUserAccess(name) {
+  const clean = cleanTargetName(name);
+  if (!clean) return readAccess(null);
+  const snap = await get(accessRef(clean));
+  return readAccess(snap.val());
+}
+
+export async function getMyAccess(force = false) {
+  const uid = currentUid();
+  const name = getSavedName();
+  if (!uid || !name) return readAccess(null);
+  const fresh = myAccessCache.uid === uid && Date.now() - myAccessCache.at < 20000;
+  if (fresh && !force) return readAccess(myAccessCache.raw);
+  let raw = null;
+  try {
+    raw = (await get(accessRef(name))).val();
+  } catch (e) {
+    raw = null; // خواندن ممنوع یا ناموفق: پیش‌فرض
+  }
+  myAccessCache = { uid, at: Date.now(), raw };
+  const access = readAccess(raw);
+  aiBaseOverride = access.dailyLimit;
+  return access;
+}
+
+function accessError(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+// فقط ادمین؛ فقط کلیدهای مجاز؛ روی حساب خود ادمین قفل «دستیار» و «مسدودی» پذیرفته نمی‌شود.
+export async function setUserAccess(targetName, key, value) {
+  if (!(await isAdminUser())) throw accessError("not-admin", "فقط ادمین اجازه‌ی این کار را دارد.");
+  const name = cleanTargetName(targetName);
+  if (!name) return { ok: false, reason: "bad-name" };
+  if (name === getSavedName() && (key === "assistant" || key === "block")) {
+    return { ok: false, reason: "self" };
+  }
+  if (!(await get(profileRef(name))).exists()) return { ok: false, reason: "no-user" };
+  await update(accessRef(name), buildAccessPatch(key, value, Date.now(), getSavedName()));
+  if (name === getSavedName()) myAccessCache.at = 0;
+  return { ok: true, name, access: await getUserAccess(name) };
+}
+
+export async function resetUserAccess(targetName) {
+  if (!(await isAdminUser())) throw accessError("not-admin", "فقط ادمین اجازه‌ی این کار را دارد.");
+  const name = cleanTargetName(targetName);
+  if (!name) return { ok: false, reason: "bad-name" };
+  if (!(await get(profileRef(name))).exists()) return { ok: false, reason: "no-user" };
+  await update(accessRef(name), buildResetPatch(Date.now(), getSavedName()));
+  if (name === getSavedName()) myAccessCache.at = 0;
+  return { ok: true, name, access: await getUserAccess(name) };
+}
+
+// برای قفل خرید و دستیار در خود تابع‌ها
+async function assertAllowed(what) {
+  if (await aiIsUnlimited()) return; // ادمین هیچ‌وقت قفل نمی‌شود
+  const access = await getMyAccess();
+  if (what === "buy" && (!access.buy || access.blocked)) {
+    throw accessError("ACCESS_DENIED", "خرید برای حساب تو بسته شده است.");
+  }
+  if (what === "assistant" && !assistantGate(access).open) {
+    throw accessError("ACCESS_DENIED", "دستیار برای حساب تو بسته شده است.");
+  }
+}
+
 function aiUnlimitedQuota() {
   return { day: aiDayKey(), used: 0, bonus: 0, limit: 999999, pending: 0, remaining: 999999, unlimited: true };
 }
 
 export async function getAIQuota() {
   if (await aiIsUnlimited()) return aiUnlimitedQuota();
+  await getMyAccess(); // سهمیه‌ی پایه‌ی این کاربر
   const day = aiDayKey();
   const now = Date.now();
   const result = await runTransaction(aiQuotaRef(), cur => aiCleanQuota(cur, day, now));
@@ -4596,6 +4696,7 @@ export async function getAIShopInfo() {
 // پس یا هر دو اتفاق می‌افتند یا هیچ‌کدام.
 export async function buyAIQuestionWithCoins() {
   if (await aiIsUnlimited()) return { ok: false, reason: "unlimited", quota: aiUnlimitedQuota() };
+  try { await assertAllowed("buy"); } catch (e) { return { ok: false, reason: "no-access", quota: await getAIQuota() }; }
   aiQuotaRef(); // اگر وارد نشده باشد خطا می‌دهد
   const username = getSavedName();
   const day = aiDayKey();
@@ -4636,6 +4737,8 @@ export async function buyAIQuestionWithCoins() {
 // پیش از صدا زدن Worker یک سؤال رزرو می‌شود تا دو تب هم‌زمان یک سؤال را خرج نکنند.
 export async function reserveAIQuestion(cost = 1) {
   if (await aiIsUnlimited()) return { id: "unlimited_" + aiMakeId(), quota: aiUnlimitedQuota() };
+  await assertAllowed("assistant"); // مسدود یا بسته: خطای ACCESS_DENIED
+  await getMyAccess(); // سهمیه‌ی پایه‌ی این کاربر را به‌روز می‌کند
   const day = aiDayKey();
   const now = Date.now();
   const safeCost = aiSafeInt(cost, 1, AI_MAX_COST);
