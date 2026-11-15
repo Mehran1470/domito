@@ -1417,7 +1417,8 @@ async function buildTurnContext(){
 
   // ادمین بودن را خود برنامه از Firebase چک می‌کند، نه حرف کاربر.
   try{
-   if(await withTimeout(isAdminUser(), CONTEXT_WAIT)){ turnIsAdmin = true; dataLines.push(describeAdmin(userName)); }
+   // همان روشی که سهمیه‌ی نامحدود را نشان می‌دهد: اگر سهمیه نامحدود است، حساب ادمین است.
+   if(isAdminNow() || await withTimeout(isAdminUser(), CONTEXT_WAIT)){ turnIsAdmin = true; dataLines.push(describeAdmin(userName)); }
   }catch(e){ /* ادمین شناخته نمی‌شود */ }
 
   if(wantsSelf){
