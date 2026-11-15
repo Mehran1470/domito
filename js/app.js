@@ -4572,19 +4572,46 @@ function aiQuotaRef() {
 
 // حساب‌های بدون محدودیت: فقط uid هایی که در Firebase زیر admins/{uid} = true هستند.
 // این مسیر را فقط از کنسول Firebase می‌شود نوشت (قوانین دیتابیس باید نوشتن را ببندند).
-let aiUnlimitedCache = { uid: null, value: false };
+let aiUnlimitedCache = { uid: null, value: false, at: 0 };
+function adminValueOk(v) {
+  // فقط از کنسول Firebase نوشته می‌شود؛ true واقعی یا رشته‌ی "true" پذیرفته می‌شود.
+  return v === true || v === "true";
+}
 async function aiIsUnlimited() {
   const uid = currentUid();
   if (!uid) return false;
-  if (aiUnlimitedCache.uid === uid) return aiUnlimitedCache.value;
+  // ادمین‌بودن تا پایان نشست می‌ماند؛ «ادمین نیست» یا خطا فقط ۳۰ ثانیه نگه داشته می‌شود
+  // تا یک خطای لحظه‌ای یا تغییر در Firebase همیشگی نشود.
+  if (aiUnlimitedCache.uid === uid) {
+    if (aiUnlimitedCache.value) return true;
+    if (Date.now() - aiUnlimitedCache.at < 30000) return false;
+  }
   let value = false;
   try {
-    value = (await get(ref(db, `admins/${uid}`))).val() === true;
+    value = adminValueOk((await get(ref(db, `admins/${uid}`))).val());
   } catch (e) {
     value = false; // اگر خواندن ممنوع بود، محدودیت عادی اعمال می‌شود
   }
-  aiUnlimitedCache = { uid, value };
+  aiUnlimitedCache = { uid, value, at: Date.now() };
   return value;
+}
+
+// تشخیص برای خود کاربر: uid حساب فعلی و مقداری که Firebase زیر admins/{uid} می‌دهد.
+export async function adminDiagnose() {
+  const uid = currentUid();
+  const out = { uid: uid || "", name: getSavedName(), exists: false, type: "", error: "", admin: false };
+  if (!uid) { out.error = "no-auth"; return out; }
+  try {
+    const snap = await get(ref(db, `admins/${uid}`));
+    out.exists = snap.exists();
+    const v = snap.val();
+    out.type = v === null ? "null" : typeof v;
+    out.admin = adminValueOk(v);
+    aiUnlimitedCache = { uid, value: out.admin, at: Date.now() };
+  } catch (e) {
+    out.error = String((e && (e.code || e.message)) || e);
+  }
+  return out;
 }
 // ادمین بودن حساب فعلی (همان چک سؤال نامحدود). اگر خواندن ممنوع یا ناموفق باشد، false برمی‌گردد.
 export async function isAdminUser() {

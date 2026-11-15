@@ -610,7 +610,7 @@ textarea::placeholder{color:var(--muted)}
 import {
  waitForUser, getSavedName, currentUid, logoutUser,
  getAIQuota, reserveAIQuestion, finishAIQuestion,
- getAIShopInfo, buyAIQuestionWithCoins, isAdminUser,
+ getAIShopInfo, buyAIQuestionWithCoins, isAdminUser, adminDiagnose,
  getMyAccess, getUserAccess, setUserAccess, resetUserAccess, createRoom,
  GAMES, getPublicProfile, getFriendNames, buyItem,
  readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf
@@ -1337,6 +1337,10 @@ const GATE_TEXT = {
 
 async function refreshAccess(){
  try{ myAccess = await getMyAccess(true); }catch(e){ /* آخرین وضعیت می‌ماند */ }
+ // اگر در شروع صفحه ادمین شناخته نشده بود (خطای لحظه‌ای)، اینجا دوباره بررسی می‌شود.
+ try{
+  if(!isAdminNow() && await isAdminUser()){ quotaState = await getAIQuota(); updateQuotaDisplay(); }
+ }catch(e){ /* بدون تغییر */ }
  applyAccessGate();
  return myAccess;
 }
@@ -2162,6 +2166,20 @@ $("form").addEventListener("submit", async e => {
 
  const text = input.value.trim();
  if(!text && !pending.length) return;
+
+ // «منو ادمین نمیشناسه»: نتیجه‌ی بررسی را خود برنامه از Firebase نشان می‌دهد (بدون مصرف سهمیه).
+ if(text && text.length <= 45 && /ادمین/.test(text) && /(من|منو|ام\b|whoami)/i.test(text) && !pending.length){
+  input.value = ""; autoGrow();
+  const d = await adminDiagnose();
+  let msgText;
+  if(d.error === "no-auth") msgText = "هنوز وارد حساب دومیتو نشدی.";
+  else if(d.error) msgText = "خواندن admins از Firebase خطا داد (" + d.error + "). قوانین دیتابیس باید به کاربر واردشده اجازه‌ی خواندن admins را بدهند.";
+  else if(d.admin) { msgText = "ادمین هستی ✅ (حساب «" + d.name + "»). اگر دستیار هنوز نمی‌شناسد، صفحه را یک بار تازه کن."; await refreshAccess(); }
+  else if(!d.exists) msgText = "زیر admins برای این حساب چیزی ثبت نشده. در Firebase باید دقیقاً این مسیر ساخته شود:\nadmins/" + d.uid + " = true\n(مقدار از نوع Boolean و کلید همان UID بالا باشد، نه نام کاربری.)";
+  else msgText = "زیر admins/" + d.uid + " مقداری هست ولی از نوع «" + d.type + "» است و true نیست. مقدار را روی Boolean = true بگذار.";
+  addNote(msgText);
+  return;
+ }
 
  await refreshAccess();
  if(!applyAccessGate()){ toast(GATE_TEXT[assistantGate(myAccess).reason]); return; }
