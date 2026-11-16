@@ -1558,13 +1558,13 @@ export const GAMES = [
     soloThreshold: 30
   },
 
-  {
-    id: "typing",
-    name: "سرعت تایپ",
-    desc: "جمله رو با دقت و سریع تایپ کن",
-    icon: "⌨️",
-    soloThreshold: 60
-  },
+    {
+    id: "thousandfold",
+    name: "هزارگونه",
+    desc: "کمبو بساز، اسلایم‌ها رو به هوا بفرست و باس تنها رو بشکن",
+    icon: "⚔️",
+    soloThreshold: 2000
+    }
 
   {
     id: "snake",
