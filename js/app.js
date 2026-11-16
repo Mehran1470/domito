@@ -1564,7 +1564,7 @@ export const GAMES = [
     desc: "کمبو بساز، اسلایم‌ها رو به هوا بفرست و باس تنها رو بشکن",
     icon: "⚔️",
     soloThreshold: 2000
-    }
+    },
 
   {
     id: "snake",
