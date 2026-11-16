@@ -410,6 +410,7 @@ addEventListener('message',e=>{const d=e.data;if(d&&d.type==='domito:init'&&d.na
 let coopEnabled=false,coopIsHost=false,coopUid='',coopName='',coopHostUid='';
 let coopPlayers={},coopRemotePlayers=[],coopPendingHits=[],coopHitSeq=0,coopProcessedHits={};
 let coopSeenTeamKills=0,coopLastHostSnapshot=null,coopLastHostPhase='';
+const coopNonce=Math.random().toString(36).slice(2,8);
 function coopTargetFor(e){
   let best={x:P?.x??300,z:P?.z??0,uid:coopUid},dist=Math.abs(best.x-e.x);
   for(const rp of coopRemotePlayers){if(rp.hp<=0)continue;const d=Math.abs(rp.x-e.x);if(d<dist){best=rp;dist=d}}
@@ -418,7 +419,7 @@ function coopTargetFor(e){
 function coopQueueHit(e,damage,opts={}){
   if(!coopEnabled||coopIsHost)return;
   coopHitSeq++;
-  coopPendingHits.push({seq:coopHitSeq,enemyId:e.id,damage:Math.max(0,Math.min(5000,Number(damage)||0)),dir:Number(opts.dir)||1,kb:Number(opts.kb)||75,lift:Number(opts.lift)||235,launch:Number(opts.launch)||0});
+  coopPendingHits.push({seq:coopHitSeq,n:coopNonce,at:Date.now(),enemyId:e.id,damage:Math.max(0,Math.min(5000,Number(damage)||0)),dir:Number(opts.dir)||1,kb:Number(opts.kb)||75,lift:Number(opts.lift)||235,launch:Number(opts.launch)||0});
   if(coopPendingHits.length>24)coopPendingHits.splice(0,coopPendingHits.length-24);
 }
 function coopApplyRemoteHit(hit){
@@ -468,14 +469,12 @@ function setCoopState(data={}){
     for(const [uid,v] of Object.entries(coopPlayers)){
       if(uid===coopUid||!v?.game)continue;
       const events=Array.isArray(v.game.hits)?v.game.hits:[];
-      for(const hit of events){const seq=+hit?.seq||0;if(seq>(coopProcessedHits[uid]||0)){coopProcessedHits[uid]=seq;coopApplyRemoteHit(hit)}}
+      for(const hit of events){const seq=+hit?.seq||0,key=uid+':'+(hit?.n||'');if(seq>(coopProcessedHits[key]||0)){coopProcessedHits[key]=seq;coopApplyRemoteHit(hit)}}
     }
   }
-  const menuStatus=$('coopMenuStatus');
-  if(menuStatus)menuStatus.textContent=`اتاق همکاری: ${fa(coopRemotePlayers.length+1)} بازیکن · ${coopIsHost?'میزبان شروع بازی هستی':'در انتظار شروع توسط میزبان'}`;
 }
 function coopNetSnapshot(){
-  const base={name:coopName,online:true,lastSeen:Date.now(),x:P?.x||300,z:P?.z||0,vx:P?.vx||0,face:P?.face||1,weapon:P?.weapon||'sword',hp:P?.hp||100,phase:state,hits:coopPendingHits.slice(-24)};
+  const base={name:coopName,online:true,lastSeen:Date.now(),x:P?.x||300,z:P?.z||0,vx:P?.vx||0,face:P?.face||1,weapon:P?.weapon||'sword',hp:P?.hp||100,phase:state,hits:coopPendingHits.filter(h=>Date.now()-h.at<2500).slice(-24)};
   if(coopIsHost){
     const pack=a=>a.map(o=>Object.fromEntries(Object.entries(o).filter(([k,v])=>v===null||['string','number','boolean'].includes(typeof v))));
     base.world=world;base.wave=wave;base.ww=ww;base.kills=kills;base.enemies=pack(enemies);base.shots=pack(shots);base.portal=portal?{x:portal.x,to:portal.to,t:portal.t,enter:portal.enter}:null;
@@ -750,7 +749,7 @@ function hurtPlayer(e,mul=1){
   combo=Math.floor(combo/2);
   if(P.hp<=0){
     P.hp=0;
-    const teammateAlive=coopEnabled&&coopIsHost&&coopRemotePlayers.some(rp=>rp.hp>0);
+    const teammateAlive=coopEnabled&&coopRemotePlayers.some(rp=>rp.hp>0);
     if(teammateAlive){P.hp=Math.max(25,P.mhp*.35);P.inv=2;P.z=0;banner('🤝 هم‌تیمی‌ها نجاتت دادند!',1700)}
     else gameOver();
   }
@@ -817,8 +816,8 @@ function update(dt){
   pops=pops.filter(p=>p.t<p.life);
   for(const p of parts){p.t+=dt;p.x+=p.vx*dt;p.z+=p.vz*dt;p.vz-=p.g*dt;if(p.z<0){p.z=0;p.vz*=-.3;p.vx*=.6}}
   parts=parts.filter(p=>p.t<p.life);
+  if(window.DOMITO_DEADLINE&&(state==='play'||state==='upgrade')&&Date.now()>=window.DOMITO_DEADLINE){P.hp=0;gameOver();return}
   if(state!=='play')return;
-  if(window.DOMITO_TIME_LIMIT){playT+=dt;if(playT>=window.DOMITO_TIME_LIMIT){P.hp=0;gameOver();return}}
   if(hitstop>0){hitstop-=dt;return}
   for(let i=later.length-1;i>=0;i--){later[i].t-=dt;if(later[i].t<=0){const f=later.splice(i,1)[0];f.fn()}}
   shake*=.88;
@@ -894,7 +893,7 @@ function update(dt){
     // Teammates still collide with the shared, host-simulated mobs on their own screen.
     for(const e of enemies){
       e.x+=e.vx*dt;e.z=Math.max(0,e.z+e.vz*dt);
-      if(e.stun<=0&&Math.abs(e.x-P.x)<e.r+4&&e.z<P.z+20&&e.z+e.h>P.z)hurtPlayer(e);
+      if(e.hp>0&&e.stun<=0&&Math.abs(e.x-P.x)<e.r+4&&e.z<P.z+20&&e.z+e.h>P.z)hurtPlayer(e);
       if(e.t==='k'&&e.z<=0&&Math.abs(e.x-P.x)<75&&P.z<14&&e._localSlam!==Math.floor(T*3)){e._localSlam=Math.floor(T*3);hurtPlayer(e,1.5)}
     }
   }
@@ -1252,7 +1251,7 @@ function hud(){
   const sk=P.skillCd>0?P.skillCd/P.skMax:0;$('skcd').style.height=(sk*100)+'%';
   $('ucd').style.height=(100-charge)+'%';$('ub').classList.toggle('rdy',charge>=100);
   const team=coopEnabled?` · 👥 ${fa(coopRemotePlayers.length+1)} نفر`:'';
-  const s=`<div>${WORLDS[world].icon} دنیا ${fa(world+1)} · موج <b>${fa(ww)}</b>/۵ · سطح سلاح <b>${fa(P.wlvl)}</b>${team}</div><div>آسیب تو: <b>${fa(score)}</b></div>${window.DOMITO_TIME_LIMIT?`<div>⏱ <b>${fa(Math.max(0,Math.ceil(window.DOMITO_TIME_LIMIT-playT)))}</b></div>`:''}`;
+  const s=`<div>${WORLDS[world].icon} دنیا ${fa(world+1)} · موج <b>${fa(ww)}</b>/۵ · سطح سلاح <b>${fa(P.wlvl)}</b>${team}</div><div>آسیب تو: <b>${fa(score)}</b></div>${window.DOMITO_DEADLINE?`<div>⏱ <b>${fa(Math.max(0,Math.ceil((window.DOMITO_DEADLINE-Date.now())/1000)))}</b></div>`:''}`;
   if(s!==lastHud){$('info').innerHTML=s;lastHud=s}
   const cb=$('combo');
   if(combo>1){cb.classList.add('on');$('cnum').textContent='×'+combo;$('cnum').style.color=tier(combo*18)[0];$('cfill').style.width=(clamp(comboT/3,0,1)*100)+'%'}
@@ -1280,78 +1279,161 @@ window.__tf={
 };
 </script>
 <script type="module">
-import { waitForUser, getSavedName, currentUid, getSavedRoom, roomRef, onValue, runTransaction, submitResult, resetSessionForNextRound, recordRoundResult, soloWon } from "../js/app.js";
-const GID = "thousandfold";
-const params = new URLSearchParams(location.search);
-const isSolo = params.has("solo");
-const code = getSavedRoom();
-let myUid, myName, players = {}, finished = false, hostUid = "", joinedAt = Date.now();
-let writeBusy = false, heartbeat = 0, lastSentHostSession = "";
-const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-window.DOMITO_MODE = true;
-window.DOMITO_TIME_LIMIT = isSolo ? 0 : 180;
-function show(html){ document.getElementById("ovc").innerHTML = html; document.getElementById("ov").classList.remove("hide"); }
-window.onDomitoScore = d => finish(d);
+import * as App from "../js/app.js";
+const { waitForUser, getSavedName, currentUid, getSavedRoom, roomRef, onValue, runTransaction, submitResult, resetSessionForNextRound, recordRoundResult, soloWon, joinLobby, db, ref, set, remove, onDisconnect } = App;
 
-function activeEntries(){
-  const now = Date.now();
-  return Object.entries(players).filter(([,p]) => p && p.game && p.game.online && now - Number(p.game.lastSeen || 0) < 12000);
-}
-function chooseHost(){
-  const active = activeEntries();
-  if (!active.some(([uid]) => uid === myUid)) active.push([myUid,{game:{joinedAt}}]);
-  active.sort((a,b) => (Number(a[1]?.game?.joinedAt)||0) - (Number(b[1]?.game?.joinedAt)||0) || a[0].localeCompare(b[0]));
-  return active[0]?.[0] || myUid;
-}
-function playerGameRef(){ return roomRef(code, `players/${myUid}/game`); }
-async function saveMyGame(patch){
-  return runTransaction(playerGameRef(), current => ({ ...(current || {}), ...patch }));
-}
-function publishLocalState(){
-  if (!myUid || isSolo || writeBusy || finished) return;
-  writeBusy = true;
-  const state = window.__tf?.netSnapshot?.() || {};
-  saveMyGame({ ...state, name:myName, online:true, joinedAt, lastSeen:Date.now() })
-    .catch(error => {
-      console.warn("Domito co-op sync failed:", error);
-      const status = document.getElementById("coopMenuStatus");
-      if (status) status.textContent = "اتصال گروهی مجاز نیست؛ قوانین نوشتن Firebase/اتاق را بررسی کن.";
-    })
-    .finally(() => { writeBusy = false; });
-}
-function applyRoomPlayers(next){
-  players = next || {};
-  hostUid = chooseHost();
-  const isHost = hostUid === myUid;
-  window.__tf?.setCoopState?.({ enabled:true, uid:myUid, name:myName, players, hostUid, isHost });
-  const status = document.getElementById("coopMenuStatus");
-  const active = activeEntries().length;
-  if (status) status.textContent = `👥 ${active || 1} نفر در اتاق · ${isHost ? "تو میزبان شروع بازی هستی" : "منتظر شروع میزبان"}`;
-  const hostGame = players[hostUid]?.game;
-  if (isHost && hostGame?.session?.id && hostGame.phase === "over") {
-    // A fresh room visit can start a new session after the previous round ended.
-    if (Date.now() - Number(hostGame.session.startedAt || 0) > 10000 && lastSentHostSession !== "reset") {
-      lastSentHostSession = "reset";
-      saveMyGame({ session:null, phase:"menu", hits:[] }).catch(()=>{});
-    }
+const GID = "thousandfold";
+const TF_TIME = 180;                 // طول هر دور تیمی (ثانیه)
+const FRESH_MS = 10000;              // بازیکنی که بیشتر از این ساکت باشد آفلاین حساب می‌شود
+const params = new URLSearchParams(location.search);
+const code = String(getSavedRoom() || "").trim().toUpperCase();
+const round = String(params.get("round") || "r").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40) || "r";
+const isSolo = params.has("solo") || !code;
+const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const toArr = v => Array.isArray(v) ? v.filter(Boolean) : (v && typeof v === "object" ? Object.values(v) : []);
+const clean = o => JSON.parse(JSON.stringify(o));
+const base = p => ref(db, `rooms/${code}/thousandfold/${round}${p ? "/" + p : ""}`);
+
+let myUid = "", myName = "";
+let nodes = {}, session = null, offset = 0;
+let finished = false, netOn = false, hbBusy = false, claiming = false, lastErrShown = 0;
+const knownResults = {};
+const now = () => Date.now() + offset;     // زمان تقریبی سرور؛ از اختلاف ساعت گوشی‌ها جلوگیری می‌کند
+
+window.DOMITO_MODE = true;
+window.DOMITO_DEADLINE = 0;
+window.onDomitoScore = d => finish(d);
+function show(html){ document.getElementById("ovc").innerHTML = html; document.getElementById("ov").classList.remove("hide"); }
+function setStatus(t){ const s = document.getElementById("coopMenuStatus"); if (s) s.textContent = t; }
+
+function netFail(error){
+  console.error("Domito co-op error:", error);
+  if (finished) return;
+  const perm = /PERMISSION/i.test(String(error && (error.code || error.message)));
+  if (perm) {
+    show(`<h2>دسترسی چندنفره بسته است</h2>
+      <p>قوانین Firebase اجازهٔ نوشتن در مسیر <b dir="ltr">rooms/{code}/thousandfold</b> را نمی‌دهد.</p>
+      <p class="sm">در Realtime Database ← Rules زیر <b dir="ltr">rooms ← $code</b> این را اضافه کن:<br><b dir="ltr">"thousandfold": {".read":"auth != null", ".write":"auth != null"}</b></p>
+      <a class="btn" href="?solo=1" style="text-decoration:none">بازی تک‌نفره</a><br>
+      <a class="btn" href="../lobby.html" style="text-decoration:none;background:#4a4a8a;border-bottom-color:#2a2a5a">بازگشت به سالن</a>`);
+  } else if (Date.now() - lastErrShown > 4000) {
+    lastErrShown = Date.now();
+    setStatus("ارتباط با اتاق قطع‌وصل می‌شود؛ اینترنت را بررسی کن.");
   }
 }
 
+/* ---------- وضعیت اتاق ---------- */
+function playerAge(p){ return now() - (+p.ts || 0); }
+function sessionFresh(s){ return !!(s && s.id && now() - (+s.startedAt || 0) < (TF_TIME + 45) * 1000); }
+
+function applyNodes(val){
+  nodes = val || {};
+  session = sessionFresh(nodes.session) ? nodes.session : null;
+  const players = {};
+  for (const [uid, p] of Object.entries(nodes.players || {})) {
+    if (!p) continue;
+    const age = playerAge(p);
+    players[uid] = { name: p.name, game: {
+      name: p.name, online: age < FRESH_MS && p.phase !== "over", lastSeen: Date.now() - age,
+      x: p.x, z: p.z, vx: p.vx, face: p.face, weapon: p.weapon, hp: p.hp, phase: p.phase, hits: toArr(p.hits)
+    } };
+  }
+  const hostUid = session ? session.hostUid : myUid;
+  const isHost = !!session && session.hostUid === myUid;
+  if (session) {
+    const host = nodes.host && nodes.host.uid === hostUid ? nodes.host : null;
+    const g = (players[hostUid] = players[hostUid] || { game: { online: false, lastSeen: 0 } }).game;
+    const localStart = (+session.startedAt || 0) - offset;
+    window.DOMITO_DEADLINE = localStart + TF_TIME * 1000;
+    g.session = { id: session.id, world: +session.world || 0, startedAt: localStart };
+    if (host) Object.assign(g, {
+      phase: host.phase, world: host.world, wave: host.wave, ww: host.ww, kills: host.kills,
+      enemies: toArr(host.enemies), shots: toArr(host.shots), portal: host.portal || null
+    });
+    maybeTakeOver(host);
+  }
+  window.__tf?.setCoopState?.({ enabled: true, uid: myUid, name: myName, players, hostUid, isHost });
+  const active = Object.values(players).filter(p => p.game.online).length || 1;
+  if (!finished && window.__tf?.state === "menu") {
+    setStatus(session ? "👥 بازی تیمی شروع شده؛ در حال پیوستن…"
+      : `👥 ${fa(active)} نفر در اتاق · هر کدام از شما می‌تواند «شروع تیمی» را بزند`);
+  }
+  checkResults();
+}
+
+/* اگر میزبان وسط بازی قطع شد، کوچک‌ترین uid بین بازیکنان آنلاین جایش را می‌گیرد */
+async function maybeTakeOver(host){
+  if (claiming || finished || !session || session.hostUid === myUid) return;
+  const hostPlayer = (nodes.players || {})[session.hostUid];
+  const last = Math.max(host ? +host.ts || 0 : 0, hostPlayer ? +hostPlayer.ts || 0 : 0, +session.startedAt || 0);
+  if (now() - last < 8000) return;
+  if (host && host.phase === "over") return;
+  const alive = Object.entries(nodes.players || {}).filter(([uid, p]) => p && uid !== session.hostUid && playerAge(p) < FRESH_MS && p.phase !== "over").map(([uid]) => uid).sort();
+  if (alive[0] !== myUid) return;
+  claiming = true;
+  try {
+    const old = session.hostUid;
+    await runTransaction(base("session"), cur => (cur && cur.hostUid === old) ? { ...cur, hostUid: myUid } : cur, { applyLocally: false });
+  } catch (e) { console.warn("host takeover failed", e); }
+  setTimeout(() => { claiming = false; }, 3000);
+}
+
+/* ---------- ارسال وضعیت خودم ---------- */
+async function pushState(){
+  const s = window.__tf?.netSnapshot?.();
+  if (!s || !myUid) return;
+  const t = now();
+  const jobs = [set(base("players/" + myUid), clean({ name: myName, ts: t, x: s.x, z: s.z, vx: s.vx, face: s.face, weapon: s.weapon, hp: s.hp, phase: s.phase, hits: s.hits }))];
+  if (s.enemies !== undefined && session && session.hostUid === myUid)
+    jobs.push(set(base("host"), clean({ uid: myUid, ts: t, phase: s.phase, world: s.world, wave: s.wave, ww: s.ww, kills: s.kills, enemies: s.enemies, shots: s.shots, portal: s.portal || null })));
+  await Promise.all(jobs);
+}
+async function heartbeat(){
+  if (!netOn || finished || hbBusy) return;
+  hbBusy = true;
+  try { await pushState(); } catch (e) { netFail(e); } finally { hbBusy = false; }
+}
+
+/* ---------- شروع بازی تیمی ---------- */
 async function requestStart(world){
   if (isSolo) { window.__tf?.startFromRoom?.(world); return; }
-  if (hostUid !== myUid) { show(`<h2>در انتظار میزبان 👥</h2><p>میزبان اتاق باید بازی گروهی را شروع کند.</p><p class="sm">اعضای حاضر: ${fa(activeEntries().length || 1)} نفر</p>`); return; }
-  const session = { id:`${myUid}_${Date.now()}`, startedAt:Date.now(), world:Number(world)||0 };
+  if (!netOn) { setStatus("در حال اتصال به اتاق بازی…"); return; }
   try {
-    await saveMyGame({ session, phase:"play", online:true, name:myName, joinedAt, lastSeen:Date.now(), hits:[] });
-    window.__tf?.startFromRoom?.(session.world);
-    window.__tf?.setCoopState?.({ enabled:true, uid:myUid, name:myName, players:{...players,[myUid]:{...(players[myUid]||{}),game:{...(players[myUid]?.game||{}),session,phase:"play",online:true,lastSeen:Date.now(),joinedAt}}}, hostUid, isHost:true });
-    lastSentHostSession = session.id;
-  } catch (error) {
-    console.error(error);
-    show(`<h2>اتصال گروهی برقرار نشد</h2><p>دسترسی ثبت وضعیت بازی در Firebase وجود ندارد. بخش <b>players/${esc(myUid)}/game</b> باید برای بازیکنِ واردشده قابل نوشتن باشد.</p><button class="btn" onclick="location.reload()">تلاش دوباره</button>`);
-  }
+    const res = await runTransaction(base("session"), cur => {
+      if (sessionFresh(cur)) return cur;                       // کسی زودتر شروع کرده؛ بپیوند
+      return { id: `${myUid}_${now()}`, hostUid: myUid, world: Number(world) || 0, startedAt: now() };
+    }, { applyLocally: false });
+    nodes = { ...nodes, session: res.snapshot.val() };
+    applyNodes(nodes);
+  } catch (error) { netFail(error); }
 }
 window.domitoStartRequest = requestStart;
+
+/* ---------- پایان بازی و نتیجه ---------- */
+function pendingPlayers(){
+  const done = knownResults;
+  return Object.entries(nodes.players || {}).filter(([uid, p]) => uid !== myUid && p && playerAge(p) < FRESH_MS && !done[uid]);   // حتی بازیکنِ «تموم‌شده» تا ثبت نتیجه‌اش منتظر می‌ماند
+}
+let handled = false;
+async function checkResults(){
+  if (!finished || isSolo || handled || !knownResults[myUid]) return;
+  const waiting = pendingPlayers().length;
+  const w = document.getElementById("waitS");
+  if (waiting) { if (w) w.textContent = `${fa(waiting)} نفر هنوز در حال بازی‌اند…`; return; }
+  handled = true;
+  const list = Object.entries(knownResults).map(([uid, r]) => ({ uid, name: r.name, score: Number(r.score) || 0 })).sort((a, b) => b.score - a.score);
+  const maxScore = list.length ? list[0].score : 0;
+  const won = (knownResults[myUid].score || 0) === maxScore;
+  try { await recordRoundResult(myName, GID, { won }); } catch (e) { console.warn(e); }
+  const rows = list.map(r => `<div style="display:flex;justify-content:space-between;padding:8px 12px;margin:6px 0;border-radius:10px;background:${r.score === maxScore ? "#5a4a10" : "#2a2450"}"><span>${esc(r.name)}</span><b>${fa(r.score)}</b></div>`).join("");
+  show(`<h2>${won ? "🏆 بهترین امتیاز تیم" : "نتیجهٔ بازی گروهی"}</h2>${rows}<p class="sm">به زودی برمی‌گردیم به سالن...</p>`);
+  setTimeout(async () => {
+    try { await remove(base("players/" + myUid)); } catch (e) {}
+    try { if (session && session.hostUid === myUid) await remove(base("")); } catch (e) {}
+    try { await resetSessionForNextRound(); } catch (e) {}
+    location.href = "../lobby.html";
+  }, 5000);
+}
 
 async function finish(d){
   if (finished) return; finished = true;
@@ -1362,56 +1444,49 @@ async function finish(d){
     show(`<h2>${won ? "🎉 آفرین، بردی!" : "😅 این‌بار نشد"}</h2>
       <p>موج <b>${fa(d.wave)}</b> · کشتار <b>${fa(d.kills)}</b> · بهترین کمبو <b>${fa(d.bestCombo)}</b></p>
       <p style="font-size:30px;color:#ffd23a;font-weight:900">${fa(score)} امتیاز</p>
-      <button class="btn" onclick="location.reload()">دوباره بازی کن</button><br>
+      <button class="btn" onclick="location.href=location.pathname+'?solo=1'">دوباره بازی کن</button><br>
       <a class="btn" style="text-decoration:none;background:#4a4a8a;border-bottom-color:#2a2a5a" href="../index.html">بازگشت به خانه</a>`);
     return;
   }
   show(`<h2>نتیجهٔ تیمت ثبت شد</h2><p style="font-size:26px;color:#ffd23a;font-weight:900">${fa(score)}</p><p id="waitS">در انتظار پایان هم‌تیمی‌ها...</p>`);
-  try { await submitResult(GID, myUid, myName, score); } catch (e) { console.warn(e); }
-  let handled = false;
-  onValue(roomRef(code, "results"), async snap => {
-    const results = snap.val() || {};
-    const totalPlayers = Math.max(1, activeEntries().length);
-    const totalResults = Object.keys(results).length;
-    const w = document.getElementById("waitS"); if (w) w.textContent = `${fa(totalResults)} از ${fa(totalPlayers)} نفر تموم کردن`;
-    if (handled || totalResults < totalPlayers) return;
-    handled = true;
-    const maxScore = Math.max(...Object.values(results).map(r => Number(r.score)||0));
-    const won = (Number(results[myUid]?.score)||0) === maxScore;
-    try { await recordRoundResult(myName, GID, { won }); } catch (e) { console.warn(e); }
-    const rows = Object.values(results).sort((a, b) => b.score - a.score).map(r =>
-      `<div style="display:flex;justify-content:space-between;padding:8px 12px;margin:6px 0;border-radius:10px;background:${r.score === maxScore ? "#5a4a10" : "#2a2450"}"><span>${esc(r.name)}</span><b>${fa(r.score)}</b></div>`).join("");
-    show(`<h2>${won ? "🏆 بهترین امتیاز تیم" : "نتیجهٔ بازی گروهی"}</h2>${rows}<p class="sm">به زودی برمی‌گردیم به سالن...</p>`);
-    setTimeout(async () => { try { await resetSessionForNextRound(); } catch (e) {} location.href = "../lobby.html"; }, 4000);
-  });
+  try { await pushState(); } catch (e) { console.warn(e); }          // آخرین وضعیت: «تموم شد»
+  try { await submitResult(GID, myUid, myName, score); } catch (e) { console.warn("submitResult", e); }
+  knownResults[myUid] = { name: myName, score };
+  checkResults();
 }
 
+/* ---------- راه‌اندازی ---------- */
 (async () => {
   const user = await waitForUser();
   myName = getSavedName();
   if (!user || !myName) { location.href = "../index.html"; return; }
   myUid = currentUid();
-  DOM.name = myName;
   window.__tf?.setLocalName?.(myName);
-  if (!isSolo) {
-    if (!code) { location.href = "../index.html"; return; }
-    try {
-      await runTransaction(playerGameRef(), current => {
-        const g = current || {};
-        const fresh = Date.now();
-        return { ...g, name:myName, online:true, lastSeen:fresh, joinedAt, hits:[], ...(g.phase === "over" ? { session:null, phase:"menu" } : {}) };
-      });
-    } catch (error) {
-      console.error("Could not join co-op room:", error);
-      show(`<h2>ورود به بازی گروهی ناموفق بود</h2><p>اجازهٔ نوشتن وضعیت بازیکن در Firebase وجود ندارد. برای فعال شدن همکاری زنده باید مسیر <b>players/${esc(myUid)}/game</b> برای اعضای اتاق قابل نوشتن باشد.</p><a class="btn" href="../lobby.html">بازگشت به سالن</a>`);
-      return;
-    }
-    onValue(roomRef(code, "players"), snap => applyRoomPlayers(snap.val() || {}));
-    heartbeat = window.setInterval(publishLocalState, 250);
-    addEventListener("pagehide", () => {
-      if (myUid) runTransaction(playerGameRef(), current => ({ ...(current || {}), online:false, lastSeen:Date.now() })).catch(()=>{});
-    });
+  if (isSolo) { window.DOMITO_TIME_LIMIT = 0; return; }
+
+  try { await joinLobby(myName); }                      // لابی هنگام خروج از صفحه، حضور ما را پاک می‌کند؛ دوباره ثبتش کن
+  catch (e) {
+    const m = String(e && e.message);
+    if (/kicked|room-not-found|no-room/.test(m)) { location.href = "../index.html"; return; }
+    console.warn("joinLobby", e);
   }
+  try {
+    await Promise.race([
+      new Promise(res => onValue(ref(db, ".info/serverTimeOffset"), s => { offset = Number(s.val()) || 0; res(); })),
+      new Promise(res => setTimeout(res, 3000))
+    ]);
+    await set(base("players/" + myUid), { name: myName, ts: now(), phase: "menu", hp: 100 });
+    onDisconnect(base("players/" + myUid)).remove().catch(() => {});
+    netOn = true;
+    onValue(base(""), snap => applyNodes(snap.val() || {}), netFail);
+    onValue(roomRef(code, "results"), snap => {
+      const r = snap.val() || {};
+      for (const [uid, v] of Object.entries(r)) if (v && v.gameId === GID) knownResults[uid] = v;
+      checkResults();
+    });
+    setInterval(heartbeat, 200);
+    addEventListener("pagehide", () => { if (!finished) remove(base("players/" + myUid)).catch(() => {}); });
+  } catch (error) { netFail(error); }
 })();
 </script>
 </body>
