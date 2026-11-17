@@ -187,13 +187,64 @@ body.playing.vig #vig{display:block}
 #mpCreate .logo{font-size:40px}#mpCreate button{padding:12px;border-radius:11px;border:0;background:#3b82f6;color:#fff;font-size:17px;font-weight:700}
 #viewSrv{text-align:right}
 #viewSrv .srvHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;color:#fff;font-size:18px}
-#viewSrv .srvNew{display:flex;gap:6px;margin:8px 0}#viewSrv .srvNew input{flex:1;min-width:0}
-#srvList{max-height:42vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:8px 0}
-.srvCard{background:rgba(255,255,255,.1);border-radius:12px;padding:10px;color:#fff}
-.srvCard small{opacity:.75;display:block;margin:2px 0 6px}
-.srvCard .tag{background:#f5b301;color:#222;border-radius:6px;padding:0 6px;font-size:11px}
-.srvBtns{display:flex;gap:6px;flex-wrap:wrap}.srvBtns button{flex:1;padding:8px;border-radius:9px;border:0;background:#3b82f6;color:#fff;font-size:14px}
-.srvBtns button:disabled{opacity:.4}.srvBtns .del{flex:0 0 auto;background:#8a3a2a}
+#srvList{max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:9px;margin:10px 0;touch-action:pan-y;padding-bottom:4px}
+/* دکمه‌های بلوکی ماین‌کرافتی */
+.mcb{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px 14px;margin-top:8px;border:0;border-radius:6px;font-weight:900;font-size:15px;color:#fff;text-shadow:0 2px 0 #0008;
+ background:repeating-conic-gradient(#0000001a 0 25%,#0000 0 50%) 0 0/8px 8px,repeating-conic-gradient(#ffffff12 0 25%,#0000 0 50%) 4px 4px/12px 12px,linear-gradient(#7b8696,#566070);
+ box-shadow:inset 3px 3px 0 #ffffff55,inset -3px -3px 0 #00000055,0 4px 0 #1b212b,0 7px 12px #0007;transition:transform .08s,box-shadow .08s}
+.mcb:active{transform:translateY(3px);box-shadow:inset 3px 3px 0 #ffffff40,inset -3px -3px 0 #00000055,0 1px 0 #1b212b,0 2px 6px #0007}
+.mcb.g{background:repeating-conic-gradient(#00000022 0 25%,#0000 0 50%) 0 0/8px 8px,repeating-conic-gradient(#ffffff1a 0 25%,#0000 0 50%) 4px 4px/12px 12px,linear-gradient(#79d64f,#3f9a2b);box-shadow:inset 3px 3px 0 #d6ffb866,inset -3px -3px 0 #0b4a0f77,0 4px 0 #1d4d17,0 7px 12px #0007}
+.mcb.b{background:repeating-conic-gradient(#00000022 0 25%,#0000 0 50%) 0 0/8px 8px,repeating-conic-gradient(#ffffff1a 0 25%,#0000 0 50%) 4px 4px/12px 12px,linear-gradient(#5aa2ff,#2f62c9);box-shadow:inset 3px 3px 0 #c8e0ff66,inset -3px -3px 0 #0b1f5577,0 4px 0 #15306b,0 7px 12px #0007}
+.mcb.r{background:repeating-conic-gradient(#00000022 0 25%,#0000 0 50%) 0 0/8px 8px,linear-gradient(#d9604f,#a32f23);box-shadow:inset 3px 3px 0 #ffc9c066,inset -3px -3px 0 #4a0f0b77,0 4px 0 #5a1a13,0 7px 12px #0007}
+.mcb.sm{width:auto;margin-top:0;padding:7px 13px;font-size:15px}
+.mcb:disabled{opacity:.45;filter:grayscale(.7);transform:none}
+.srvCard{position:relative;background:linear-gradient(#ffffff18,#ffffff0a);border:1px solid #ffffff24;border-radius:12px;padding:12px;color:#fff;box-shadow:inset 0 0 0 1px #0004}
+.srvCard .ttl{display:flex;align-items:center;gap:8px;font-size:15px;padding-left:38px}.srvCard .ttl .ico{font-size:22px}
+.srvCard .st{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}
+.srvCard .desc{font-size:12px;opacity:.88;margin:6px 0 2px;line-height:1.8}
+.srvCard small{opacity:.75;display:block;margin:5px 0 4px;font-size:11px}
+.stag{display:inline-block;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:800;background:#ffffff1f;white-space:nowrap}
+.stag.own{background:#f5b301;color:#222}.stag.fr{background:#6f52ee}.stag.on{background:#2c6e49}.stag.off{background:#5b6572}.stag.lk{background:#8a3a2a}
+.srvBtns{display:flex;gap:8px}.srvBtns .mcb{margin-top:8px;flex:1;padding:10px 6px;font-size:13.5px}
+.kebab{position:absolute;left:6px;top:6px;width:34px;height:34px;border-radius:8px;border:0;background:#ffffff16;font-size:22px;font-weight:900;line-height:1;padding:0}
+.kback{position:fixed;inset:0;z-index:56;background:rgba(3,7,14,.6)}
+.kmenu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:57;width:min(310px,88vw);background:#0d1626;border:2px solid #2b3a57;border-radius:14px;box-shadow:0 18px 50px #000c;overflow:hidden;text-align:right}
+.kmenu .kt{padding:12px 14px;font-weight:900;font-size:14px;background:#ffffff0d;border-bottom:1px solid #ffffff18}
+.kmenu button{display:block;width:100%;text-align:right;padding:12px 14px;border:0;border-bottom:1px solid #ffffff12;background:none;font-size:14px}
+.kmenu button:last-child{border-bottom:0}.kmenu button:active{background:#ffffff1c}.kmenu .danger{color:#ff8a80}
+/* پنل ساخت / تنظیم سرور */
+#srvWiz{position:fixed;inset:0;z-index:55;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(5,9,18,.84);backdrop-filter:blur(5px);direction:rtl;text-align:right}
+#srvWiz .wbox{width:min(440px,100%);max-height:96vh;overflow:auto;background:linear-gradient(#142138,#0d1627);border:2px solid #2b3a57;border-radius:16px;box-shadow:0 20px 60px #000b;padding:16px;touch-action:pan-y}
+#srvWiz .wh{display:flex;justify-content:space-between;align-items:center;font-size:18px;font-weight:900}
+#srvWiz .wx{width:36px;height:36px;border:0;border-radius:8px;background:#ffffff16;font-size:16px;padding:0}
+#srvWiz .steps{display:flex;gap:6px;margin:12px 0 4px}
+#srvWiz .steps button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:9px;border:1px solid #ffffff26;background:#ffffff0c;font-size:12.5px;font-weight:800;opacity:.6}
+#srvWiz .steps button b{display:grid;place-items:center;width:21px;height:21px;border-radius:5px;background:#ffffff26;font-size:11px}
+#srvWiz .steps button.on{opacity:1;border-color:#9be564;background:#9be56418}#srvWiz .steps button.on b{background:#9be564;color:#082018}
+.fld{margin:14px 0}
+.fld>label{display:block;font-size:13.5px;font-weight:800;margin-bottom:7px;color:#e9f4ff}
+.fld>label i{color:#ff8a80;font-style:normal;margin-right:3px}.fld>label em{font-style:normal;font-weight:600;opacity:.6;font-size:11.5px}
+.fld .cnt{float:left;font-weight:700;opacity:.6;font-size:11px;direction:ltr}
+#srvWiz input[type=text],#srvWiz select{width:100%;padding:13px 12px;border-radius:8px;border:2px solid #3a4a6b;background:#07101d;color:#fff;font:inherit;font-size:16px;outline:none;user-select:text;-webkit-user-select:text}
+#srvWiz input[type=text]:focus,#srvWiz select:focus{border-color:#9be564;box-shadow:0 0 0 3px #9be56433}
+.fld.err input{border-color:#ff5a4d;box-shadow:0 0 0 3px #ff5a4d33;animation:srvshk .38s}
+.fld .hint{font-size:11.5px;color:#9fb5c9;margin-top:6px;line-height:1.8}
+.fld .emsg{display:none;font-size:13px;color:#ffb3aa;font-weight:800;margin-top:7px;line-height:1.7}.fld.err .emsg{display:block}.fld.err .hint{display:none}
+@keyframes srvshk{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.wprev{margin:14px 0 2px;padding:10px;border-radius:10px;border:1px dashed #ffffff33;background:#ffffff08}
+.wprev>small{display:block;font-size:10.5px;opacity:.6;margin-bottom:6px}
+.wprev .pt{font-size:15px;font-weight:900;display:flex;gap:8px;align-items:center;word-break:break-word}
+.wsec{font-size:12px;font-weight:800;color:#9be564;margin:16px 0 4px}
+.opt{display:flex;align-items:center;gap:10px;padding:11px;margin:8px 0;border-radius:10px;background:#ffffff0c;border:1px solid #ffffff1f}
+.opt .oi{font-size:22px;width:30px;text-align:center;flex:0 0 auto}
+.opt .ot{flex:1;min-width:0}.opt .ot b{display:block;font-size:13.5px}.opt .ot small{display:block;font-size:11.5px;color:#a9bdd0;line-height:1.75;margin-top:3px}
+.sw{position:relative;flex:0 0 auto;width:50px;height:28px}
+.sw input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:6px;background:#3a4252;box-shadow:inset 2px 2px 0 #0007;transition:background .15s}
+.sw span:after{content:"";position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:4px;background:#cfd6e2;box-shadow:inset -2px -2px 0 #0004,inset 2px 2px 0 #fffa;transition:right .15s,background .15s}
+.sw input:checked+span{background:#3f9a2b}.sw input:checked+span:after{right:26px;background:#eaffd2}
+.wbtns{display:flex;gap:10px;margin-top:16px;position:sticky;bottom:-16px;padding:12px 0 2px;background:linear-gradient(#0d162700,#0d1627 28%)}.wbtns .mcb{margin-top:0;flex:1}.wbtns .mcb.sm{flex:0 0 auto}
+.jrow{display:flex;gap:8px}.jrow .mcb{margin-top:0;flex:1;font-size:13px;padding:10px 6px}
 
 </style>
 </head>
@@ -3057,54 +3108,174 @@ MMNet.worldReset=()=>{toast('دنیای مشترک از نو ساخته شد؛ �
 
 // ---- سرورها: مجوز حالت خلاقانه ----
 MMNet.isOp=false;
-MMNet.canCreative=()=>!G.srv||MMNet.owner||MMNet.isOp;
+MMNet.canCreative=()=>!G.srv||MMNet.owner||MMNet.isOp||!!G.srv.allCreative;
 {const _sm=switchMode;switchMode=function(){if(G.mp&&G.srv&&!MMNet.canCreative()&&G.mode==='survival'){toast('🔒 فقط سازنده یا OP می‌تواند خلاقانه شود');return}_sm()}}
 MMNet.opsChanged=ops=>{MMNet.ops=ops||{};MMNet.isOp=!!MMNet.ops[MMNet.uid];if(G.mp&&G.srv&&G.running&&!MMNet.canCreative()&&G.mode==='creative'){switchMode();toast('OP تو لغو شد؛ حالت بقا')}if(plOpen)renderPlayers()};
 
 setInterval(()=>{if(G.mp&&G.mpSave&&G.running&&MMNet.on)saveGame(true)},25000);addEventListener('pagehide',()=>{if(G.mp&&G.mpSave&&G.running)saveGame(true)});
 
 /* ---- p8b_server.js ---- */
-// ===================== P8b: صفحهٔ سرورها =====================
+// ===================== P8b: صفحهٔ سرورها (سرور دائمی • پنل دو مرحله‌ای • تنظیمات) =====================
 {
 const viewSrv=document.createElement('div');viewSrv.id='viewSrv';viewSrv.style.display='none';
-viewSrv.innerHTML='<div class="srvHead"><b>🌐 سرورها</b><button type="button" id="srvRefresh" class="btn2">↻</button></div>'+
+viewSrv.innerHTML='<div class="srvHead"><b>🌐 سرورها</b><button type="button" id="srvRefresh" class="mcb sm" title="بازخوانی">↻</button></div>'+
  '<div id="srvNote" class="fine"></div>'+
- '<div class="srvNew"><input id="srvName" maxlength="24" placeholder="نام سرور جدید"><button id="srvCreate" class="btn1">➕ ساخت سرور</button></div>'+
+ '<button type="button" id="srvNewBtn" class="mcb g">➕ ساخت سرور جدید</button>'+
  '<div id="srvList"></div>'+
- '<button id="srvBack" class="btn2">بازگشت</button>';
+ '<button type="button" id="srvBack" class="mcb">بازگشت</button>';
 $('viewMain').parentNode.appendChild(viewSrv);
 const _smv=showMenuView;showMenuView=function(v){_smv(v);viewSrv.style.display=v==='srv'?'block':'none'};
 const open=document.createElement('button');open.id='btnSrv';open.className='btn1';open.textContent='🌐 سرورها (چندنفره)';
 $('viewMain').insertBefore(open,$('btnRotate'));
 const note=$('srvNote'),list=$('srvList');
-let servers={},unsub=null;
+let servers={},unsub=null,myFriends=new Set(),menuId=null,delArm=null;
 const esc2=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function render(){
- const api=MMNet.api;list.innerHTML='';
- const arr=Object.entries(servers).sort((a,b)=>(b[1].online?1:0)-(a[1].online?1:0)||(b[1].createdAt||0)-(a[1].createdAt||0));
- if(!arr.length){list.innerHTML='<p class="fine">هنوز سروری ساخته نشده.</p>';return}
- for(const[id,s]of arr){
-  const mine=api.uid&&s.owner===api.uid,on=!!s.online;
-  const c=document.createElement('div');c.className='srvCard';
-  c.innerHTML='<div class="meta"><b>'+(on?'🟢 ':'⚪ ')+esc2(s.name)+(mine?' <span class="tag">سازنده</span>':'')+'</div><small>سازنده: '+esc2(s.ownerName||'؟')+' • '+(on?'آنلاین':'آفلاین (سازنده نیست)')+'</small></div>';
-  const row=document.createElement('div');row.className='srvBtns';
-  for(const wn of['w1','w2']){const b=document.createElement('button');b.textContent='▶ '+((s.worlds&&s.worlds[wn]&&s.worlds[wn].name)||('دنیای '+(wn==='w1'?'۱':'۲')));b.disabled=!on&&!mine;b.onclick=()=>api.join(id,wn);row.appendChild(b)}
-  if(mine){const d=document.createElement('button');d.className='del';d.textContent='🗑';d.onclick=()=>{if(d.dataset.s){api.remove(id)}else{d.dataset.s=1;d.textContent='؟ حذف';setTimeout(()=>{d.dataset.s='';d.textContent='🗑'},2500)}};row.appendChild(d)}
-  c.appendChild(row);list.appendChild(c)}
+const DEF={name:'',desc:'',needOwner:false,friendsOnly:false,pvp:false,allCreative:false,maxPlayers:0};
+const clean=v=>({name:String(v.name||'').trim().slice(0,24),desc:String(v.desc||'').trim().slice(0,60),needOwner:!!v.needOwner,friendsOnly:!!v.friendsOnly,pvp:!!v.pvp,allCreative:!!v.allCreative,maxPlayers:Math.max(0,Math.min(50,parseInt(v.maxPlayers)||0))});
+const dlJson=(obj,fname)=>{const b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fname;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
+const cfgOf=s=>Object.assign({type:'mm-server',version:1},clean(s));
+const fnameOf=s=>'server-'+(String(s.name||'config').trim().replace(/[^\w؀-ۿ]+/g,'_')||'config')+'.json';
+
+// برچسب‌های وضعیت سرور (در کارت و در پیش‌نمایش)
+function tagsHtml(s,x){
+ const t=[];
+ if(x.mine)t.push('<span class="stag own">👑 سازنده</span>');
+ if(s.needOwner)t.push(x.on?'<span class="stag on">🟢 سازنده داخل سرور است</span>':'<span class="stag off">⚪ آفلاین — منتظر سازنده</span>');
+ else t.push('<span class="stag on">🟢 همیشه فعال</span>');
+ if(s.friendsOnly)t.push('<span class="stag fr">👥 فقط دوستان</span>');
+ if(x.fr===false)t.push('<span class="stag lk">🔒 دوست سازنده نیستی</span>');
+ if(s.pvp)t.push('<span class="stag">⚔️ PvP</span>');
+ if(s.allCreative)t.push('<span class="stag">🪽 همه خلاقانه</span>');
+ if(+s.maxPlayers>0)t.push('<span class="stag">👤 حداکثر '+fa(+s.maxPlayers)+'</span>');
+ return t.join('');
 }
+
+// ---------- پنل ساخت / تنظیم سرور (دو مرحله) ----------
+let wizEl=null;
+const closeWiz=()=>{if(wizEl){wizEl.remove();wizEl=null}};
+function openWiz(mode,sid,s){
+ closeWiz();
+ const v=Object.assign({},DEF,s?clean(s):{});
+ let step=1,busy=false;
+ const el=wizEl=document.createElement('div');el.id='srvWiz';
+ const optHtml=(k,ic,t,d)=>'<div class="opt"><div class="oi">'+ic+'</div><div class="ot"><b>'+t+'</b><small>'+d+'</small></div><label class="sw"><input type="checkbox" data-k="'+k+'"><span></span></label></div>';
+ el.innerHTML=
+  '<div class="wbox"><div class="wh"><span id="svWTitle"></span><button type="button" class="wx" id="svWClose">✕</button></div>'+
+  '<div class="steps"><button type="button" data-s="1"><b>۱</b>اطلاعات سرور</button><button type="button" data-s="2"><b>۲</b>تنظیمات و دسترسی</button></div>'+
+  '<div id="svWp1">'+
+   '<div class="fld" id="svFName"><label for="svWName">نام سرور <i>(الزامی)</i><span class="cnt" id="svWCnt"></span></label>'+
+   '<input type="text" id="svWName" maxlength="24" autocomplete="off" placeholder="اینجا اسم سرور را بنویس؛ مثلاً: سرور دوستان">'+
+   '<div class="hint">این همان اسمی است که بقیه در لیست سرورها می‌بینند.</div>'+
+   '<div class="emsg">✏️ اول باید برای سرورت یک اسم بنویسی! مثلاً «سرور دوستان»</div></div>'+
+   '<div class="fld"><label for="svWDesc">توضیح کوتاه <em>(اختیاری)</em><span class="cnt" id="svWCnt2"></span></label>'+
+   '<input type="text" id="svWDesc" maxlength="60" autocomplete="off" placeholder="مثلاً: فقط ساخت‌وساز، بدون خرابکاری 🙂"></div>'+
+   '<div class="wprev"><small>پیش‌نمایش در لیست سرورها</small><div class="pt" id="svWPrev"></div><div class="st" id="svWPrevT" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px"></div></div>'+
+   '<div class="hint" style="margin-top:12px">🌍 هر سرور دو دنیای جدا دارد (دنیای ۱ و دنیای ۲). هر نفر حداکثر ۳ سرور می‌تواند بسازد.</div>'+
+  '</div>'+
+  '<div id="svWp2" style="display:none">'+
+   '<div class="wsec">🔑 دسترسی</div>'+
+   optHtml('needOwner','🕹️','فقط وقتی من آنلاین باشم سرور فعال باشد','خاموش (پیش‌فرض): سرور همیشه روشن است و حتی وقتی تو نیستی بقیه می‌توانند وارد شوند و بازی کنند. روشن: بقیه فقط وقتی تو خودت داخل سرور هستی می‌توانند وارد شوند.')+
+   optHtml('friendsOnly','👥','سرور فقط برای دوستان من باشد','فقط کسانی که در دومیتو دوست تو هستند می‌توانند وارد شوند.')+
+   '<div class="fld"><label for="svWMax">👤 حداکثر بازیکن در هر دنیا</label><select id="svWMax"><option value="0">بدون محدودیت</option><option value="5">۵ نفر</option><option value="10">۱۰ نفر</option><option value="20">۲۰ نفر</option><option value="50">۵۰ نفر</option></select></div>'+
+   '<div class="wsec">🎮 قوانین بازی</div>'+
+   optHtml('pvp','⚔️','نبرد بازیکن‌ها (PvP)','بازیکن‌ها می‌توانند به هم آسیب بزنند.')+
+   optHtml('allCreative','🪽','همه بتوانند حالت خلاقانه شوند','به‌طور پیش‌فرض فقط سازنده و OPها می‌توانند خلاقانه شوند.')+
+   '<div class="wsec">📂 فایل تنظیمات (JSON)</div>'+
+   '<div class="jrow"><button type="button" class="mcb b" id="svWImp">📂 ورود از فایل</button><button type="button" class="mcb" id="svWExp">⬇ ذخیرهٔ فایل</button></div>'+
+   '<div class="hint">می‌توانی تنظیمات این سرور را به‌صورت فایل JSON ذخیره کنی و برای ساخت سرور دیگر دوباره وارد کنی.</div>'+
+   '<input type="file" id="svWFile" accept=".json,application/json,text/plain" style="display:none">'+
+  '</div>'+
+  '<div class="wbtns" id="svWBtns"></div></div>';
+ document.body.appendChild(el);
+ const q=s=>el.querySelector(s),nm=q('#svWName'),ds=q('#svWDesc'),mx=q('#svWMax');
+ const prev=()=>{const n=nm.value.trim();q('#svWPrev').innerHTML='<span>🌍</span><span'+(n?'':' style="opacity:.45"')+'>'+esc2(n||'نام سرور شما…')+'</span>';q('#svWPrevT').innerHTML=tagsHtml(clean(v),{mine:true,on:true,fr:true});const d=ds.value.trim();if(d)q('#svWPrevT').insertAdjacentHTML('beforebegin','<div class="desc" style="font-size:12px;opacity:.85;margin-top:6px">'+esc2(d)+'</div>')};
+ const prevSafe=()=>{const p=el.querySelectorAll('.wprev .desc');p.forEach(x=>x.remove());prev()};
+ const cnt=()=>{q('#svWCnt').textContent=nm.value.length+'/24';q('#svWCnt2').textContent=ds.value.length+'/60'};
+ const sync=()=>{nm.value=v.name;ds.value=v.desc;if(![...mx.options].some(o=>+o.value===v.maxPlayers)){const o=document.createElement('option');o.value=v.maxPlayers;o.textContent=fa(v.maxPlayers)+' نفر';mx.appendChild(o)}mx.value=String(v.maxPlayers);el.querySelectorAll('input[data-k]').forEach(c=>{c.checked=!!v[c.dataset.k]});cnt();prevSafe()};
+ const check=()=>{v.name=nm.value.trim();const f=q('#svFName');f.classList.remove('err');if(!v.name){void f.offsetWidth;f.classList.add('err');nm.focus();try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}return false}return true};
+ const mkb=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className='mcb '+cls;b.textContent=label;b.onclick=fn;return b};
+ const save=async()=>{
+  if(busy)return;v.name=nm.value.trim();
+  if(!v.name){step=1;draw();check();return}
+  if(!MMNet.api){toast('اتصال برقرار نیست');return}
+  busy=true;const bs=[...el.querySelectorAll('#wBtns .mcb')];bs.forEach(b=>b.disabled=true);
+  try{
+   if(mode==='edit')await MMNet.api.update(sid,clean(v));else await MMNet.api.create(clean(v));
+   toast(mode==='edit'?'✅ تنظیمات ذخیره شد':(v.needOwner?'✅ سرور ساخته شد':'✅ سرور ساخته شد و همیشه فعال است'),3000);closeWiz()
+  }catch(e){toast('⚠️ '+(e&&e.message||'ناموفق بود'),3800);busy=false;bs.forEach(b=>b.disabled=false)}
+ };
+ function draw(){
+  q('#svWTitle').textContent=mode==='edit'?'⚙️ تنظیمات سرور':'➕ ساخت سرور جدید';
+  el.querySelectorAll('.steps button').forEach(b=>b.classList.toggle('on',+b.dataset.s===step));
+  q('#svWp1').style.display=step===1?'block':'none';q('#svWp2').style.display=step===2?'block':'none';
+  const bt=q('#svWBtns');bt.innerHTML='';
+  if(step===1){bt.appendChild(mkb('ادامه ◀','g',()=>{if(check()){step=2;draw()}}));if(mode==='edit')bt.appendChild(mkb('✅ ذخیره','b',save))}
+  else{const back=mkb('▶ قبلی','sm',()=>{step=1;draw()});bt.appendChild(back);bt.appendChild(mkb(mode==='edit'?'✅ ذخیرهٔ تغییرات':'✅ ساخت سرور','g',save))}
+  prevSafe();
+ }
+ nm.oninput=()=>{v.name=nm.value;q('#svFName').classList.remove('err');cnt();prevSafe()};
+ ds.oninput=()=>{v.desc=ds.value;cnt();prevSafe()};
+ mx.onchange=()=>{v.maxPlayers=+mx.value||0;prevSafe()};
+ el.querySelectorAll('input[data-k]').forEach(c=>{c.onchange=()=>{v[c.dataset.k]=c.checked;prevSafe()}});
+ el.querySelectorAll('.steps button').forEach(b=>b.onclick=()=>{const t=+b.dataset.s;if(t===2&&!check())return;step=t;draw()});
+ q('#svWClose').onclick=closeWiz;
+ q('#svWExp').onclick=()=>{v.name=nm.value;dlJson(cfgOf(v),fnameOf(v));toast('⬇ فایل تنظیمات ذخیره شد')};
+ q('#svWImp').onclick=()=>q('#svWFile').click();
+ q('#svWFile').onchange=ev=>{const f=ev.target.files[0];ev.target.value='';if(!f)return;if(f.size>50000){toast('فایل بزرگ است');return}
+  const rd=new FileReader();rd.onload=()=>{let j;try{j=JSON.parse(String(rd.result))}catch(e){toast('⚠️ فایل JSON معتبر نیست');return}
+   if(!j||typeof j!=='object'||Array.isArray(j)){toast('⚠️ ساختار فایل درست نیست');return}
+   let n=0;
+   if(typeof j.name==='string'){v.name=j.name.slice(0,24);n++}
+   if(typeof j.desc==='string'){v.desc=j.desc.slice(0,60);n++}
+   for(const k of['needOwner','friendsOnly','pvp','allCreative'])if(typeof j[k]==='boolean'){v[k]=j[k];n++}
+   if(Number.isFinite(+j.maxPlayers)&&j.maxPlayers!==null){v.maxPlayers=Math.max(0,Math.min(50,parseInt(j.maxPlayers)||0));n++}
+   if(!n){toast('⚠️ تنظیمات قابل‌استفاده‌ای در فایل نبود');return}
+   sync();toast('✅ تنظیمات از فایل خوانده شد')};
+  rd.readAsText(f)};
+ sync();draw();
+ if(mode==='create')setTimeout(()=>{try{nm.focus()}catch(e){}},50);
+}
+
+// ---------- لیست سرورها ----------
+function render(){
+ const api=MMNet.api;if(!api)return;const sc=list.scrollTop;list.innerHTML='';
+ const arr=Object.entries(servers).map(([id,s])=>{const mine=!!(api.uid&&s.owner===api.uid),on=!!s.online,fr=!s.friendsOnly||mine||myFriends.has(s.ownerName);return{id,s,mine,on,fr,can:mine||(fr&&(!s.needOwner||on))}})
+  .sort((a,b)=>(b.can?1:0)-(a.can?1:0)||(b.s.createdAt||0)-(a.s.createdAt||0));
+ if(!arr.length){list.innerHTML='<p class="fine">هنوز سروری ساخته نشده. اولین سرور را تو بساز! 👆</p>';return}
+ for(const{id,s,mine,on,fr,can}of arr){
+  const c=document.createElement('div');c.className='srvCard';
+  c.innerHTML='<div class="ttl"><span class="ico">🌍</span><b>'+esc2(s.name)+'</b></div>'+(s.desc?'<div class="desc">'+esc2(s.desc)+'</div>':'')+
+   '<div class="st">'+tagsHtml(s,{mine,on,fr})+'</div><small>سازنده: '+esc2(s.ownerName||'؟')+' • ۲ دنیا</small>';
+  if(mine){
+   const k=document.createElement('button');k.type='button';k.className='kebab';k.textContent='⋮';k.title='گزینه‌ها';
+   k.onclick=e=>{e.stopPropagation();menuId=menuId===id?null:id;delArm=null;render()};c.appendChild(k);
+   if(menuId===id){
+    const bk=document.createElement('div');bk.className='kback';c.appendChild(bk);
+    const m=document.createElement('div');m.className='kmenu';m.innerHTML='<div class="kt">🌍 '+esc2(s.name)+'</div>';
+    const it=(t,fn,cls)=>{const b=document.createElement('button');b.type='button';b.textContent=t;if(cls)b.className=cls;b.onclick=e=>{e.stopPropagation();fn()};m.appendChild(b)};
+    it('⚙️ تغییر تنظیمات',()=>{menuId=null;render();openWiz('edit',id,s)});
+    it('⬇ ذخیرهٔ تنظیمات (JSON)',()=>{menuId=null;dlJson(cfgOf(s),fnameOf(s));render();toast('⬇ فایل تنظیمات ذخیره شد')});
+    it(delArm===id?'؟ مطمئنی؟ دوباره بزن تا حذف شود':'🗑 حذف سرور',()=>{if(delArm===id){delArm=null;menuId=null;render();api.remove(id).catch(e=>toast('⚠️ '+(e&&e.message||'حذف نشد')))}else{delArm=id;render();setTimeout(()=>{if(delArm===id){delArm=null;render()}},3000)}},'danger');
+    c.appendChild(m)}
+  }
+  const row=document.createElement('div');row.className='srvBtns';
+  for(const wn of['w1','w2']){const b=document.createElement('button');b.type='button';b.className='mcb g';b.textContent='▶ '+((s.worlds&&s.worlds[wn]&&s.worlds[wn].name)||('دنیای '+(wn==='w1'?'۱':'۲')));b.disabled=!can;b.onclick=()=>api.join(id,wn);row.appendChild(b)}
+  c.appendChild(row);list.appendChild(c)}
+ list.scrollTop=sc;
+}
+document.addEventListener('click',()=>{if(menuId){menuId=null;delArm=null;render()}});
 MMNet.openSrv=async()=>{
  showMenuView('srv');note.textContent='';
  if(!MMNet.api){note.textContent=MMNet.netFail?'سرورها فقط وقتی بازی داخل پوشهٔ games دومیتو باشد و وارد شده باشی کار می‌کند.':'در حال اتصال…';if(!MMNet.netFail)setTimeout(()=>{if(viewSrv.style.display!=='none')MMNet.openSrv()},1200);return}
  note.textContent='در حال دریافت لیست…';
- try{await MMNet.api.ready();note.textContent='سازندهٔ سرور می‌تواند هر دو حالت بقا و خلاقانه را بازی کند؛ بقیه فقط بقا، مگر اینکه سازنده به آن‌ها OP بدهد.';
-  if(unsub)unsub();unsub=MMNet.api.watch(v=>{servers=v||{};render()})}catch(e){note.textContent='⚠️ '+(e&&e.message||'اتصال برقرار نشد')}
+ try{await MMNet.api.ready();note.textContent='سرورها به‌صورت پیش‌فرض همیشه فعال‌اند، مگر سازنده «فقط وقتی من آنلاین باشم» را روشن کرده باشد. سازنده می‌تواند بقا و خلاقانه بازی کند؛ بقیه فقط بقا، مگر OP بگیرند یا سازنده «همه خلاقانه» را روشن کند.';
+  if(unsub)unsub();unsub=MMNet.api.watch(v=>{servers=v||{};render()});
+  MMNet.api.friends().then(a=>{myFriends=new Set(a||[]);render()}).catch(()=>{})}catch(e){note.textContent='⚠️ '+(e&&e.message||'اتصال برقرار نشد')}
 };
 open.onclick=()=>MMNet.openSrv();
-$('srvBack').onclick=()=>{if(unsub){unsub();unsub=null}showMenuView('main')};
+$('srvBack').onclick=()=>{closeWiz();if(unsub){unsub();unsub=null}showMenuView('main')};
 $('srvRefresh').onclick=()=>MMNet.openSrv();
-$('srvCreate').onclick=async()=>{const n=$('srvName').value.trim();if(!n){toast('نام سرور را بنویس');return}
- if(!MMNet.api){toast('اتصال برقرار نیست');return}
- $('srvCreate').disabled=true;try{await MMNet.api.create(n);$('srvName').value='';toast('✅ سرور ساخته شد')}catch(e){toast('⚠️ ساخت سرور ناموفق: '+(e&&e.message||''),3500)}$('srvCreate').disabled=false};
+$('srvNewBtn').onclick=()=>{if(!MMNet.api){toast('اتصال برقرار نیست');return}openWiz('create')};
 }
 
 // ===================== BOOT =====================
@@ -3166,7 +3337,7 @@ const M=window.MMNet;if(!M)return;
 const DBURL="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 let App,FB;
 try{App=await import("../js/app.js");FB=await import(DBURL)}catch(e){console.warn('MM net import',e);M.netFail=true;if(M.wanted)M.fail('فایل بازی باید داخل پوشهٔ games دومیتو باشد');return}
-const{db,ref,set,get,update,remove,push,onValue,runTransaction,onDisconnect,serverTimestamp,waitForUser,currentUid,getSavedRoom,getSavedName,sendChatMessage,listenChat,resetSessionForNextRound,getRoomMeta,joinLobby}=App;
+const{db,ref,set,get,update,remove,push,onValue,runTransaction,onDisconnect,serverTimestamp,waitForUser,currentUid,getSavedRoom,getSavedName,sendChatMessage,listenChat,resetSessionForNextRound,getRoomMeta,joinLobby,getFriendNames}=App;
 const{onChildAdded,onChildChanged,onChildRemoved,query,limitToLast}=FB;
 let uid=null,name='',skin='classic',offs=0;
 onValue(ref(db,'.info/serverTimeOffset'),s=>{offs=s.val()||0});
@@ -3242,11 +3413,19 @@ const SL=p=>ref(db,'serverList'+(p?'/'+p:'')),SD=p=>ref(db,'serverData'+(p?'/'+p
 const rnd=()=>(Math.random()*2147483647)|0;
 M.api={uid:null,ready,
  watch(cb){return onValue(SL(),s=>{const v=s.val()||{};for(const k of Object.keys(v))v[k].online=!!v[k].online&&(now()-(v[k].at||0))<75000;cb(v)})},
- async create(n){await ready();
+ friends:async()=>{await ready();return getFriendNames(name)},
+ // تنظیمات سرور: needOwner=false یعنی سرور همیشه فعال است (پیش‌فرض، حتی برای سرورهای قدیمی که این فیلد را ندارند)
+ opts(o){o=typeof o==='string'?{name:o}:(o||{});const n=String(o.name||'').trim().slice(0,24);if(!n)throw new Error('اسم سرور را بنویس');
+  return{name:n,desc:String(o.desc||'').trim().slice(0,60),needOwner:!!o.needOwner,friendsOnly:!!o.friendsOnly,pvp:!!o.pvp,allCreative:!!o.allCreative,maxPlayers:Math.max(0,Math.min(50,parseInt(o.maxPlayers)||0))}},
+ async create(o){await ready();o=M.api.opts(o);
   const cur=(await get(SL())).val()||{};if(Object.values(cur).filter(s=>s.owner===uid).length>=3)throw new Error('حداکثر ۳ سرور می‌توانی داشته باشی');
   const sid='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),sd=[rnd(),rnd()];
-  await set(SL(sid),{name:n,owner:uid,ownerName:name,createdAt:now(),online:false,at:0,worlds:{w1:{name:'دنیای ۱',seed:sd[0]},w2:{name:'دنیای ۲',seed:sd[1]}}});
-  await Promise.all(['w1','w2'].map((w,i)=>set(SD(sid+'/'+w+'/world'),{seed:sd[i],pvp:false,t0:serverTimestamp(),time0:.3})))},
+  await set(SL(sid),Object.assign({},o,{owner:uid,ownerName:name,createdAt:now(),online:false,at:0,worlds:{w1:{name:'دنیای ۱',seed:sd[0]},w2:{name:'دنیای ۲',seed:sd[1]}}}));
+  await Promise.all(['w1','w2'].map((w,i)=>set(SD(sid+'/'+w+'/world'),{seed:sd[i],pvp:o.pvp,t0:serverTimestamp(),time0:.3})))},
+ async update(sid,o){await ready();o=M.api.opts(o);
+  const meta=(await get(SL(sid))).val();if(!meta)throw new Error('این سرور دیگر وجود ندارد');if(meta.owner!==uid)throw new Error('فقط سازنده می‌تواند تنظیمات را عوض کند');
+  await update(SL(sid),o);
+  if(!!meta.pvp!==o.pvp)await Promise.all(['w1','w2'].map(w=>update(SD(sid+'/'+w+'/world'),{pvp:o.pvp}).catch(()=>{})))},
  async remove(sid){await ready();await remove(SD(sid));await remove(SL(sid))},
  async join(sid,wn){
   $x('loading').style.display='flex';$x('menu').style.display='none';$x('loadMsg').textContent='اتصال به سرور…';
@@ -3254,12 +3433,17 @@ M.api={uid:null,ready,
    await ready();
    const meta=(await get(SL(sid))).val();if(!meta){M.fail('این سرور دیگر وجود ندارد',1);return}
    const isOwner=meta.owner===uid,live=!!meta.online&&(now()-(meta.at||0))<75000;
-   if(!isOwner&&!live){M.fail('سرور آفلاین است؛ سازنده باید وارد شود',1);return}
+   if(!isOwner){
+    if(meta.friendsOnly){let ok=false;try{ok=(await getFriendNames(name)).includes(meta.ownerName)}catch(e){}if(!ok){M.fail('این سرور فقط برای دوستان سازنده است',1);return}}
+    // سرورهای بدون needOwner (از جمله همهٔ سرورهای قدیمی) همیشه فعال‌اند
+    if(meta.needOwner&&!live){M.fail('سازنده این سرور را فقط وقتی خودش داخلش باشد باز گذاشته؛ بعداً دوباره امتحان کن',1);return}
+   }
    const base=`serverData/${sid}/${wn}`,mc=p=>ref(db,base+(p?'/'+p:''));
+   if(!isOwner&&+meta.maxPlayers>0){const ps=(await get(mc('players'))).val()||{};if(Object.keys(ps).filter(k=>k!==uid).length>=+meta.maxPlayers){M.fail('ظرفیت این دنیا پر است',1);return}}
    let world=(await get(mc('world'))).val();
-   if(!world){if(!isOwner){M.fail('دنیا هنوز ساخته نشده',1);return}world={seed:meta.worlds[wn].seed,pvp:false,t0:serverTimestamp(),time0:.3};await set(mc('world'),world);world=(await get(mc('world'))).val()}
+   if(!world){const wd=meta.worlds&&meta.worlds[wn];if(!wd){M.fail('دنیا هنوز ساخته نشده',1);return}await runTransaction(mc('world'),cur=>cur||{seed:wd.seed,pvp:!!meta.pvp,t0:serverTimestamp(),time0:.3});world=(await get(mc('world'))).val()}
    const slot=`srv_${sid}_${wn}`,key='mm_w'+slot;
-   const server={sid,wn,name:meta.name+' — '+((meta.worlds&&meta.worlds[wn]&&meta.worlds[wn].name)||wn)};
+   const server={sid,wn,name:meta.name+' — '+((meta.worlds&&meta.worlds[wn]&&meta.worlds[wn].name)||wn),allCreative:!!meta.allCreative};
    M.owner=isOwner;M.ops={};M.isOp=false;
    const dbEdits={},pre=[];(await get(mc('edits'))).forEach(x=>{const k=x.key;if(k[0]==='b'){dbEdits[k]=x.val()|0;pre.push(+k.slice(1),x.val()|0)}});
    let data=null,mode='survival';
@@ -3278,6 +3462,8 @@ M.api={uid:null,ready,
    }
    // OPها
    onValue(SD(sid+'/ops'),s=>M.opsChanged(s.val()||{}));
+   // اگر سازنده وسط بازی «همه خلاقانه» را عوض کرد، همان لحظه اعمال شود
+   onValue(SL(sid),s=>{const v=s.val();if(!v)return;const a=!!v.allCreative;if(a!==server.allCreative){server.allCreative=a;if(M.opsChanged)M.opsChanged(M.ops||{})}});
    M.setOp=(u,on)=>set(SD(sid+'/ops/'+u),on?true:null);
    await session({base,srv:true,world,owner:isOwner,mode,pre:data?null:pre,data,slot,server,save:isOwner,
     onReset(){if(isOwner){try{localStorage.removeItem(key)}catch(e){}}},
@@ -3286,6 +3472,8 @@ M.api={uid:null,ready,
      M.sendChat=t=>push(ch,{name,text:String(t).slice(0,200),at:now()}).catch(e=>console.warn(e));
      onChildAdded(query(ch,limitToLast(40)),x=>{const v=x.val()||{};if(!v.text)return;list.push({id:x.key,name:v.name||'؟',text:v.text,at:v.at||0});if(list.length>60)list.shift();M.setChatList(list);if((v.at||0)>=t0&&v.name!==name)M.addChat(v)})},
     async exit(){if(isOwner){try{await update(SL(sid),{online:false})}catch(e){}}}});
+   // اگر سازنده PvP را داخل بازی عوض کرد، در تنظیمات سرور هم همان نمایش داده شود
+   if(isOwner&&M.setPvp){const _sp=M.setPvp;M.setPvp=v=>{update(SL(sid),{pvp:!!v}).catch(()=>{});return _sp(v)}}
   }catch(e){console.error('MM srv',e);M.fail(/PERMISSION/i.test(String(e&&(e.code||e.message)))?'دسترسی دیتابیس مجاز نیست (قوانین Firebase را به‌روز کن)':'اتصال به سرور ناموفق بود',1)}
  }};
 const $x=id=>document.getElementById(id);
