@@ -1686,7 +1686,7 @@ H.on('frame',updateArrows);
 H._['useBlock'].unshift(t=>{
  const h=heldDef(),n=BD[t.id].name;
  if(n==='tnt'){const x=t.x,y=t.y,z=t.z;setBlock(x,y,z,0);toast('💥 فتیله روشن شد!');sfx('fuse');setTimeout(()=>{if(G.running)explode(x+.5,y+.5,z+.5,4)},2400);return true}
- if(n==='bed'){if(dayLight()<.35){G.time=.27;toast('😴 صبح شد!');spawnPt={x:t.x+.5,y:t.y+1,z:t.z+.5};sfx('pop')}else{spawnPt={x:t.x+.5,y:t.y+1,z:t.z+.5};toast('نقطهٔ تولد روی تخت ثبت شد 🛏')}return true}
+ if(n==='bed'){if(dayLight()<.35){MMNet.setDayTime(.27);toast('😴 صبح شد!');spawnPt={x:t.x+.5,y:t.y+1,z:t.z+.5};sfx('pop')}else{spawnPt={x:t.x+.5,y:t.y+1,z:t.z+.5};toast('نقطهٔ تولد روی تخت ثبت شد 🛏')}return true}
  if(h&&h.tool==='hoe'&&(n==='grass'||n==='dirt')&&!getB(t.x,t.y+1,t.z)){setBlock(t.x,t.y,t.z,B.farmland);sfx('place','dirt');if(G.mode==='survival')useTool(1);return true}
  return false});
 const oldDrops4=G.drops;
@@ -1840,7 +1840,8 @@ const oldBS3=buildSettings;buildSettings=function(){
  const add=(t,f)=>{const b=document.createElement('button');b.textContent=t;b.onclick=f;tg.appendChild(b)};
  add('🎮 حالت: '+(G.mode==='creative'?'خلاقانه → بقا':'بقا → خلاقانه'),switchMode);
  add('✋ جابه‌جایی دکمه‌ها',startEdit);
- add('☀️ صبح',()=>{G.time=.3;toast('صبح شد')});add('🌙 شب',()=>{G.time=0;toast('شب شد')});
+ const setT=(t,m)=>{if(MMNet.on&&MMNet.canCreative&&!MMNet.canCreative()){toast('🔒 فقط سازنده یا OP می‌تواند زمان را عوض کند');return}MMNet.setDayTime(t);toast(m)};
+ add('☀️ صبح',()=>setT(.3,'صبح شد'));add('🌙 شب',()=>setT(0,'شب شد'));
  add('🌧 باران/صاف',()=>{G.weather=G.weather==='rain'?'clear':'rain';wT=120;toast(G.weather==='rain'?'باران':'هوای صاف')});
  add('🏠 نقطهٔ تولد',()=>{Object.assign(player,{x:spawnPt.x,y:spawnPt.y,z:spawnPt.z,vx:0,vy:0,vz:0,fallY:spawnPt.y});togglePause(false)});
  const f=document.createElement('button');f.textContent='FPS'+(G.settings.fps?' ✓':'');f.onclick=()=>{G.settings.fps=!G.settings.fps;saveSettings();applySettings();f.textContent='FPS'+(G.settings.fps?' ✓':'')};tg.appendChild(f);
@@ -2977,6 +2978,8 @@ MMNet.remoteEdit=(idx,id)=>{if(!G.running||blocks[idx]===id)return;const y=Math.
 {const _sg=saveGame;saveGame=function(silent){return G.mp&&!G.mpSave?true:_sg(silent)}}
 // ---- زمان مشترک ----
 H.on('frame',dt=>{if(MMNet.on&&MMNet.timeFn){const t=MMNet.timeFn();if(t!==undefined)G.time=t}});
+// در چندنفره ساعت مشترک است؛ تغییر زمان (تخت/دکمهٔ صبح و شب) باید روی ساعت مشترک ثبت شود وگرنه فریم بعد برمی‌گردد
+MMNet.setDayTime=t=>{if(MMNet.on&&MMNet.setTime)MMNet.setTime(t);else G.time=t};
 // ---- حالت محلی برای ارسال ----
 MMNet.getLocalState=()=>{const p=player,s=inv[sel];return{x:Math.round(p.x*100)/100,y:Math.round(p.y*100)/100,z:Math.round(p.z*100)/100,yaw:Math.round(p.yaw*100)/100,pitch:Math.round(p.pitch*100)/100,h:s?s.id:0,s:p.sneak?1:0,f:p.flying?1:0}};
 // ---- آواتار بازیکن‌های دیگر ----
@@ -3350,6 +3353,7 @@ async function session(c){
  const mc=p=>ref(db,c.base+(p?'/'+p:''));
  const world=c.world;
  M.timeFn=()=>{const t=(world.time0||.3)+(now()-(world.t0||now()))/1000/1100;return((t%1)+1)%1};
+ M.setTime=t=>{world.time0=t;world.t0=now();update(mc('world'),{time0:t,t0:serverTimestamp()}).catch(e=>console.warn('time',e))};
  const pr=mc('players/'+uid),evr=mc('events/'+uid);
  try{await remove(evr)}catch(e){}
  onDisconnect(pr).remove();onDisconnect(evr).remove();
@@ -3369,7 +3373,7 @@ async function session(c){
  const up=x=>{if(x.key!==uid)M.upsertPlayer(x.key,x.val());M.updatePlayers&&M.updatePlayers()};
  onChildAdded(pl,up);onChildChanged(pl,up);onChildRemoved(pl,x=>M.removePlayer(x.key));
  // دنیا
- onValue(mc('world'),s=>{const w=s.val();if(!w){if(c.srv)M.worldReset();return}if(w.seed!==world.seed){if(c.onReset)c.onReset();M.worldReset();return}M.pvp=!!w.pvp});
+ onValue(mc('world'),s=>{const w=s.val();if(!w){if(c.srv)M.worldReset();return}if(w.seed!==world.seed){if(c.onReset)c.onReset();M.worldReset();return}M.pvp=!!w.pvp;if(typeof w.time0==='number'&&typeof w.t0==='number'){world.time0=w.time0;world.t0=w.t0}});
  M.setPvp=v=>update(mc('world'),{pvp:!!v});
  M.resetWorld=async()=>{const w={seed:(Math.random()*2147483647)|0,pvp:!!M.pvp,t0:serverTimestamp(),time0:.3};if(c.owner0)w.owner=uid;if(c.onReset)c.onReset();if(c.worldPatch)await c.worldPatch(w);await update(mc(''),{world:w,edits:null,players:null,feed:null})};
  // ضربه
