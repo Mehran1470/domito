@@ -2962,7 +2962,7 @@ H.on('frame',dt=>{if(!G.running||G.mode!=='survival')return;for(const m of mobs)
 /* ---- p8a_mp.js ---- */
 // ===================== P8a: چندنفره (سمت بازی) — اتصال به دومیتو =====================
 const MMNet={on:false,remotes:new Map(),pvp:false,name:'',uid:'',pre:null,lastHit:null,applying:false,owner:false,code:'',started:false};
-window.MMNet=MMNet;
+window.MMNet=MMNet;MMNet.toast=(m,ms)=>toast(m,ms);
 MMNet.wanted=/[?&]round=/.test(location.search)&&!/[?&]solo/.test(location.search);
 G.mp=false;
 // اگر از طریق دومیتو باز شده، منوی تک‌نفره را پنهان کن تا اتصال برقرار شود
@@ -3352,8 +3352,13 @@ const ready=async()=>{if(uid)return;const u=await waitForUser();if(!u)throw new 
 async function session(c){
  const mc=p=>ref(db,c.base+(p?'/'+p:''));
  const world=c.world;
- M.timeFn=()=>{const t=(world.time0||.3)+(now()-(world.t0||now()))/1000/1100;return((t%1)+1)%1};
- M.setTime=t=>{world.time0=t;world.t0=now();update(mc('world'),{time0:t,t0:serverTimestamp()}).catch(e=>console.warn('time',e))};
+ M.timeFn=()=>{const t0=typeof world.time0==='number'?world.time0:.3;const t=t0+(now()-(world.t0||now()))/1000/1100;return((t%1)+1)%1};
+ // اگر دیتابیس نوشتن ساعت را نپذیرد (قوانین Firebase)، دیگر ساعت بی‌صدا برنمی‌گردد: خطا نشان داده می‌شود و ساعت برای خود بازیکن عوض می‌ماند
+ M.setTime=t=>{world.time0=t;world.t0=now();world.localOv=false;
+  update(mc('world'),{time0:t,t0:serverTimestamp()}).catch(e=>{
+   console.warn('time',e);world.localOv=true;world.time0=t;world.t0=now();
+   const denied=/PERMISSION/i.test(String(e&&(e.code||e.message)));
+   if(M.toast)M.toast(denied?'⚠️ دیتابیس اجازهٔ تغییر ساعت سرور را نداد (قوانین Firebase)؛ فقط برای خودت عوض شد':'⚠️ ساعت سرور ذخیره نشد؛ فقط برای خودت عوض شد',4500)})};
  const pr=mc('players/'+uid),evr=mc('events/'+uid);
  try{await remove(evr)}catch(e){}
  onDisconnect(pr).remove();onDisconnect(evr).remove();
@@ -3373,7 +3378,7 @@ async function session(c){
  const up=x=>{if(x.key!==uid)M.upsertPlayer(x.key,x.val());M.updatePlayers&&M.updatePlayers()};
  onChildAdded(pl,up);onChildChanged(pl,up);onChildRemoved(pl,x=>M.removePlayer(x.key));
  // دنیا
- onValue(mc('world'),s=>{const w=s.val();if(!w){if(c.srv)M.worldReset();return}if(w.seed!==world.seed){if(c.onReset)c.onReset();M.worldReset();return}M.pvp=!!w.pvp;if(typeof w.time0==='number'&&typeof w.t0==='number'){world.time0=w.time0;world.t0=w.t0}});
+ onValue(mc('world'),s=>{const w=s.val();if(!w){if(c.srv)M.worldReset();return}if(w.seed!==world.seed){if(c.onReset)c.onReset();M.worldReset();return}M.pvp=!!w.pvp;if(typeof w.time0==='number'&&typeof w.t0==='number'){if(world.localOv&&!(w.t0>world.t0)){}else{world.localOv=false;world.time0=w.time0;world.t0=w.t0}}});
  M.setPvp=v=>update(mc('world'),{pvp:!!v});
  M.resetWorld=async()=>{const w={seed:(Math.random()*2147483647)|0,pvp:!!M.pvp,t0:serverTimestamp(),time0:.3};if(c.owner0)w.owner=uid;if(c.onReset)c.onReset();if(c.worldPatch)await c.worldPatch(w);await update(mc(''),{world:w,edits:null,players:null,feed:null})};
  // ضربه
