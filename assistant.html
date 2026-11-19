@@ -2059,6 +2059,7 @@ function liveStop(msg){
  try{ if(liveRecog){ liveRecog.onend = null; liveRecog.abort(); } }catch(e){}
  liveRecog = null;
  try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
+ try{ if(liveAudio){ const a0 = liveAudio; a0.pause(); if(a0.onended) a0.onended(); liveAudio = null; } }catch(e){}
  $("live").classList.remove("on");
  $("liveBar").hidden = false; $("liveEnd").hidden = true; $("liveCaption").textContent = "";
  setLiveState("idle");
@@ -2124,17 +2125,56 @@ async function liveSend(text){
  }
 }
 
-function speakChunks(text){
+// صدای ابری (Worker): فارسی Dilara/Farid، انگلیسی چند صدای طبیعی. اگر کار نکرد، صدای خود دستگاه.
+const CLOUD_VOICES = {
+ fa: { f1:["fa-IR-DilaraNeural",1,1], f2:["fa-IR-DilaraNeural",1.12,1.05], f3:["fa-IR-DilaraNeural",0.94,0.95],
+       m1:["fa-IR-FaridNeural",1,1],  m2:["fa-IR-FaridNeural",0.88,0.95],  m3:["fa-IR-FaridNeural",1.1,1.06] },
+ en: { f1:["en-US-JennyNeural",1,1], f2:["en-US-AriaNeural",1,1], f3:["en-GB-SoniaNeural",1,1],
+       m1:["en-US-GuyNeural",1,1],   m2:["en-US-ChristopherNeural",1,1], m3:["en-GB-RyanNeural",1,1] }
+};
+let cloudOK = null, liveAudio = null; // null = هنوز امتحان نشده
+
+function fetchCloudAudio(text){
+ const [voice, pitch, rate] = (CLOUD_VOICES[liveLang] || CLOUD_VOICES.fa)[livePreset] || CLOUD_VOICES.fa.f1;
+ const ctrl = new AbortController();
+ const timer = setTimeout(() => ctrl.abort(), 20000);
+ return fetch(API, {
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({ tts:true, text, voice, pitch, rate }),
+  signal: ctrl.signal
+ }).then(r => {
+  if(!r.ok) throw new Error("tts " + r.status);
+  return r.blob();
+ }).then(b => {
+  if(!b || b.size < 200) throw new Error("tts empty");
+  return b;
+ }).finally(() => clearTimeout(timer));
+}
+
+function playBlob(blob){
+ return new Promise(resolve => {
+  const url = URL.createObjectURL(blob);
+  const a = new Audio(url);
+  liveAudio = a;
+  const end = () => { URL.revokeObjectURL(url); if(liveAudio === a) liveAudio = null; resolve(); };
+  a.onended = end; a.onerror = end;
+  a.play().catch(end);
+ });
+}
+
+function liveCleanText(text){
+ return String(text)
+  .replace(/```[\s\S]*?```/g, " ")
+  .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+  .replace(/https?:\/\/\S+/g, " ")
+  .replace(/[*#`>_|~]/g, " ")
+  .replace(/\s+/g, " ").trim();
+}
+
+function speakDevice(parts){
  return new Promise(resolve => {
   if(!("speechSynthesis" in window)){ resolve(); return; }
-  const clean = String(text)
-   .replace(/```[\s\S]*?```/g, " ")
-   .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-   .replace(/https?:\/\/\S+/g, " ")
-   .replace(/[*#`>_|~]/g, " ")
-   .replace(/\s+/g, " ").trim();
-  if(!clean){ resolve(); return; }
-  const parts = clean.match(/[^.!؟?؛\n]{1,180}[.!؟?؛\n]?/g) || [clean];
   const preset = LIVE_PRESETS.find(p => p.id === livePreset) || LIVE_PRESETS[0];
   const pick = liveVoiceFor(preset);
   if(!pick && !liveWarnedVoice){ liveWarnedVoice = true; toast(liveLang === "en" ? "صدای انگلیسی روی این دستگاه نصب نیست." : "صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه."); }
@@ -2145,12 +2185,34 @@ function speakChunks(text){
    const u = new SpeechSynthesisUtterance(parts[i++]);
    if(pick){ u.voice = pick.voice; u.lang = pick.voice.lang; } else u.lang = liveLang === "en" ? "en-US" : "fa-IR";
    u.pitch = preset.pitch; u.rate = preset.rate;
-   u.onend = next;
-   u.onerror = next;
+   u.onend = next; u.onerror = next;
    window.speechSynthesis.speak(u);
   };
   next();
  });
+}
+
+async function speakChunks(text){
+ const clean = liveCleanText(text);
+ if(!clean) return;
+ const parts = clean.match(/[^.!؟?؛\n]{1,200}[.!؟?؛\n]?/g) || [clean];
+ if(cloudOK !== false){
+  try{
+   let nextP = fetchCloudAudio(parts[0]);
+   for(let i = 0; i < parts.length && liveMode; i++){
+    const blob = await nextP;
+    cloudOK = true;
+    nextP = i + 1 < parts.length ? fetchCloudAudio(parts[i + 1]) : null;
+    if(nextP) nextP.catch(() => {}); // خطا هنگام نوبت خودش بررسی می‌شود
+    await playBlob(blob);
+   }
+   return;
+  }catch(e){
+   if(cloudOK === null) cloudOK = false; // اولین بار کار نکرد: از صدای دستگاه استفاده کن
+   if(!liveMode) return;
+  }
+ }
+ await speakDevice(parts);
 }
 
 // بعد از هر جواب دستیار صدا زده می‌شود.
@@ -2223,7 +2285,7 @@ $("liveClose").onclick = () => { if(liveMode) liveStop(); $("liveScreen").hidden
 $("liveCharge").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); refreshShop(); refreshLiveCharge(); };
 
 function liveVoiceHint(){
- const hasVoice = !!liveVoiceFor(LIVE_PRESETS[0]);
+ const hasVoice = cloudOK !== false || !!liveVoiceFor(LIVE_PRESETS[0]);
  $("liveHint").textContent = hasVoice ? "" :
   (liveLang === "en" ? "صدای انگلیسی روی این دستگاه نصب نیست." : "صدای فارسی روی این دستگاه نصب نیست؛ جواب‌ها بدون صدا یا با تلفظ ضعیف می‌آیند.");
 }
