@@ -271,7 +271,7 @@ textarea::placeholder{color:var(--muted)}
 #send.stop{background:linear-gradient(135deg,#ff7b8a,#e0445a)}
 #send span{display:inline-block}
 #send:not(.stop) span{transform:scaleX(-1)}
-#mic.rec{color:#fff;background:#e0445a;animation:pulse 1s infinite}
+#mic.rec,#live.on{color:#fff;background:#e0445a;animation:pulse 1s infinite}
 #quotaInfo{text-align:center;font-size:11px;color:var(--muted);padding:7px 0 1px}
 #quotaInfo.finished{color:var(--danger)}
 #quotaInfo a{color:var(--accent)}
@@ -507,6 +507,7 @@ textarea::placeholder{color:var(--muted)}
   <form id="form">
    <button type="button" class="icon" id="attach" title="پیوست">📎</button>
    <button type="button" class="icon" id="mic" title="ورودی صوتی">🎤</button>
+   <button type="button" class="icon" id="live" title="مکالمه‌ی صوتی زنده">📞</button>
    <textarea id="input" rows="1" placeholder="پیامت رو بنویس..."></textarea>
    <button type="submit" id="send" title="ارسال"><span>➤</span></button>
   </form>
@@ -1886,6 +1887,132 @@ $("mic").onclick = () => {
  }catch(e){ recording = false; }
 };
 
+
+// ======================================
+// مکالمه‌ی صوتی زنده: گوش می‌دهد ← می‌فرستد ← جواب را با صدا می‌خواند ← دوباره گوش می‌دهد
+// دوباره روی 📞 بزنی تمام می‌شود. هر پیام همان مسیر عادی (سهمیه، دسترسی، دستورهای ادمین) را می‌رود.
+// ======================================
+
+let liveMode = false, liveHold = false, liveSilence = 0, liveRecog = null, liveWarnedVoice = false;
+const LIVE_MAX_SILENCE = 3;
+
+function liveStatus(text){ if(liveMode) setStatus(text); }
+
+function liveStop(msg){
+ liveMode = false; liveHold = false; liveSilence = 0;
+ try{ if(liveRecog){ liveRecog.onend = null; liveRecog.abort(); } }catch(e){}
+ liveRecog = null;
+ try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
+ $("live").classList.remove("on");
+ setStatus("آماده");
+ if(msg) toast(msg);
+}
+
+function liveListen(){
+ if(!liveMode || busy || liveHold) return;
+ liveRecog = new SR();
+ const r = liveRecog;
+ r.lang = "fa-IR";
+ r.interimResults = true;
+ r.continuous = false;
+ let finalText = "", gotAny = false;
+ r.onresult = ev => {
+  let t = "";
+  for(let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+  finalText = t.trim();
+  gotAny = !!finalText;
+  input.value = finalText; autoGrow();
+ };
+ r.onerror = ev => {
+  if(ev.error === "not-allowed" || ev.error === "service-not-allowed"){ liveStop("اجازه میکروفون داده نشد."); }
+  else if(ev.error === "network"){ liveStop("تشخیص گفتار به اینترنت نیاز دارد و وصل نشد. اگه داخل ایران هستی ممکنه بدون VPN کار نکنه."); }
+ };
+ r.onend = () => {
+  if(!liveMode || liveRecog !== r) return;
+  if(gotAny && finalText){
+   liveSilence = 0;
+   liveSend(finalText);
+  }else{
+   liveSilence++;
+   if(liveSilence >= LIVE_MAX_SILENCE){ liveStop("چیزی نشنیدم؛ مکالمه تمام شد."); return; }
+   setTimeout(liveListen, 250);
+  }
+ };
+ try{
+  r.start();
+  liveStatus("🎙️ گوش می‌دم…");
+ }catch(e){ setTimeout(liveListen, 500); }
+}
+
+let liveAdmin = false;
+
+async function liveSend(text){
+ if(!liveMode) return;
+ liveHold = true; // تا جواب کامل نشده دوباره گوش نده
+ input.value = text; autoGrow();
+ $("form").requestSubmit();
+ // منتظر می‌مانیم ارسال واقعاً شروع شود (جواب مدل یا دستور ادمین). اگر شروع نشد (سهمیه تمام، دسترسی بسته…) دوباره گوش می‌دهیم.
+ const t0 = Date.now();
+ while(liveMode && !busy && !liveAdmin && Date.now() - t0 < 5000){
+  await new Promise(res => setTimeout(res, 250));
+ }
+ if(liveMode && !busy && !liveAdmin){
+  liveHold = false;
+  if(input.value.trim()) input.value = "";
+  liveListen();
+ }
+}
+
+function speakChunks(text){
+ return new Promise(resolve => {
+  if(!("speechSynthesis" in window)){ resolve(); return; }
+  const clean = String(text)
+   .replace(/```[\s\S]*?```/g, " ")
+   .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+   .replace(/https?:\/\/\S+/g, " ")
+   .replace(/[*#`>_|~]/g, " ")
+   .replace(/\s+/g, " ").trim();
+  if(!clean){ resolve(); return; }
+  const parts = clean.match(/[^.!؟?؛\n]{1,180}[.!؟?؛\n]?/g) || [clean];
+  const voices = window.speechSynthesis.getVoices();
+  const fa = voices.find(v => /^fa/i.test(v.lang));
+  if(!fa && !liveWarnedVoice){ liveWarnedVoice = true; toast("صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه."); }
+  window.speechSynthesis.cancel();
+  let i = 0;
+  const next = () => {
+   if(!liveMode || i >= parts.length){ resolve(); return; }
+   const u = new SpeechSynthesisUtterance(parts[i++]);
+   if(fa){ u.voice = fa; u.lang = fa.lang; } else u.lang = "fa-IR";
+   u.onend = next;
+   u.onerror = next;
+   window.speechSynthesis.speak(u);
+  };
+  next();
+ });
+}
+
+// بعد از هر جواب دستیار صدا زده می‌شود.
+async function liveAfterReply(){
+ if(!liveMode) return;
+ const last = conv && conv.messages[conv.messages.length - 1];
+ if(last && last.role === "assistant" && last.content){
+  liveStatus("🔊 دارم جواب می‌دم…");
+  await speakChunks(last.content);
+ }
+ liveHold = false;
+ if(liveMode) setTimeout(liveListen, 300);
+}
+
+$("live").onclick = () => {
+ if(liveMode){ liveStop("مکالمه‌ی صوتی تمام شد."); return; }
+ if(!SR){ toast("مرورگرت ورودی صوتی رو پشتیبانی نمی‌کنه."); return; }
+ if(recording && recog){ try{ recog.stop(); }catch(e){} }
+ liveMode = true; liveHold = false; liveSilence = 0;
+ $("live").classList.add("on");
+ toast("مکالمه‌ی صوتی شروع شد؛ حرف بزن. دوباره 📞 بزنی تمام می‌شود.");
+ liveListen();
+};
+
 // ======================================
 // فایل‌ها و تصاویر
 // ======================================
@@ -2159,12 +2286,14 @@ async function runAssistant(reservationId, lastContent, mode, search){
  }
 
  setBusy(false);
+ if(liveMode) liveHold = true; // تا صدای جواب تمام نشده دوباره گوش نده
  if(success) renderConversation();
  if(failedStatus) setStatus("خطا در اتصال", "err");
  // پیشنهاد خرید دستیار: پنجره‌ی تأیید باز می‌شود و فقط با دکمه‌ی خود کاربر خرید انجام می‌شود.
  if(success && proposal) await handleProposal(proposal);
  if(success) await runIntent(turnIntent);
  input.focus();
+ if(liveMode){ if(success) await liveAfterReply(); else { liveHold = false; setTimeout(liveListen, 800); } }
 }
 
 $("form").addEventListener("submit", async e => {
@@ -2209,6 +2338,7 @@ $("form").addEventListener("submit", async e => {
     }catch(e){ adm = false; }
    }
    if(adm){
+    if(liveMode){ liveHold = true; liveAdmin = true; }
     input.value = ""; autoGrow();
     const w0 = $("welcome"); if(w0) w0.remove();
     if(!conv) newConv();
@@ -2232,6 +2362,7 @@ $("form").addEventListener("submit", async e => {
      await proposeAccess(cmd.action);
     }
     input.focus();
+    if(liveMode){ liveAdmin = false; liveHold = false; setTimeout(liveListen, 600); }
     return;
    }
   }

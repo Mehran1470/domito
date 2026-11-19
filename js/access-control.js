@@ -7,7 +7,8 @@
 //   images:    false  → عکس‌های اینترنتی در چت نمایش داده نمی‌شود
 //   think:     false  → حالت تفکر متوسط/حداکثر بسته است (فقط «کم»)
 //   buy:       false  → خرید از فروشگاه و خرید سؤال با سکه بسته است
-//   dailyLimit: عدد → سهمیه‌ی پایه‌ی روزانه‌ی سؤال (۰ تا MAX_DAILY_LIMIT)
+//   dailyLimit: عدد → سهمیه‌ی پایه‌ی روزانه‌ی سؤال (۰ تا MAX_DAILY_LIMIT)، فقط برای روز dailyLimitDay (به وقت تهران)
+//   dailyLimitDay: «YYYY-MM-DD» روزی که سهمیه تنظیم شد
 //   blockedUntil: زمان (میلی‌ثانیه) → تا این زمان مسدود است
 //
 // نبودن هر کلید یعنی پیش‌فرض (همه‌چیز آزاد). فقط همین کلیدها قابل تغییرند؛
@@ -109,6 +110,15 @@ export function cleanTargetName(name) {
   return t;
 }
 
+// کلید روز به وقت تهران (مثل aiDayKey در app.js): سهمیه‌ی تنظیم‌شده فقط تا پایان همین روز معتبر است.
+export function tehranDay(now = Date.now()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date(now));
+  const v = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${v.year}-${v.month}-${v.day}`;
+}
+
 // داده‌ی خام Firebase → وضعیت امن و کامل. هر چیز نامعتبر یعنی پیش‌فرض (آزاد).
 export function readAccess(raw, now = Date.now()) {
   const r = raw && typeof raw === "object" ? raw : {};
@@ -121,8 +131,9 @@ export function readAccess(raw, now = Date.now()) {
     images: r.images !== false,
     think: r.think !== false,
     buy: r.buy !== false,
+    // سهمیه‌ی ویژه فقط برای همان روزی که ثبت شده؛ فردا خودکار برمی‌گردد به پیش‌فرض.
     dailyLimit:
-      Number.isFinite(lim) && r.dailyLimit !== null && lim >= 0
+      Number.isFinite(lim) && r.dailyLimit !== null && lim >= 0 && r.dailyLimitDay === tehranDay(now)
         ? Math.min(MAX_DAILY_LIMIT, Math.floor(lim))
         : null,
     blockedUntil,
@@ -150,6 +161,7 @@ export function buildAccessPatch(key, value, now = Date.now(), adminName = "") {
     patch[field] = value === true ? null : false;
   } else if (spec.kind === "limit") {
     patch.dailyLimit = value === null ? null : Math.max(0, Math.min(MAX_DAILY_LIMIT, Math.floor(value)));
+    patch.dailyLimitDay = value === null ? null : tehranDay(now);
   } else {
     patch.blockedUntil = value > 0 ? now + Math.min(MAX_BLOCK_HOURS, Math.floor(value)) * 3600_000 : null;
   }
@@ -160,7 +172,7 @@ export function buildAccessPatch(key, value, now = Date.now(), adminName = "") {
 export function buildResetPatch(now = Date.now(), adminName = "") {
   const patch = {
     assistant: null, web: null, images: null, think: null, buy: null,
-    dailyLimit: null, blockedUntil: null, updatedAt: now
+    dailyLimit: null, dailyLimitDay: null, blockedUntil: null, updatedAt: now
   };
   if (adminName) patch.updatedBy = String(adminName).slice(0, 30);
   return patch;
@@ -172,7 +184,7 @@ export function describeValue(key, value) {
   const spec = ACCESS_KEYS[key];
   if (!spec) return "";
   if (spec.kind === "bool") return onOff(value === true);
-  if (spec.kind === "limit") return value === null ? "پیش‌فرض (۵ سؤال)" : `${value} سؤال در روز`;
+  if (spec.kind === "limit") return value === null ? "پیش‌فرض (۵ سؤال)" : `${value} سؤال (فقط امروز)`;
   return value > 0 ? `${value} ساعت` : "بدون مسدودی";
 }
 
