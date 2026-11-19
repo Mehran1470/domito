@@ -2143,19 +2143,25 @@ function fetchCloudAudio(text){
   headers:{ "Content-Type":"application/json" },
   body: JSON.stringify({ tts:true, text, voice, pitch, rate }),
   signal: ctrl.signal
- }).then(r => {
+ }).then(async r => {
   if(!r.ok) throw new Error("tts " + r.status);
-  return r.blob();
- }).then(b => {
+  const b = await r.blob();
   if(!b || b.size < 200) throw new Error("tts empty");
-  return b;
+  return { blob:b, engine: r.headers.get("X-TTS-Engine") || "edge" };
  }).finally(() => clearTimeout(timer));
 }
 
-function playBlob(blob){
+// اگر Worker مجبور شد از صدای ساده‌ی گوگل استفاده کند (فقط یک صدا)، فرق ۶ صدا با سرعت/زیر و بم پخش ساخته می‌شود.
+const GOOGLE_RATE = { f1:1.0, f2:1.12, f3:0.96, m1:0.86, m2:0.78, m3:0.92 };
+
+function playBlob(item){
  return new Promise(resolve => {
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(item.blob);
   const a = new Audio(url);
+  if(item.engine === "google"){
+   try{ a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; }catch(e){}
+   a.playbackRate = GOOGLE_RATE[livePreset] || 1;
+  }
   liveAudio = a;
   const end = () => { URL.revokeObjectURL(url); if(liveAudio === a) liveAudio = null; resolve(); };
   a.onended = end; a.onerror = end;
@@ -2200,11 +2206,11 @@ async function speakChunks(text){
   try{
    let nextP = fetchCloudAudio(parts[0]);
    for(let i = 0; i < parts.length && liveMode; i++){
-    const blob = await nextP;
+    const item = await nextP;
     cloudOK = true;
     nextP = i + 1 < parts.length ? fetchCloudAudio(parts[i + 1]) : null;
     if(nextP) nextP.catch(() => {}); // خطا هنگام نوبت خودش بررسی می‌شود
-    await playBlob(blob);
+    await playBlob(item);
    }
    return;
   }catch(e){
