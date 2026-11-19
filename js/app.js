@@ -29,6 +29,18 @@ import {
 } from "./firebase-config.js";
 
 import {
+  suspendedPageUrl,
+  onSuspendedPage,
+  readSuspensionRaw,
+  saveSuspension,
+  clearSuspension,
+  enforceCachedSuspension
+} from "./suspension.js";
+
+// اگر کش می‌گوید این حساب تعلیق است، همین‌جا و بدون شبکه به صفحه‌ی تعلیق می‌رود.
+enforceCachedSuspension();
+
+import {
   SHOP_ITEMS,
   SHOP_CATEGORIES,
   MAX_ITEM_PRICE,
@@ -635,6 +647,15 @@ export async function loginUser(
   saveName(username);
 
 
+  // حساب تعلیق‌شده نمی‌تواند وارد شود؛ وضعیت از Firebase خوانده و در کش ذخیره می‌شود.
+  if ((await checkSuspension(username)) === "blocked") {
+    goSuspended();
+    const suspended = new Error("suspended");
+    suspended.code = "suspended";
+    throw suspended;
+  }
+
+
   await ensureOwnerLinks(
     username,
     cred.user.uid
@@ -703,6 +724,45 @@ export async function logoutUser() {
 
 
 // ============================================================
+// تعلیق حساب
+// نتیجه: "blocked" | "ok" | "unknown" (وقتی Firebase در دسترس نبود)
+// ============================================================
+
+function goSuspended() {
+  if (onSuspendedPage()) return;
+  try { location.replace(suspendedPageUrl()); } catch (e) {}
+}
+
+export async function checkSuspension(name) {
+  try {
+    if (!name) return "unknown";
+    if (await aiIsUnlimited()) { // ادمین هیچ‌وقت تعلیق نمی‌شود
+      clearSuspension();
+      return "ok";
+    }
+    const snap = await get(accessRef(name));
+    const access = readAccess(snap.val());
+    if (access.blockedUntil > Date.now()) {
+      saveSuspension(name, access.blockedUntil);
+      return "blocked";
+    }
+    const cached = readSuspensionRaw();
+    if (cached && cached.name === name) clearSuspension();
+    return "ok";
+  } catch (e) {
+    return "unknown";
+  }
+}
+
+let suspensionTimer = null;
+function watchSuspension(name) {
+  if (suspensionTimer || !name) return;
+  suspensionTimer = setInterval(async () => {
+    if ((await checkSuspension(name)) === "blocked") goSuspended();
+  }, 60000);
+}
+
+// ============================================================
 // Auto Login
 // ============================================================
 
@@ -743,6 +803,12 @@ export function waitForUser() {
             }
 
 
+            const hadSavedName =
+              !!getSavedName();
+
+            let lookupFailed =
+              false;
+
             let username =
               getSavedName();
 
@@ -778,6 +844,9 @@ export function waitForUser() {
 
               } catch (e) {
 
+                lookupFailed =
+                  true;
+
                 console.warn(
                   "USERNAME LOOKUP ERROR:",
                   e
@@ -786,6 +855,50 @@ export function waitForUser() {
               }
 
             }
+
+
+            // بررسی تعلیق از Firebase (حداکثر ۴ ثانیه صبر).
+            let suspension =
+              "unknown";
+
+            if (username) {
+
+              suspension =
+                await Promise.race([
+                  checkSuspension(username),
+                  new Promise(
+                    r => setTimeout(
+                      () => r("unknown"),
+                      4000
+                    )
+                  )
+                ]);
+
+            }
+
+            if (suspension === "blocked") {
+
+              goSuspended();
+
+              resolve(null);
+
+              return;
+
+            }
+
+            // کش پاک شده و Firebase در دسترس نیست: بدون Firebase نمی‌شود وارد شد.
+            if (
+              suspension === "unknown" &&
+              (!hadSavedName || lookupFailed)
+            ) {
+
+              resolve(null);
+
+              return;
+
+            }
+
+            watchSuspension(username);
 
 
             resolve(user);
