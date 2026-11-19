@@ -2067,42 +2067,59 @@ function liveStop(msg){
  if(msg) toast(msg);
 }
 
-function liveListen(){
- if(!liveMode || busy || liveHold) return;
- liveRecog = new SR();
- const r = liveRecog;
+// میکروفون یک بار روشن می‌شود و تا پایان مکالمه می‌ماند (continuous)، پس صدای «دینگ» شروع/پایان تشخیص گفتار هر بار تکرار نمی‌شود.
+// وقتی دستیار فکر می‌کند یا حرف می‌زند، هرچه شنیده شود نادیده گرفته می‌شود (تا صدای خودش را نشنود).
+let liveIgnoreIdx = 0, liveRecogTries = 0, liveNoSpeechRuns = 0;
+
+function liveEnsureRecog(){
+ if(liveRecog || !liveMode) return;
+ const r = new SR();
+ liveRecog = r;
  r.lang = liveLang === "en" ? "en-US" : "fa-IR";
  r.interimResults = true;
- r.continuous = false;
- let finalText = "", gotAny = false;
+ r.continuous = true;
+ liveIgnoreIdx = 0;
  r.onresult = ev => {
-  let t = "";
-  for(let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
-  finalText = t.trim();
-  gotAny = !!finalText;
-  input.value = finalText; autoGrow();
-  $("liveCaption").textContent = finalText;
+  if(liveRecog !== r) return;
+  if(liveState !== "listen"){ liveIgnoreIdx = ev.results.length; return; } // صدای خود دستیار یا حرف وسط فکر کردن
+  liveNoSpeechRuns = 0;
+  let interim = "";
+  for(let i = Math.max(ev.resultIndex, liveIgnoreIdx); i < ev.results.length; i++){
+   const res = ev.results[i];
+   const text = res[0].transcript.trim();
+   if(res.isFinal){
+    liveIgnoreIdx = i + 1;
+    if(text){ $("liveCaption").textContent = text; liveSend(text); return; }
+   }else{
+    interim += text + " ";
+   }
+  }
+  if(interim.trim()) $("liveCaption").textContent = interim.trim();
  };
  r.onerror = ev => {
   if(ev.error === "not-allowed" || ev.error === "service-not-allowed"){ liveStop("اجازه میکروفون داده نشد."); }
   else if(ev.error === "network"){ liveStop("تشخیص گفتار به اینترنت نیاز دارد و وصل نشد. اگه داخل ایران هستی ممکنه بدون VPN کار نکنه."); }
  };
  r.onend = () => {
-  if(!liveMode || liveRecog !== r) return;
-  if(gotAny && finalText){
-   liveSilence = 0;
-   liveSend(finalText);
-  }else{
-   liveSilence++;
-   if(liveSilence >= LIVE_MAX_SILENCE){ liveStop("چیزی نشنیدم؛ مکالمه تمام شد."); return; }
-   setTimeout(liveListen, 250);
+  // مرورگر بعد از مدتی سکوت خودش تمام می‌کند؛ بی‌صدا دوباره روشن می‌کنیم.
+  if(liveRecog !== r) return;
+  liveRecog = null;
+  if(!liveMode) return;
+  if(liveState === "listen"){
+   liveNoSpeechRuns++;
+   if(liveNoSpeechRuns >= LIVE_MAX_SILENCE){ liveStop("چیزی نشنیدم؛ مکالمه تمام شد."); return; }
   }
+  setTimeout(liveEnsureRecog, 300);
  };
- try{
-  r.start();
-  setLiveState("listen");
-  liveStatus("🎙️ گوش می‌دم…");
- }catch(e){ setTimeout(liveListen, 500); }
+ try{ r.start(); }catch(e){ liveRecog = null; setTimeout(liveEnsureRecog, 600); }
+}
+
+function liveListen(){
+ if(!liveMode || busy || liveHold) return;
+ liveEnsureRecog();
+ $("liveCaption").textContent = "";
+ setLiveState("listen");
+ liveStatus("🎙️ گوش می‌دم…");
 }
 
 let liveAdmin = false;
@@ -2280,7 +2297,7 @@ async function liveBegin(){
  if(recording && recog){ try{ recog.stop(); }catch(e){} }
  $("liveBar").hidden = true;
  $("liveEnd").hidden = false;
- liveMode = true; liveHold = false; liveSilence = 0;
+ liveMode = true; liveHold = false; liveSilence = 0; liveNoSpeechRuns = 0;
  liveMeterStart();
  $("live").classList.add("on");
  liveListen();
