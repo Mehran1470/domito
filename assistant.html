@@ -272,6 +272,12 @@ textarea::placeholder{color:var(--muted)}
 #send span{display:inline-block}
 #send:not(.stop) span{transform:scaleX(-1)}
 #mic.rec,#live.on{color:#fff;background:#e0445a;animation:pulse 1s infinite}
+#liveBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;margin-bottom:6px;border:1px solid var(--line);border-radius:14px;background:var(--panel,transparent)}
+#liveBar[hidden]{display:none}
+#liveBar .seg{display:flex;gap:4px}
+#liveBar button,#liveBar select{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text)}
+#liveBar button.act{background:var(--accent,#4d8dff);color:#fff;border-color:transparent}
+#liveBar #liveGo{margin-inline-start:auto;background:#e0445a;color:#fff;border-color:transparent}
 #quotaInfo{text-align:center;font-size:11px;color:var(--muted);padding:7px 0 1px}
 #quotaInfo.finished{color:var(--danger)}
 #quotaInfo a{color:var(--accent)}
@@ -503,6 +509,14 @@ textarea::placeholder{color:var(--muted)}
    <button type="button" class="pin-item" id="pinSearch"><span>🌐</span><span id="pinSearchLabel">جستجوی وب: خاموش</span></button>
    <div class="pin-title">🧠 حالت تفکر (فقط برای پیام بعدی)</div>
    <div id="thinkOpts"></div>
+  </div>
+  <div id="liveBar" hidden>
+   <div class="seg" id="liveLangs">
+    <button type="button" data-lang="fa">فارسی</button>
+    <button type="button" data-lang="en">English</button>
+   </div>
+   <select id="liveVoice" aria-label="صدا"></select>
+   <button type="button" id="liveGo">📞 شروع</button>
   </div>
   <form id="form">
    <button type="button" class="icon" id="attach" title="پیوست">📎</button>
@@ -1418,6 +1432,10 @@ async function buildTurnContext(){
   turnIntent = detectIntent(lastText, GAMES);
   const hint = intentHint(turnIntent);
   if(hint) dataLines.push(hint);
+  if(liveMode){
+   dataLines.push("- کاربر الان در مکالمه‌ی صوتی زنده است و جواب تو با صدا خوانده می‌شود؛ کوتاه و محاوره‌ای و طبیعی جواب بده، مثل آدمی که حرف می‌زند: بدون فهرست، بدون علامت‌های markdown، بدون ایموجی، حداکثر چند جمله." +
+    (liveLang === "en" ? " کاربر انگلیسی حرف می‌زند؛ به انگلیسی جواب بده." : " به فارسی جواب بده."));
+  }
   const wantsSelf = wantsCatalog || needsSelfInfo(userTexts);
   turnIsAdmin = false;
 
@@ -1894,6 +1912,36 @@ $("mic").onclick = () => {
 // ======================================
 
 let liveMode = false, liveHold = false, liveSilence = 0, liveRecog = null, liveWarnedVoice = false;
+
+// ۶ صدا: ۳ زن و ۳ مرد. صدای واقعی را خود دستگاه می‌دهد؛ اگر صدای زن یا مردِ جدا نداشت، با زیر و بمی (pitch) فرق می‌گذاریم.
+const LIVE_PRESETS = [
+ { id:"f1", label:"زن ۱", g:"f", pitch:1.1,  rate:1.0 },
+ { id:"f2", label:"زن ۲", g:"f", pitch:1.3,  rate:1.05 },
+ { id:"f3", label:"زن ۳", g:"f", pitch:0.98, rate:0.95 },
+ { id:"m1", label:"مرد ۱", g:"m", pitch:0.8,  rate:1.0 },
+ { id:"m2", label:"مرد ۲", g:"m", pitch:0.65, rate:0.95 },
+ { id:"m3", label:"مرد ۳", g:"m", pitch:0.9,  rate:1.08 }
+];
+const MALE_RE = /(\bmale\b|\bman\b|david|mark|james|george|daniel|alex\b|fred|guy|ryan|brian|matthew|thomas|arthur|oliver|rishi|aaron|مرد|-x-(iom|iog|tpd|rjs|iol|tpc))/i;
+const FEMALE_RE = /(female|woman|samantha|zira|susan|karen|moira|tessa|fiona|victoria|hazel|kate|serena|ava|allison|زن|-x-(sfg|tpf|iob|tpc|ena|enb))/i;
+let liveLang = "fa", livePreset = "f1";
+try{
+ liveLang = localStorage.getItem("liveLang") === "en" ? "en" : "fa";
+ const sp = localStorage.getItem("livePreset");
+ if(LIVE_PRESETS.some(p => p.id === sp)) livePreset = sp;
+}catch(e){}
+
+function liveVoiceFor(preset){
+ const voices = (window.speechSynthesis ? window.speechSynthesis.getVoices() : []).filter(v => v.lang && v.lang.toLowerCase().startsWith(liveLang));
+ if(!voices.length) return null;
+ const want = preset.g === "m" ? MALE_RE : FEMALE_RE;
+ const other = preset.g === "m" ? FEMALE_RE : MALE_RE;
+ const same = voices.filter(v => want.test(v.name) && !other.test(v.name));
+ const pool = same.length ? same : voices.filter(v => !other.test(v.name));
+ const list = pool.length ? pool : voices;
+ const idx = Number(preset.id.slice(1)) - 1;
+ return { voice: list[idx % list.length], exact: same.length > 0 };
+}
 const LIVE_MAX_SILENCE = 3;
 
 function liveStatus(text){ if(liveMode) setStatus(text); }
@@ -1912,7 +1960,7 @@ function liveListen(){
  if(!liveMode || busy || liveHold) return;
  liveRecog = new SR();
  const r = liveRecog;
- r.lang = "fa-IR";
+ r.lang = liveLang === "en" ? "en-US" : "fa-IR";
  r.interimResults = true;
  r.continuous = false;
  let finalText = "", gotAny = false;
@@ -1974,15 +2022,16 @@ function speakChunks(text){
    .replace(/\s+/g, " ").trim();
   if(!clean){ resolve(); return; }
   const parts = clean.match(/[^.!؟?؛\n]{1,180}[.!؟?؛\n]?/g) || [clean];
-  const voices = window.speechSynthesis.getVoices();
-  const fa = voices.find(v => /^fa/i.test(v.lang));
-  if(!fa && !liveWarnedVoice){ liveWarnedVoice = true; toast("صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه."); }
+  const preset = LIVE_PRESETS.find(p => p.id === livePreset) || LIVE_PRESETS[0];
+  const pick = liveVoiceFor(preset);
+  if(!pick && !liveWarnedVoice){ liveWarnedVoice = true; toast(liveLang === "en" ? "صدای انگلیسی روی این دستگاه نصب نیست." : "صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه."); }
   window.speechSynthesis.cancel();
   let i = 0;
   const next = () => {
    if(!liveMode || i >= parts.length){ resolve(); return; }
    const u = new SpeechSynthesisUtterance(parts[i++]);
-   if(fa){ u.voice = fa; u.lang = fa.lang; } else u.lang = "fa-IR";
+   if(pick){ u.voice = pick.voice; u.lang = pick.voice.lang; } else u.lang = liveLang === "en" ? "en-US" : "fa-IR";
+   u.pitch = preset.pitch; u.rate = preset.rate;
    u.onend = next;
    u.onerror = next;
    window.speechSynthesis.speak(u);
@@ -2003,14 +2052,56 @@ async function liveAfterReply(){
  if(liveMode) setTimeout(liveListen, 300);
 }
 
-$("live").onclick = () => {
- if(liveMode){ liveStop("مکالمه‌ی صوتی تمام شد."); return; }
+function renderLiveBar(){
+ document.querySelectorAll("#liveLangs button").forEach(b => b.classList.toggle("act", b.dataset.lang === liveLang));
+ const sel = $("liveVoice");
+ sel.innerHTML = "";
+ LIVE_PRESETS.forEach(p => {
+  const pick = liveVoiceFor(p);
+  const o = document.createElement("option");
+  o.value = p.id;
+  o.textContent = (p.g === "m" ? "👨 " : "👩 ") + p.label + (pick && !pick.exact ? " (تغییر زیر و بم)" : "");
+  sel.appendChild(o);
+ });
+ sel.value = livePreset;
+}
+document.querySelectorAll("#liveLangs button").forEach(b => b.onclick = () => {
+ liveLang = b.dataset.lang;
+ try{ localStorage.setItem("liveLang", liveLang); }catch(e){}
+ renderLiveBar();
+});
+$("liveVoice").onchange = e => {
+ livePreset = e.target.value;
+ try{ localStorage.setItem("livePreset", livePreset); }catch(e2){}
+ // نمونه‌ی صدا
+ if(window.speechSynthesis){
+  const p = LIVE_PRESETS.find(x => x.id === livePreset);
+  const pick = liveVoiceFor(p);
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(liveLang === "en" ? "Hi, how can I help you?" : "سلام، چطور می‌تونم کمکت کنم؟");
+  if(pick){ u.voice = pick.voice; u.lang = pick.voice.lang; } else u.lang = liveLang === "en" ? "en-US" : "fa-IR";
+  u.pitch = p.pitch; u.rate = p.rate;
+  window.speechSynthesis.speak(u);
+ }
+};
+if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { if(!$("liveBar").hidden) renderLiveBar(); };
+
+function liveBegin(){
  if(!SR){ toast("مرورگرت ورودی صوتی رو پشتیبانی نمی‌کنه."); return; }
  if(recording && recog){ try{ recog.stop(); }catch(e){} }
+ $("liveBar").hidden = true;
  liveMode = true; liveHold = false; liveSilence = 0;
  $("live").classList.add("on");
- toast("مکالمه‌ی صوتی شروع شد؛ حرف بزن. دوباره 📞 بزنی تمام می‌شود.");
+ toast(liveLang === "en" ? "Live voice started — speak. Tap 📞 to end." : "مکالمه‌ی صوتی شروع شد؛ حرف بزن. دوباره 📞 بزنی تمام می‌شود.");
  liveListen();
+}
+$("liveGo").onclick = liveBegin;
+
+$("live").onclick = () => {
+ if(liveMode){ liveStop("مکالمه‌ی صوتی تمام شد."); return; }
+ const bar = $("liveBar");
+ bar.hidden = !bar.hidden;
+ if(!bar.hidden) renderLiveBar();
 };
 
 // ======================================
