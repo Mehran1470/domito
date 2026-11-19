@@ -272,12 +272,32 @@ textarea::placeholder{color:var(--muted)}
 #send span{display:inline-block}
 #send:not(.stop) span{transform:scaleX(-1)}
 #mic.rec,#live.on{color:#fff;background:#e0445a;animation:pulse 1s infinite}
-#liveBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;margin-bottom:6px;border:1px solid var(--line);border-radius:14px;background:var(--panel,transparent)}
+#liveScreen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 28px);background:radial-gradient(120% 90% at 50% 35%,#16213f 0%,#0a0f1f 70%);color:#eaf0ff}
+#liveScreen[hidden]{display:none}
+#liveScreen .lv-top{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#9db0d8}
+#liveScreen .lv-top button{background:#ffffff14;color:#eaf0ff;border:0;border-radius:50%;width:38px;height:38px;font-size:16px}
+#liveScreen .lv-mid{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;min-height:0}
+#liveOrb{width:170px;height:170px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#9ec1ff,#4d8dff 45%,#2a3fd6 100%);box-shadow:0 0 60px #4d8dff66,0 0 140px #4d8dff33;transition:transform .25s,filter .3s;will-change:transform}
+#liveScreen[data-state="listen"] #liveOrb{animation:lvListen 1.6s ease-in-out infinite}
+#liveScreen[data-state="think"] #liveOrb{animation:lvThink 1.2s linear infinite;filter:hue-rotate(60deg)}
+#liveScreen[data-state="speak"] #liveOrb{animation:lvSpeak .9s ease-in-out infinite;filter:hue-rotate(-40deg) saturate(1.2)}
+@keyframes lvListen{50%{transform:scale(1.12)}}
+@keyframes lvThink{to{transform:rotate(360deg) scale(.95)}}
+@keyframes lvSpeak{0%,100%{transform:scale(1)}30%{transform:scale(1.2)}60%{transform:scale(1.05)}}
+#liveState{font-size:15px;color:#b9c8ee}
+#liveCaption{max-width:92%;max-height:26vh;overflow:auto;text-align:center;font-size:17px;line-height:1.9;color:#eaf0ff;direction:auto}
+#liveBar{width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px;align-items:stretch}
 #liveBar[hidden]{display:none}
-#liveBar .seg{display:flex;gap:4px}
-#liveBar button,#liveBar select{font:inherit;font-size:12.5px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text)}
-#liveBar button.act{background:var(--accent,#4d8dff);color:#fff;border-color:transparent}
-#liveBar #liveGo{margin-inline-start:auto;background:#e0445a;color:#fff;border-color:transparent}
+#liveBar .seg{display:flex;gap:8px;justify-content:center}
+#liveBar button,#liveBar select{font:inherit;font-size:14px;padding:10px 14px;border-radius:14px;border:1px solid #ffffff2a;background:#ffffff10;color:#eaf0ff}
+#liveBar .seg button{flex:1}
+#liveBar button.act{background:#4d8dff;border-color:transparent}
+#liveBar select option{color:#111}
+#liveGo{background:#2fbf71!important;border-color:transparent!important;font-size:16px!important;padding:13px!important}
+#liveEnd{width:68px;height:68px;border-radius:50%;border:0;background:#e0445a;color:#fff;font-size:26px;box-shadow:0 6px 24px #e0445a66}
+#liveEnd[hidden]{display:none}
+#liveScreen .lv-bot{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
+#liveHint{font-size:11.5px;color:#8ea0c8;text-align:center;min-height:1em}
 #quotaInfo{text-align:center;font-size:11px;color:var(--muted);padding:7px 0 1px}
 #quotaInfo.finished{color:var(--danger)}
 #quotaInfo a{color:var(--accent)}
@@ -510,15 +530,6 @@ textarea::placeholder{color:var(--muted)}
    <div class="pin-title">🧠 حالت تفکر (فقط برای پیام بعدی)</div>
    <div id="thinkOpts"></div>
   </div>
-  <div id="liveBar" hidden>
-   <div class="seg" id="liveLangs">
-    <button type="button" data-lang="fa">فارسی</button>
-    <button type="button" data-lang="en">English</button>
-   </div>
-   <select id="liveVoice" aria-label="صدا"></select>
-   <span id="liveLeft" style="font-size:12px;color:var(--muted)"></span>
-   <button type="button" id="liveGo">📞 شروع</button>
-  </div>
   <form id="form">
    <button type="button" class="icon" id="attach" title="پیوست">📎</button>
    <button type="button" class="icon" id="mic" title="ورودی صوتی">🎤</button>
@@ -624,6 +635,30 @@ textarea::placeholder{color:var(--muted)}
  </div>
 </div>
 
+<div id="liveScreen" hidden data-state="idle">
+ <div class="lv-top">
+  <button type="button" id="liveClose" title="بستن">✕</button>
+  <span id="liveLeft"></span>
+  <button type="button" id="liveCharge" title="شارژ">🪙</button>
+ </div>
+ <div class="lv-mid">
+  <div id="liveOrb"></div>
+  <div id="liveState">آماده‌ای؟</div>
+  <div id="liveCaption"></div>
+ </div>
+ <div class="lv-bot">
+  <div id="liveBar">
+   <div class="seg" id="liveLangs">
+    <button type="button" data-lang="fa">فارسی</button>
+    <button type="button" data-lang="en">English</button>
+   </div>
+   <select id="liveVoice" aria-label="صدا"></select>
+   <button type="button" id="liveGo">📞 شروع مکالمه</button>
+  </div>
+  <button type="button" id="liveEnd" hidden title="پایان">📵</button>
+  <div id="liveHint"></div>
+ </div>
+</div>
 <div id="toast"></div>
 
 <script type="module">
@@ -1987,6 +2022,12 @@ $("buyLive").onclick = async () => {
 };
 
 // شمارش مصرف: فقط وقتی حرف می‌زنی یا دستیار جواب را می‌خواند (نه وقتی منتظر جواب مدل هستی).
+function setLiveState(st){
+ liveState = st;
+ const sc = $("liveScreen"); if(sc) sc.dataset.state = st;
+ const label = { listen:"🎙️ گوش می‌دم…", think:"💭 دارم فکر می‌کنم…", speak:"🔊 دارم جواب می‌دم…", idle:"آماده‌ای؟" };
+ $("liveState").textContent = (liveLang === "en" && st !== "idle") ? ({ listen:"Listening…", think:"Thinking…", speak:"Speaking…" })[st] : (label[st] || "");
+}
 let liveState = "idle", liveUnflushed = 0, liveTicker = null, liveFlushing = false;
 
 async function liveFlush(){
@@ -2008,7 +2049,7 @@ function liveTick(){
  }
 }
 function liveMeterStart(){ liveUnflushed = 0; clearInterval(liveTicker); liveTicker = setInterval(liveTick, 1000); }
-function liveMeterStop(){ clearInterval(liveTicker); liveTicker = null; liveState = "idle"; liveFlush(); }
+function liveMeterStop(){ clearInterval(liveTicker); liveTicker = null; setLiveState("idle"); liveFlush(); }
 
 function liveStatus(text){ if(liveMode) setStatus(text); }
 
@@ -2019,6 +2060,8 @@ function liveStop(msg){
  liveRecog = null;
  try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
  $("live").classList.remove("on");
+ $("liveBar").hidden = false; $("liveEnd").hidden = true; $("liveCaption").textContent = "";
+ setLiveState("idle");
  setStatus("آماده");
  if(msg) toast(msg);
 }
@@ -2037,6 +2080,7 @@ function liveListen(){
   finalText = t.trim();
   gotAny = !!finalText;
   input.value = finalText; autoGrow();
+  $("liveCaption").textContent = finalText;
  };
  r.onerror = ev => {
   if(ev.error === "not-allowed" || ev.error === "service-not-allowed"){ liveStop("اجازه میکروفون داده نشد."); }
@@ -2055,7 +2099,7 @@ function liveListen(){
  };
  try{
   r.start();
-  liveState = "listen";
+  setLiveState("listen");
   liveStatus("🎙️ گوش می‌دم…");
  }catch(e){ setTimeout(liveListen, 500); }
 }
@@ -2065,7 +2109,7 @@ let liveAdmin = false;
 async function liveSend(text){
  if(!liveMode) return;
  liveHold = true; // تا جواب کامل نشده دوباره گوش نده
- liveState = "think";
+ setLiveState("think");
  input.value = text; autoGrow();
  $("form").requestSubmit();
  // منتظر می‌مانیم ارسال واقعاً شروع شود (جواب مدل یا دستور ادمین). اگر شروع نشد (سهمیه تمام، دسترسی بسته…) دوباره گوش می‌دهیم.
@@ -2114,10 +2158,11 @@ async function liveAfterReply(){
  if(!liveMode) return;
  const last = conv && conv.messages[conv.messages.length - 1];
  if(last && last.role === "assistant" && last.content){
-  liveState = "speak";
+  setLiveState("speak");
+  $("liveCaption").textContent = last.content.replace(/[*#`>_|~]/g, "").slice(0, 600);
   liveStatus("🔊 دارم جواب می‌دم…");
   await speakChunks(last.content);
-  liveState = "think";
+  setLiveState("think");
  }
  liveHold = false;
  if(liveMode) setTimeout(liveListen, 300);
@@ -2139,7 +2184,7 @@ function renderLiveBar(){
 document.querySelectorAll("#liveLangs button").forEach(b => b.onclick = () => {
  liveLang = b.dataset.lang;
  try{ localStorage.setItem("liveLang", liveLang); }catch(e){}
- renderLiveBar();
+ renderLiveBar(); liveVoiceHint();
 });
 $("liveVoice").onchange = e => {
  livePreset = e.target.value;
@@ -2155,32 +2200,39 @@ $("liveVoice").onchange = e => {
   window.speechSynthesis.speak(u);
  }
 };
-if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { if(!$("liveBar").hidden) renderLiveBar(); };
+if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { renderLiveBar(); liveVoiceHint(); };
 
 async function liveBegin(){
  if(!SR){ toast("مرورگرت ورودی صوتی رو پشتیبانی نمی‌کنه."); return; }
  await refreshLiveCharge();
  if(!liveUnlimited && liveLeftSec <= 0){
-  toast("شارژ لایو نداری؛ از تنظیمات ⚙️ با سکه شارژ کن.");
-  $("liveBar").hidden = true;
-  sheet.classList.add("open"); scrim.classList.add("show");
+  toast("شارژ لایو نداری؛ با 🪙 یا از تنظیمات ⚙️ شارژ کن.");
   return;
  }
  if(recording && recog){ try{ recog.stop(); }catch(e){} }
  $("liveBar").hidden = true;
+ $("liveEnd").hidden = false;
  liveMode = true; liveHold = false; liveSilence = 0;
  liveMeterStart();
  $("live").classList.add("on");
- toast(liveLang === "en" ? "Live voice started — speak. Tap 📞 to end." : "مکالمه‌ی صوتی شروع شد؛ حرف بزن. دوباره 📞 بزنی تمام می‌شود.");
  liveListen();
 }
 $("liveGo").onclick = liveBegin;
+$("liveEnd").onclick = () => liveStop("مکالمه‌ی صوتی تمام شد.");
+$("liveClose").onclick = () => { if(liveMode) liveStop(); $("liveScreen").hidden = true; };
+$("liveCharge").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); refreshShop(); refreshLiveCharge(); };
+
+function liveVoiceHint(){
+ const hasVoice = !!liveVoiceFor(LIVE_PRESETS[0]);
+ $("liveHint").textContent = hasVoice ? "" :
+  (liveLang === "en" ? "صدای انگلیسی روی این دستگاه نصب نیست." : "صدای فارسی روی این دستگاه نصب نیست؛ جواب‌ها بدون صدا یا با تلفظ ضعیف می‌آیند.");
+}
 
 $("live").onclick = () => {
- if(liveMode){ liveStop("مکالمه‌ی صوتی تمام شد."); return; }
- const bar = $("liveBar");
- bar.hidden = !bar.hidden;
- if(!bar.hidden){ renderLiveBar(); refreshLiveCharge(); }
+ if(liveMode){ $("liveScreen").hidden = false; return; }
+ $("liveScreen").hidden = false;
+ setLiveState("idle");
+ renderLiveBar(); refreshLiveCharge(); liveVoiceHint();
 };
 
 // ======================================
