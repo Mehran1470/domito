@@ -219,3 +219,115 @@ export function parseSetCommand(argText) {
   if (!v.ok) return { ok: false, reason: v.reason };
   return { ok: true, name, key, value: v.value };
 }
+
+// ============================================================
+// فهمیدن دستور فارسی ادمین بدون مدل: «ALIXMOD رو ۲ ساعت مسدود کن»
+// خروجی: null (دستور نیست) | { ok:false, reason } | { ok:true, action }
+// action همان شکل اکشن‌های دستیار را دارد (access / access-show / access-reset).
+// فقط تجزیه می‌کند؛ اجرا همیشه با پنجره‌ی تأیید و فقط برای ادمین است.
+// ============================================================
+
+const CMD_FILLER = new Set([
+  "رو", "را", "رو.", "کاربر", "حساب", "اکانت", "یوزر", "لطفا", "لطفاً", "بکن", "کن", "کنی", "بکنی", "کنید",
+  "برای", "به", "مدت", "از", "و", "هم", "یه", "یک", "این", "اون", "اینو", "اونو", "بده", "بگو", "نشون", "نشان",
+  "را.", "ی", "please", "user", "account", "for", "the", "to"
+]);
+const BLOCK_RE = /(مسدود|بلاک|بن(?=\s|$)|ban|block)/i;
+const UNBLOCK_RE = /(رفع|آزاد|ازاد|unblock|unban|باز\s*کن)/i;
+const RESET_RE = /(ریست|reset|پیش\s?فرض|default)/i;
+const SHOW_RE = /(وضعیت|نشون|نشان|status|show|چک)/i;
+const DURATION_RE = /(\d+(?:\.\d+)?)\s*(ساعت(?:ه)?|روز(?:ه)?|دقیقه(?:‌ای)?|hours?|hrs?|h|days?|d|minutes?|mins?|m)(?=\s|$)/i;
+const TOGGLE_ON = /(روشن|فعال|باز\s*کن|باز(?=\s|$)|on(?=\s|$)|enable)/i;
+const TOGGLE_OFF = /(خاموش|ببند|بسته|قطع|غیرفعال|off(?=\s|$)|disable)/i;
+
+function cmdNorm(text) {
+  return String(text ?? "")
+    .replace(/[۰-۹٠-٩]/g, (d) => DIGITS[d])
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[‌‏‎]/g, " ")
+    .replace(/[؟?!.,،؛:"«»()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractName(text, extraWords) {
+  const drop = new Set(extraWords.map((w) => w.toLowerCase()));
+  const tokens = text
+    .split(" ")
+    .map((t) => t.replace(/^@/, ""))
+    .filter((t) => t && !CMD_FILLER.has(t.toLowerCase()) && !drop.has(t.toLowerCase()));
+  return cleanTargetName(tokens.join(" "));
+}
+
+export function parseAdminCommand(rawText) {
+  const text = cmdNorm(rawText);
+  if (!text || text.length > 80) return null;
+
+  const wordsOf = (re) => (text.match(new RegExp(re.source, "gi")) || []).flatMap((w) => w.split(" "));
+
+  // ۱) رفع مسدودی (قبل از مسدود کردن، چون «رفع مسدودی» کلمه‌ی مسدود هم دارد)
+  if (UNBLOCK_RE.test(text) && (BLOCK_RE.test(text) || /(آزاد|ازاد|unban|unblock)/i.test(text))) {
+    const name = extractName(text, [...wordsOf(UNBLOCK_RE), ...wordsOf(BLOCK_RE), "مسدودی", "بلاکی"]);
+    if (!name) return { ok: false, reason: "no-name" };
+    return { ok: true, action: { type: "access", name, key: "block", value: 0 } };
+  }
+
+  // ۲) مسدود کردن با مدت
+  if (BLOCK_RE.test(text)) {
+    const d = text.match(DURATION_RE);
+    if (!d) {
+      const name = extractName(text, [...wordsOf(BLOCK_RE)]);
+      return name ? { ok: false, reason: "need-hours", name } : { ok: false, reason: "no-name" };
+    }
+    const n = Number(d[1]);
+    const unit = d[2].toLowerCase();
+    let hours = n;
+    if (/^(روز|day|d)/.test(unit)) hours = n * 24;
+    else if (/^(دقیقه|min|m$)/.test(unit)) hours = Math.max(1, Math.ceil(n / 60));
+    hours = Math.ceil(hours);
+    if (hours < 1) return { ok: false, reason: "bad-value" };
+    if (hours > MAX_BLOCK_HOURS) return { ok: false, reason: "too-big" };
+    const rest = text.replace(d[0], " ");
+    const name = extractName(rest, [...wordsOf(BLOCK_RE)]);
+    if (!name) return { ok: false, reason: "no-name" };
+    return { ok: true, action: { type: "access", name, key: "block", value: hours } };
+  }
+
+  // ۳) برگرداندن به پیش‌فرض
+  if (RESET_RE.test(text) && !/سهمیه|limit|quota/i.test(text)) {
+    const name = extractName(text, [...wordsOf(RESET_RE), "همه", "همه‌چیز", "همهچیز", "دسترسی", "دسترسیها", "دسترسی‌ها"]);
+    if (!name) return { ok: false, reason: "no-name" };
+    return { ok: true, action: { type: "access-reset", name } };
+  }
+
+  // ۴) سهمیه: «سهمیه علی رو ۱۰ کن»
+  if (/(سهمیه|سقف|limit|quota)/i.test(text)) {
+    const m = text.match(/(?:^|\s)(\d{1,4})(?=\s|$)/);
+    const isDefault = /(پیش\s?فرض|default)/i.test(text);
+    if (m || isDefault) {
+      const rest = text.replace(m ? m[0] : "", " ");
+      const name = extractName(rest, ["سهمیه", "سقف", "limit", "quota", "پیشفرض", "پیش", "فرض", "default", "روزانه", "سوال", "سؤال"]);
+      if (!name) return { ok: false, reason: "no-name" };
+      const v = parseAccessValue("limit", isDefault ? "default" : m[1]);
+      return v.ok ? { ok: true, action: { type: "access", name, key: "limit", value: v.value } } : { ok: false, reason: v.reason };
+    }
+  }
+
+  // ۵) خاموش/روشن کردن یک قابلیت: «وب علی رو ببند»، «دستیار X رو روشن کن»
+  const keyMatch = text.match(/(^| )(دستیار|وب|جستجو|سرچ|عکس|عکسها|تصویر|تفکر|خرید|فروشگاه|assistant|web|images|think|buy)( |$)/i);
+  if (keyMatch && (TOGGLE_OFF.test(text) || TOGGLE_ON.test(text))) {
+    const key = normalizeKey(keyMatch[2]);
+    const off = TOGGLE_OFF.test(text);
+    const name = extractName(text, [keyMatch[2], ...wordsOf(TOGGLE_OFF), ...wordsOf(TOGGLE_ON)]);
+    if (key && name) return { ok: true, action: { type: "access", name, key, value: !off } };
+  }
+
+  // ۶) دیدن وضعیت: «وضعیت ALIXMOD»، «دسترسی علی رو نشون بده»
+  if (SHOW_RE.test(text) && /(وضعیت|دسترسی|status|access)/i.test(text)) {
+    const name = extractName(text, [...wordsOf(SHOW_RE), "وضعیت", "دسترسی", "دسترسی‌ها", "status", "access"]);
+    if (name) return { ok: true, action: { type: "access-show", name } };
+  }
+
+  return null;
+}

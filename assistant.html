@@ -621,7 +621,7 @@ import {
  asksAccessChange, detectIntent, intentFallback, intentHint, extractActions, fallbackTextFor, buildGameGuide, buildAssistantRules, buildDomitoContext
 } from "./js/assistant-tools.js";
 import {
- readAccess, assistantGate, describeAccess, describeChange
+ readAccess, assistantGate, describeAccess, describeChange, parseAdminCommand
 } from "./js/access-control.js";
 
 // ======================================
@@ -2185,6 +2185,48 @@ $("form").addEventListener("submit", async e => {
   else msgText = "زیر admins/" + d.uid + " مقداری هست ولی از نوع «" + d.type + "» است و true نیست. مقدار را روی Boolean = true بگذار.";
   addNote(msgText);
   return;
+ }
+
+ // دستور ادمین (مسدود، رفع مسدودی، خاموش/روشن، سهمیه، وضعیت): خود برنامه می‌فهمد، بدون مدل و بدون مصرف سهمیه.
+ // پنجره‌ی تأیید همیشه نشان داده می‌شود و فقط با دکمه‌ی خود ادمین اعمال می‌شود.
+ if(text && !pending.length){
+  const cmd = parseAdminCommand(text);
+  if(cmd){
+   let adm = isAdminNow();
+   if(!adm){
+    try{
+     const d = await adminDiagnose(); // خواندن تازه از Firebase، نه حافظه‌ی موقت
+     adm = !!d.admin;
+     if(adm){ quotaState = await getAIQuota(); updateQuotaDisplay(); }
+    }catch(e){ adm = false; }
+   }
+   if(adm){
+    input.value = ""; autoGrow();
+    const w0 = $("welcome"); if(w0) w0.remove();
+    if(!conv) newConv();
+    if(!conv.messages.length) conv.title = makeTitle(text);
+    conv.messages.push({ role:"user", content:text, t:Date.now() });
+    persistCurrent();
+    const ur = makeRow("user", "", false);
+    const tt = document.createElement("div"); tt.textContent = text; ur.msg.appendChild(tt);
+    chat.appendChild(ur.row);
+    updateHeader();
+    scrollDown(true);
+    if(!cmd.ok){
+     const why = {
+      "need-hours": "«" + (cmd.name || "") + "» رو برای چند ساعت مسدود کنم؟ مثلاً: " + (cmd.name || "نام") + " رو ۲ ساعت مسدود کن",
+      "no-name": "اسم کاربر رو نفهمیدم؛ اسمش رو بنویس.",
+      "too-big": "حداکثر مسدودی ۳۰ روزه.",
+      "bad-value": "مقدار درست نیست."
+     };
+     addNote(why[cmd.reason] || "دستور رو نفهمیدم.");
+    }else{
+     await proposeAccess(cmd.action);
+    }
+    input.focus();
+    return;
+   }
+  }
  }
 
  await refreshAccess();
