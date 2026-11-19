@@ -1672,6 +1672,14 @@ async function proposeAccess(action){
   return;
  }
  if(action.type === "access-show"){
+  const okShow = await confirmBuy({
+   title:"🔐 تأیید دیدن وضعیت",
+   ask:"وضعیت دسترسی «" + action.name + "» نشان داده بشه؟",
+   rows:[["کاربر", action.name]],
+   note:"فقط نمایش است و چیزی تغییر نمی‌کند.",
+   yes:"نشان بده"
+  });
+  if(!okShow){ addNote("لغو شد."); return; }
   addNote("🔐 " + action.name + " ← " + describeAccess(current));
   return;
  }
