@@ -516,6 +516,7 @@ textarea::placeholder{color:var(--muted)}
     <button type="button" data-lang="en">English</button>
    </div>
    <select id="liveVoice" aria-label="صدا"></select>
+   <span id="liveLeft" style="font-size:12px;color:var(--muted)"></span>
    <button type="button" id="liveGo">📞 شروع</button>
   </div>
   <form id="form">
@@ -588,6 +589,10 @@ textarea::placeholder{color:var(--muted)}
   <span>🪙 خرید سؤال با سکه<small id="buyInfo">...</small></span>
   <button type="button" class="buy-btn" id="buyQ" disabled>خرید ۱ سؤال</button>
  </div>
+ <div class="set sw">
+  <span>📞 شارژ لایو<small id="liveInfo">...</small></span>
+  <button type="button" class="buy-btn" id="buyLive" disabled>خرید ۵ دقیقه</button>
+ </div>
  <div class="set" id="verLine" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۱۵ / ۵</div>
  <button id="closeSheet" type="button">تأیید</button>
 </div>
@@ -628,7 +633,8 @@ import {
  getAIShopInfo, buyAIQuestionWithCoins, isAdminUser, adminDiagnose,
  getMyAccess, getUserAccess, setUserAccess, resetUserAccess, createRoom,
  GAMES, getPublicProfile, getFriendNames, buyItem,
- readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf
+ readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf,
+ getLiveInfo, buyLiveCharge, spendLiveSeconds
 } from "./js/app.js";
 import {
  cleanText, describeAdmin, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
@@ -1047,7 +1053,7 @@ $("menuBtn").onclick = openDrawer;
 $("closeDrawer").onclick = closeAll;
 scrim.onclick = closeAll;
 $("settingsBtn").onclick = () => {
- sheet.classList.add("open"); scrim.classList.add("show"); refreshShop();
+ sheet.classList.add("open"); scrim.classList.add("show"); refreshShop(); refreshLiveCharge();
  // نسخه‌ی صفحه + وضعیت ادمین (از همان سهمیه‌ی نامحدود)
  const vl = $("verLine");
  if(vl) vl.textContent = "نسخه صفحه: ۲۰۲۶-۱۱-۱۵ / ۵ • ادمین: " + (isAdminNow() ? "بله" : "خیر");
@@ -1944,9 +1950,70 @@ function liveVoiceFor(preset){
 }
 const LIVE_MAX_SILENCE = 3;
 
+
+// شارژ لایو: ۳۰ سکه = ۵ دقیقه؛ با حرف زدن در لایو کم می‌شود
+const fmtTime = sec => { sec = Math.max(0, Math.floor(sec)); return toFa(Math.floor(sec / 60)) + ":" + toFa(String(sec % 60).padStart(2, "0")); };
+let liveLeftSec = 0, liveUnlimited = false;
+
+async function refreshLiveCharge(){
+ const btn = $("buyLive"), info = $("liveInfo");
+ btn.disabled = true;
+ if(!authReady || !uid){ info.textContent = "اول با حساب دومیتو وارد شو."; return; }
+ try{
+  const s = await getLiveInfo();
+  liveUnlimited = !!s.unlimited;
+  if(s.unlimited){ info.textContent = "حساب نامحدود نیازی به شارژ ندارد."; $("liveLeft").textContent = ""; return; }
+  liveLeftSec = s.seconds;
+  info.textContent = "باقی‌مانده: " + fmtTime(s.seconds) + " • سکه‌ات: " + toFa(s.coins);
+  $("liveLeft").textContent = "شارژ: " + fmtTime(s.seconds);
+  btn.textContent = "خرید " + toFa(Math.round(s.pack / 60)) + " دقیقه · " + toFa(s.price) + " 🪙";
+  btn.disabled = s.coins < s.price || s.seconds + s.pack > s.max;
+ }catch(e){
+  info.textContent = "خواندن شارژ ممکن نشد.";
+ }
+}
+
+$("buyLive").onclick = async () => {
+ $("buyLive").disabled = true;
+ try{
+  const r = await buyLiveCharge();
+  if(r.ok) toast("📞 شارژ لایو اضافه شد؛ " + fmtTime(r.seconds) + " باقی مانده");
+  else{
+   const msg = { insufficient:"سکه‌ات کافی نیست.", max:"موجودی شارژ به سقف رسیده.", "no-profile":"پروفایل پیدا نشد.", "no-access":"خرید برای حساب تو بسته شده.", unlimited:"حساب نامحدود نیازی به شارژ ندارد." };
+   toast(msg[r.reason] || "خرید انجام نشد.");
+  }
+ }catch(e){ toast("خرید انجام نشد. دوباره تلاش کن."); }
+ refreshLiveCharge();
+};
+
+// شمارش مصرف: فقط وقتی حرف می‌زنی یا دستیار جواب را می‌خواند (نه وقتی منتظر جواب مدل هستی).
+let liveState = "idle", liveUnflushed = 0, liveTicker = null, liveFlushing = false;
+
+async function liveFlush(){
+ if(liveFlushing || liveUnflushed <= 0) return;
+ liveFlushing = true;
+ const n = liveUnflushed; liveUnflushed = 0;
+ try{ await spendLiveSeconds(n); }catch(e){ liveUnflushed += n; }
+ liveFlushing = false;
+}
+
+function liveTick(){
+ if(!liveMode || liveUnlimited) return;
+ if(liveState === "listen" || liveState === "speak"){
+  liveLeftSec = Math.max(0, liveLeftSec - 1);
+  liveUnflushed++;
+  $("liveLeft").textContent = "شارژ: " + fmtTime(liveLeftSec);
+  if(liveUnflushed >= 10) liveFlush();
+  if(liveLeftSec <= 0){ liveFlush(); liveStop("شارژ لایو تمام شد. از تنظیمات ⚙️ شارژ کن."); }
+ }
+}
+function liveMeterStart(){ liveUnflushed = 0; clearInterval(liveTicker); liveTicker = setInterval(liveTick, 1000); }
+function liveMeterStop(){ clearInterval(liveTicker); liveTicker = null; liveState = "idle"; liveFlush(); }
+
 function liveStatus(text){ if(liveMode) setStatus(text); }
 
 function liveStop(msg){
+ liveMeterStop();
  liveMode = false; liveHold = false; liveSilence = 0;
  try{ if(liveRecog){ liveRecog.onend = null; liveRecog.abort(); } }catch(e){}
  liveRecog = null;
@@ -1988,6 +2055,7 @@ function liveListen(){
  };
  try{
   r.start();
+  liveState = "listen";
   liveStatus("🎙️ گوش می‌دم…");
  }catch(e){ setTimeout(liveListen, 500); }
 }
@@ -1997,6 +2065,7 @@ let liveAdmin = false;
 async function liveSend(text){
  if(!liveMode) return;
  liveHold = true; // تا جواب کامل نشده دوباره گوش نده
+ liveState = "think";
  input.value = text; autoGrow();
  $("form").requestSubmit();
  // منتظر می‌مانیم ارسال واقعاً شروع شود (جواب مدل یا دستور ادمین). اگر شروع نشد (سهمیه تمام، دسترسی بسته…) دوباره گوش می‌دهیم.
@@ -2045,8 +2114,10 @@ async function liveAfterReply(){
  if(!liveMode) return;
  const last = conv && conv.messages[conv.messages.length - 1];
  if(last && last.role === "assistant" && last.content){
+  liveState = "speak";
   liveStatus("🔊 دارم جواب می‌دم…");
   await speakChunks(last.content);
+  liveState = "think";
  }
  liveHold = false;
  if(liveMode) setTimeout(liveListen, 300);
@@ -2086,11 +2157,19 @@ $("liveVoice").onchange = e => {
 };
 if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { if(!$("liveBar").hidden) renderLiveBar(); };
 
-function liveBegin(){
+async function liveBegin(){
  if(!SR){ toast("مرورگرت ورودی صوتی رو پشتیبانی نمی‌کنه."); return; }
+ await refreshLiveCharge();
+ if(!liveUnlimited && liveLeftSec <= 0){
+  toast("شارژ لایو نداری؛ از تنظیمات ⚙️ با سکه شارژ کن.");
+  $("liveBar").hidden = true;
+  sheet.classList.add("open"); scrim.classList.add("show");
+  return;
+ }
  if(recording && recog){ try{ recog.stop(); }catch(e){} }
  $("liveBar").hidden = true;
  liveMode = true; liveHold = false; liveSilence = 0;
+ liveMeterStart();
  $("live").classList.add("on");
  toast(liveLang === "en" ? "Live voice started — speak. Tap 📞 to end." : "مکالمه‌ی صوتی شروع شد؛ حرف بزن. دوباره 📞 بزنی تمام می‌شود.");
  liveListen();
@@ -2101,7 +2180,7 @@ $("live").onclick = () => {
  if(liveMode){ liveStop("مکالمه‌ی صوتی تمام شد."); return; }
  const bar = $("liveBar");
  bar.hidden = !bar.hidden;
- if(!bar.hidden) renderLiveBar();
+ if(!bar.hidden){ renderLiveBar(); refreshLiveCharge(); }
 };
 
 // ======================================

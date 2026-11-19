@@ -4858,3 +4858,67 @@ async function maybeAwardSoloBonus(gameId) {
   if (!currentUid() || !getSavedName()) return;
   await awardAIQuestionForSoloGame(gameId, rule.minScore, PAGE_RUN_ID);
 }
+
+// ============================================================
+// شارژ لایو (مکالمه‌ی صوتی دستیار): با سکه خریده می‌شود و با حرف زدن کم می‌شود.
+// profiles/{نام}/liveSeconds = ثانیه‌های باقی‌مانده. ادمین (نامحدود) شارژ لازم ندارد.
+// ============================================================
+
+export const LIVE_PACK_SECONDS = 300;   // هر بسته ۵ دقیقه
+export const LIVE_PACK_PRICE = 30;      // قیمت هر بسته به سکه
+export const LIVE_MAX_SECONDS = 7200;   // حداکثر موجودی ۲ ساعت
+
+function liveSafeSeconds(v) {
+  const n = Math.floor(Number(v));
+  return Number.isFinite(n) && n > 0 ? Math.min(LIVE_MAX_SECONDS, n) : 0;
+}
+
+export async function getLiveInfo() {
+  const base = { seconds: 0, coins: 0, price: LIVE_PACK_PRICE, pack: LIVE_PACK_SECONDS, max: LIVE_MAX_SECONDS, unlimited: false };
+  const username = getSavedName();
+  if (!currentUid() || !username) return base;
+  if (await aiIsUnlimited()) return { ...base, unlimited: true };
+  const snap = await get(profileRef(username));
+  const val = snap.val() || {};
+  return {
+    ...base,
+    seconds: liveSafeSeconds(val.liveSeconds),
+    coins: Math.max(0, Math.floor(Number(val.coins) || 0))
+  };
+}
+
+// خرید یک بسته: کم‌شدن سکه و اضافه‌شدن ثانیه‌ها در یک تراکنش.
+export async function buyLiveCharge() {
+  if (await aiIsUnlimited()) return { ok: false, reason: "unlimited" };
+  try { await assertAllowed("buy"); } catch (e) { return { ok: false, reason: "no-access" }; }
+  const username = getSavedName();
+  if (!currentUid() || !username) throw new Error("وارد نشده‌ای.");
+  let result = { ok: false, reason: "unknown" };
+  const tx = await runTransaction(profileRef(username), cur => {
+    if (!cur || typeof cur !== "object") { result = { ok: false, reason: "no-profile" }; return cur; }
+    const coins = Number(cur.coins || 0);
+    const have = liveSafeSeconds(cur.liveSeconds);
+    if (have + LIVE_PACK_SECONDS > LIVE_MAX_SECONDS) { result = { ok: false, reason: "max" }; return cur; }
+    if (!Number.isFinite(coins) || coins < LIVE_PACK_PRICE) { result = { ok: false, reason: "insufficient" }; return cur; }
+    cur.coins = coins - LIVE_PACK_PRICE;
+    cur.liveSeconds = have + LIVE_PACK_SECONDS;
+    result = { ok: true, reason: "bought" };
+    return cur;
+  });
+  if (!tx.committed) throw new Error("خرید انجام نشد.");
+  if (result.ok) {
+    try { await logTransaction(username, { type: "purchase", amount: -LIVE_PACK_PRICE, note: "خرید شارژ لایو" }); } catch (e) { /* ثبت تاریخچه اختیاری است */ }
+  }
+  const val = tx.snapshot.val() || {};
+  return { ...result, coins: Math.max(0, Math.floor(Number(val.coins) || 0)), seconds: liveSafeSeconds(val.liveSeconds) };
+}
+
+// مصرف ثانیه‌ها در حین مکالمه. موجودی باقی‌مانده را برمی‌گرداند (ادمین: null = نامحدود).
+export async function spendLiveSeconds(seconds) {
+  if (await aiIsUnlimited()) return null;
+  const username = getSavedName();
+  if (!currentUid() || !username) return 0;
+  const spend = Math.max(0, Math.min(600, Math.floor(Number(seconds) || 0)));
+  const tx = await runTransaction(profileRef(username, "liveSeconds"), cur => Math.max(0, liveSafeSeconds(cur) - spend));
+  return liveSafeSeconds(tx.snapshot.val());
+}
