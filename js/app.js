@@ -1942,6 +1942,16 @@ const COIN_WIN =
 const COIN_PLAY =
   5;
 
+// بازی‌هایی که پاداش سکه‌شان ثابت است (چه برد چه باخت): «پرش از سکو» (math)
+const FIXED_COIN_GAMES = { math: 5 };
+
+function coinRewardFor(gameId, won) {
+  if (Object.prototype.hasOwnProperty.call(FIXED_COIN_GAMES, gameId)) {
+    return FIXED_COIN_GAMES[gameId];
+  }
+  return won ? COIN_WIN : COIN_PLAY;
+}
+
 
 export async function recordRoundResult(
   name,
@@ -2000,17 +2010,14 @@ export async function recordRoundResult(
 
         curr.wins++;
 
-        curr.coins +=
-          COIN_WIN;
-
       } else {
 
         curr.losses++;
 
-        curr.coins +=
-          COIN_PLAY;
-
       }
+
+      curr.coins +=
+        coinRewardFor(gameId, won);
 
 
       const game =
@@ -2051,9 +2058,7 @@ export async function recordRoundResult(
           : "play",
 
       amount:
-        won
-          ? COIN_WIN
-          : COIN_PLAY,
+        coinRewardFor(gameId, won),
 
       note:
         won
