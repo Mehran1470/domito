@@ -697,6 +697,12 @@ textarea::placeholder{color:var(--muted)}
 </div>
 <div id="toast"></div>
 
+<script type="importmap">
+{"imports":{
+"https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/":"https://sparkling-limit-d8d5.mhranzary40.workers.dev/cdn/cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/",
+"https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/":"https://sparkling-limit-d8d5.mhranzary40.workers.dev/cdn/cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/"
+}}
+</script>
 <script type="module">
 import {
  waitForUser, getSavedName, currentUid, logoutUser,
@@ -2371,6 +2377,8 @@ function patchHfFetch(){
   try{
    const u = typeof input === "string" ? input : ((input && input.url) || "");
    if(u.startsWith("https://huggingface.co/")) return orig(API + "/hf/" + u.slice("https://huggingface.co/".length), init);
+   const cm = u.match(/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)(\/[^?#]*)/);
+   if(cm && /onnxruntime-web|piper-wasm/.test(cm[2])) return orig(API + "/cdn/" + cm[1] + cm[2], init);
   }catch(e){}
   return orig(input, init);
  };
