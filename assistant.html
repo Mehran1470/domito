@@ -1909,15 +1909,31 @@ chat.addEventListener("click", e => {
 // خواندن با صدا و ورودی صوتی
 // ======================================
 
-function speak(text){
+// دکمه‌ی 🔊 زیر هر جواب: اول صدای ابری (Gemini)، اگر نشد صدای گوشی.
+let msgAudio = null;
+async function speak(text){
+ try{ if(msgAudio){ msgAudio.pause(); msgAudio = null; } }catch(e){}
+ try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
+ const clean = String(text).replace(/```[\s\S]*?```/g, " ").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/https?:\/\/\S+/g, " ").replace(/[*#`>_|~]/g, " ").replace(/\s+/g, " ").trim();
+ if(!clean) return;
+ const lang = /[؀-ۿ]/.test(clean) ? "fa" : "en";
+ if(Date.now() >= cloudBlockedUntil){
+  try{
+   toast("🔊 چند لحظه…");
+   const first = clean.slice(0, 700);
+   const item = await fetchCloudAudio(first, lang);
+   const url = URL.createObjectURL(item.blob);
+   const a = new Audio(url); msgAudio = a;
+   a.onended = a.onerror = () => { URL.revokeObjectURL(url); if(msgAudio === a) msgAudio = null; };
+   await a.play();
+   return;
+  }catch(err){ cloudDown(err); }
+ }
  if(!("speechSynthesis" in window)) return toast("مرورگرت خواندن با صدا رو پشتیبانی نمی‌کنه.");
- window.speechSynthesis.cancel();
- const clean = String(text).replace(/```[\s\S]*?```/g, " (کد) ").replace(/[*#`>_]/g, "");
  const u = new SpeechSynthesisUtterance(clean);
  const voices = window.speechSynthesis.getVoices();
- const fa = voices.find(v => /^fa/i.test(v.lang));
- if(fa){ u.voice = fa; u.lang = fa.lang; }
- else toast("صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه.");
+ const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(lang));
+ if(v){ u.voice = v; u.lang = v.lang; } else u.lang = lang === "en" ? "en-US" : "fa-IR";
  window.speechSynthesis.speak(u);
 }
 
@@ -2256,19 +2272,35 @@ const CLOUD_VOICES = {
  en: { f1:["en-US-JennyNeural",1,1], f2:["en-US-AriaNeural",1,1], f3:["en-GB-SoniaNeural",1,1],
        m1:["en-US-GuyNeural",1,1],   m2:["en-US-ChristopherNeural",1,1], m3:["en-GB-RyanNeural",1,1] }
 };
-let cloudOK = null, liveAudio = null; // null = هنوز امتحان نشده
+let cloudOK = null, liveAudio = null; // cloudOK فقط برای نمایش راهنما؛ خطا دائمی نیست
+let cloudBlockedUntil = 0, cloudToastAt = 0;
+function cloudDown(err){
+ cloudBlockedUntil = Date.now() + 60000; // یک دقیقه سراغ صدای ابری نمی‌رویم تا مکالمه کند نشود
+ if(Date.now() - cloudToastAt > 120000){
+  cloudToastAt = Date.now();
+  toast(err && err.why === "tts_quota"
+   ? "سهمیه‌ی رایگان صدای Gemini تمام شده؛ فعلاً با صدای گوشی می‌خونم."
+   : "صدای ابری در دسترس نیست؛ فعلاً با صدای گوشی می‌خونم.");
+ }
+ liveWarnedVoice = true; // پیام «صدای فارسی نصب نیست» را دوباره نشان نده
+}
 
-function fetchCloudAudio(text){
- const [voice, pitch, rate] = (CLOUD_VOICES[liveLang] || CLOUD_VOICES.fa)[livePreset] || CLOUD_VOICES.fa.f1;
+function fetchCloudAudio(text, langOv){
+ const lang = langOv || liveLang;
+ const [voice, pitch, rate] = (CLOUD_VOICES[lang] || CLOUD_VOICES.fa)[livePreset] || CLOUD_VOICES.fa.f1;
  const ctrl = new AbortController();
  const timer = setTimeout(() => ctrl.abort(), 20000);
  return fetch(API, {
   method:"POST",
   headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({ tts:true, text, voice, pitch, rate, preset: livePreset, lang: liveLang }),
+  body: JSON.stringify({ tts:true, text, voice, pitch, rate, preset: livePreset, lang }),
   signal: ctrl.signal
  }).then(async r => {
-  if(!r.ok) throw new Error("tts " + r.status);
+  if(!r.ok){
+   let why = "";
+   try{ why = (await r.json()).error || ""; }catch(e){}
+   const err = new Error("tts " + r.status); err.why = why; throw err;
+  }
   const b = await r.blob();
   if(!b || b.size < 200) throw new Error("tts empty");
   return { blob:b, engine: r.headers.get("X-TTS-Engine") || "edge" };
@@ -2328,13 +2360,13 @@ function splitForSpeech(clean){
  if(!first) return [clean];
  const parts = [first[0]];
  const rest = clean.slice(first[0].length).trim();
- if(rest) parts.push(...(rest.match(/[^.!؟?؛\n]{1,420}[.!؟?؛\n]?/g) || [rest]));
+ if(rest) parts.push(...(rest.match(/[^.!؟?؛\n]{1,800}[.!؟?؛\n]?/g) || [rest]));
  return parts.map(x => x.trim()).filter(Boolean);
 }
 
 let livePrefetched = null; // { first, promise }
 function livePrefetch(text){
- if(!liveMode || cloudOK === false) return;
+ if(!liveMode || Date.now() < cloudBlockedUntil) return;
  const parts = splitForSpeech(liveCleanText(text));
  if(!parts.length) return;
  const promise = fetchCloudAudio(parts[0]);
@@ -2346,7 +2378,7 @@ async function speakChunks(text){
  const clean = liveCleanText(text);
  if(!clean) return;
  const parts = splitForSpeech(clean);
- if(cloudOK !== false){
+ if(Date.now() >= cloudBlockedUntil){
   try{
    let nextP = (livePrefetched && livePrefetched.first === parts[0]) ? livePrefetched.promise : fetchCloudAudio(parts[0]);
    livePrefetched = null;
@@ -2359,7 +2391,7 @@ async function speakChunks(text){
    }
    return;
   }catch(e){
-   if(cloudOK === null) cloudOK = false;
+   cloudDown(e);
    if(!liveMode) return;
   }
  }
@@ -2423,13 +2455,13 @@ $("liveVoice").onchange = async e => {
  try{
   if(liveAudio){ liveAudio.pause(); liveAudio = null; }
   window.speechSynthesis && window.speechSynthesis.cancel();
-  if(cloudOK !== false){
+  if(Date.now() >= cloudBlockedUntil){
    const item = await fetchCloudAudio(sample);
    cloudOK = true;
    playBlob(item);
    return;
   }
- }catch(err){ cloudOK = cloudOK === true ? true : false; }
+ }catch(err){ cloudDown(err); }
  if(window.speechSynthesis){
   const p = LIVE_PRESETS.find(x => x.id === livePreset);
   const pick = liveVoiceFor(p);
@@ -2461,7 +2493,7 @@ $("liveClose").onclick = () => { if(liveMode) liveStop(); $("liveScreen").hidden
 $("liveCharge").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); refreshShop(); refreshLiveCharge(); };
 
 function liveVoiceHint(){
- const hasVoice = cloudOK !== false || !!liveVoiceFor(LIVE_PRESETS[0]);
+ const hasVoice = Date.now() >= cloudBlockedUntil || !!liveVoiceFor(LIVE_PRESETS[0]);
  $("liveHint").textContent = hasVoice ? "" :
   (liveLang === "en" ? "صدای انگلیسی روی این دستگاه نصب نیست." : "صدای فارسی روی این دستگاه نصب نیست؛ جواب‌ها بدون صدا یا با تلفظ ضعیف می‌آیند.");
 }
