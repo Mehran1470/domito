@@ -2339,7 +2339,13 @@ function speakDevice(parts){
   if(!("speechSynthesis" in window)){ resolve(); return; }
   const preset = LIVE_PRESETS.find(p => p.id === livePreset) || LIVE_PRESETS[0];
   const pick = liveVoiceFor(preset);
-  if(!pick && !liveWarnedVoice){ liveWarnedVoice = true; toast(liveLang === "en" ? "صدای انگلیسی روی این دستگاه نصب نیست." : "صدای فارسی روی این دستگاه نصب نیست؛ ممکنه تلفظ درست نباشه."); }
+  if(!pick){
+   // هیچ صدایی برای این زبان نیست: بی‌صدا نمی‌مانیم؛ جواب روی صفحه می‌ماند و به اندازه‌ی خواندنش صبر می‌کنیم.
+   if(!liveWarnedVoice){ liveWarnedVoice = true; toast("صدایی برای خواندن جواب در دسترس نیست؛ جواب رو روی صفحه بخون."); }
+   const words = parts.join(" ").split(/\s+/).length;
+   setTimeout(resolve, Math.min(9000, 1500 + words * 230));
+   return;
+  }
   window.speechSynthesis.cancel();
   let i = 0;
   const next = () => {
