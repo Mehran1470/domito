@@ -2387,7 +2387,7 @@ async function loadPiper(){
  if(piperLib) return piperLib;
  patchHfFetch();
  const errs = [];
- for(const u of ["https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web/+esm", "https://esm.sh/@mintplex-labs/piper-tts-web"]){
+ for(const u of [API + "/lib/piper.mjs", "https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web/+esm"]){
   try{
    const m = await import(u);
    const lib = m && m.predict ? m : (m && m.default && m.default.predict ? m.default : null);
