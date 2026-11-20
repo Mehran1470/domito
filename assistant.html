@@ -277,6 +277,20 @@ textarea::placeholder{color:var(--muted)}
 #liveScreen .lv-top{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#9db0d8}
 #liveScreen .lv-right{display:flex;gap:8px;align-items:center}
 #liveAttach{position:relative}
+#liveAttach.badge::before{content:"";position:absolute;top:2px;left:2px;width:9px;height:9px;border-radius:50%;background:#ff9d5c;border:2px solid #16213f}
+#liveScreen #pinMenu{position:absolute;top:calc(env(safe-area-inset-top,0px) + 62px);right:18px;bottom:auto;margin:0;z-index:50;width:min(calc(100% - 36px),330px)}
+#liveDl{position:absolute;left:0;right:0;bottom:0;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:30;display:flex;align-items:center;justify-content:center;padding:24px;background:#0a0f1ff2}
+#liveDl[hidden]{display:none}
+#liveDl .dl-card{width:min(100%,380px);padding:22px 18px;border-radius:22px;background:#ffffff0f;border:1px solid #ffffff22;text-align:center;display:flex;flex-direction:column;gap:12px}
+#liveDl .dl-ico{font-size:34px}
+#liveDl .dl-title{font-size:17px;font-weight:700}
+#liveDl .dl-sub{font-size:12.5px;color:#9db0d8;line-height:1.8}
+#liveDl .dl-bar{height:10px;border-radius:6px;background:#ffffff1c;overflow:hidden}
+#liveDl .dl-bar i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,#4d8dff,#7c5cff);transition:width .25s}
+#liveDlTxt{font-size:13px;color:#cdd8ff;min-height:1.4em}
+#liveDl .dl-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#liveDl .dl-btns button{font:inherit;font-size:13px;padding:9px 14px;border-radius:12px;border:1px solid #ffffff2a;background:#ffffff12;color:#eaf0ff}
+#liveDl .dl-btns button[hidden]{display:none}
 #liveAttach .cnt{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#ff9d5c;color:#111;font-size:11px;line-height:16px;text-align:center;padding:0 3px}
 #liveScreen .lv-top button{background:#ffffff14;color:#eaf0ff;border:0;border-radius:50%;width:38px;height:38px;font-size:16px}
 #liveScreen .lv-mid{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;min-height:0}
@@ -667,6 +681,19 @@ textarea::placeholder{color:var(--muted)}
   <button type="button" id="liveEnd" hidden title="پایان">📵</button>
   <div id="liveHint"></div>
  </div>
+ <div id="liveDl" hidden>
+  <div class="dl-card">
+   <div class="dl-ico">⬇️</div>
+   <div class="dl-title">دانلود صدای فارسی</div>
+   <div class="dl-sub">فقط بار اول لازمه. بعدش روی گوشی می‌مونه و بدون اینترنت و بدون سهمیه کار می‌کنه.</div>
+   <div class="dl-bar"><i id="liveDlBar"></i></div>
+   <div id="liveDlTxt">در حال آماده‌سازی…</div>
+   <div class="dl-btns">
+    <button type="button" id="liveDlRetry" hidden>تلاش دوباره</button>
+    <button type="button" id="liveDlSkip">رد کردن (فعلاً صدای گوشی)</button>
+   </div>
+  </div>
+ </div>
 </div>
 <div id="toast"></div>
 
@@ -806,6 +833,7 @@ function renderThinkBar(){
  $("attach").classList.toggle("badge", thinkMode !== "low" || searchOn);
  $("pinSearch").classList.toggle("on", searchOn);
  $("pinSearchLabel").textContent = searchOn ? "جستجوی وب: روشن (فقط پیام بعدی)" : "جستجوی وب: خاموش";
+ try{ renderLiveAttach(); }catch(e){}
  box.innerHTML = "";
  Object.entries(THINK).forEach(([key, t]) => {
   const b = document.createElement("button");
@@ -2300,7 +2328,10 @@ function cloudDown(err){
 
 function fetchCloudAudio(text, langOv){
  const lang = langOv || liveLang;
- if(lang === "fa" && !livePremium) return piperSpeak(text);
+ if(lang === "fa" && !livePremium){
+  if(Date.now() < piperSkipUntil) return Promise.reject(new Error("piper skipped"));
+  return piperSpeak(text);
+ }
  const [voice, pitch, rate] = (CLOUD_VOICES[lang] || CLOUD_VOICES.fa)[livePreset] || CLOUD_VOICES.fa.f1;
  const ctrl = new AbortController();
  const timer = setTimeout(() => ctrl.abort(), 20000);
@@ -2354,9 +2385,54 @@ async function loadPiper(){
  }
  throw err || new Error("piper load failed");
 }
+let piperReady = new Set();
+try{ piperReady = new Set(JSON.parse(localStorage.getItem("piperReady") || "[]")); }catch(e){}
+let piperDl = null, piperSkipUntil = 0;
+function piperVoiceId(){ return (PIPER_VOICES[livePreset] || PIPER_VOICES.f1)[0]; }
+function liveNeedsVoice(){
+ return liveLang === "fa" && !livePremium && Date.now() >= piperSkipUntil && !piperReady.has(piperVoiceId());
+}
+function dlUi(state, pct, txt){
+ const box = $("liveDl");
+ box.hidden = state === "hide";
+ $("liveDlBar").style.width = (pct || 0) + "%";
+ $("liveDlTxt").textContent = txt || "";
+ $("liveDlRetry").hidden = state !== "error";
+}
+async function liveEnsureVoice(){
+ if(!liveNeedsVoice() || piperDl) return;
+ const voiceId = piperVoiceId();
+ dlUi("show", 0, "در حال آماده‌سازی…");
+ piperDl = (async () => {
+  try{
+   const lib = await loadPiper();
+   let have = [];
+   try{ have = await lib.stored(); }catch(e){}
+   if(!(have || []).includes(voiceId)){
+    await lib.download(voiceId, pr => {
+     if(!pr || !pr.total || (pr.url && !/\.onnx(\?|$)/.test(pr.url))) return;
+     const pct = Math.min(100, Math.round(pr.loaded * 100 / pr.total));
+     dlUi("show", pct, toFa(pct) + "٪ • " + toFa((pr.loaded / 1048576).toFixed(0)) + " از " + toFa((pr.total / 1048576).toFixed(0)) + " مگابایت");
+    });
+   }
+   piperReady.add(voiceId);
+   try{ localStorage.setItem("piperReady", JSON.stringify([...piperReady])); }catch(e){}
+   dlUi("hide");
+   toast("صدای فارسی آماده شد ✅");
+  }catch(e){
+   dlUi("error", 0, "دانلود انجام نشد. اینترنتت رو چک کن و دوباره امتحان کن.");
+  }finally{ piperDl = null; }
+ })();
+}
+$("liveDlRetry").onclick = () => liveEnsureVoice();
+$("liveDlSkip").onclick = () => {
+ piperSkipUntil = Date.now() + 30 * 60 * 1000;
+ dlUi("hide");
+ toast("فعلاً با صدای گوشی می‌خونم.");
+};
+
 function piperSpeak(text){
  const run = async () => {
-  if(!piperToasted){ piperToasted = true; toast("در حال آماده‌سازی صدای فارسی؛ بار اول حدود ۶۰ مگابایت دانلود می‌شه."); }
   const lib = await loadPiper();
   const voiceId = (PIPER_VOICES[livePreset] || PIPER_VOICES.f1)[0];
   let wav;
@@ -2523,15 +2599,18 @@ $("livePremium").onclick = () => {
  cloudBlockedUntil = 0;
  renderPremium();
  toast(livePremium ? "صدای پرمیوم (Gemini) روشن شد؛ هر کلمه ۵ شارژ لایو می‌بره." : "صدای پیش‌فرض (آفلاین) فعال شد.");
+ if(livePremium) dlUi("hide"); else liveEnsureVoice();
 };
 document.querySelectorAll("#liveLangs button").forEach(b => b.onclick = () => {
  liveLang = b.dataset.lang;
  try{ localStorage.setItem("liveLang", liveLang); }catch(e){}
  renderLiveBar(); liveVoiceHint();
+ if(liveLang === "fa") liveEnsureVoice(); else dlUi("hide");
 });
 $("liveVoice").onchange = async e => {
  livePreset = e.target.value;
  try{ localStorage.setItem("livePreset", livePreset); }catch(e2){}
+ if(liveNeedsVoice()){ liveEnsureVoice(); return; }
  // نمونه‌ی صدا: همان صدای ابری که در مکالمه می‌شنوی
  const sample = liveLang === "en" ? "Hi, how can I help you today?" : "سلام، چطور می‌تونم کمکت کنم؟";
  try{
@@ -2556,6 +2635,7 @@ $("liveVoice").onchange = async e => {
 if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { renderLiveBar(); liveVoiceHint(); };
 
 async function liveBegin(){
+ if(piperDl){ toast("صبر کن تا دانلود صدا تموم بشه، یا «رد کردن» رو بزن."); return; }
  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ toast("مرورگرت دسترسی به میکروفون رو پشتیبانی نمی‌کنه."); return; }
  await refreshLiveCharge();
  if(!liveUnlimited && liveCharge <= 0){
@@ -2571,7 +2651,7 @@ async function liveBegin(){
 }
 $("liveGo").onclick = liveBegin;
 $("liveEnd").onclick = () => liveStop("مکالمه‌ی صوتی تمام شد.");
-$("liveClose").onclick = () => { if(liveMode) liveStop(); $("liveScreen").hidden = true; };
+$("liveClose").onclick = () => { if(liveMode) liveStop(); closePin(); $("liveScreen").hidden = true; };
 $("liveCharge").onclick = () => { sheet.classList.add("open"); scrim.classList.add("show"); refreshShop(); refreshLiveCharge(); };
 
 function liveVoiceHint(){
@@ -2585,6 +2665,7 @@ $("live").onclick = () => {
  $("liveScreen").hidden = false;
  setLiveState("idle");
  renderLiveBar(); refreshLiveCharge(); liveVoiceHint();
+ liveEnsureVoice();
 };
 
 // ======================================
@@ -2661,7 +2742,15 @@ function renderTray(){
 
 // دکمه‌ی 📎 یک منو باز می‌کند: ارسال فایل و انتخاب حالت تفکر.
 function closePin(){ $("pinMenu").hidden = true; }
-$("attach").onclick = () => { $("pinMenu").hidden = !$("pinMenu").hidden; };
+const pinHome = { parent: $("pinMenu").parentNode, next: $("pinMenu").nextSibling };
+function pinTo(where){
+ const m = $("pinMenu");
+ if(where === "live"){ if(m.parentNode !== $("liveScreen")) $("liveScreen").appendChild(m); }
+ else if(m.parentNode !== pinHome.parent){
+  pinHome.parent.insertBefore(m, pinHome.next && pinHome.next.parentNode === pinHome.parent ? pinHome.next : null);
+ }
+}
+$("attach").onclick = () => { pinTo("chat"); $("pinMenu").hidden = !$("pinMenu").hidden; };
 $("pinFile").onclick = () => {
  closePin();
  if(!canSendMessage()){ showLimitMessage(); return; }
@@ -2677,12 +2766,12 @@ $("pinSearch").onclick = () => {
 };
 document.addEventListener("click", e => {
  if($("pinMenu").hidden) return;
- if(e.target.closest("#pinMenu") || e.target.closest("#attach")) return;
+ if(e.target.closest("#pinMenu") || e.target.closest("#attach") || e.target.closest("#liveAttach")) return;
  closePin();
 });
 $("liveAttach").onclick = () => {
- if(!canSendMessage()){ showLimitMessage(); return; }
- fileInput.click();
+ pinTo("live");
+ $("pinMenu").hidden = !$("pinMenu").hidden;
 };
 function renderLiveAttach(){
  const b = $("liveAttach");
@@ -2692,7 +2781,8 @@ function renderLiveAttach(){
   c.className = "cnt"; c.textContent = pending.length;
   b.appendChild(c);
  }
- b.title = pending.length ? "فایل ضمیمه شده؛ حرف بزن تا همراه پیامت بره" : "پیوست عکس یا فایل";
+ try{ b.classList.toggle("badge", thinkMode !== "low" || searchOn); }catch(e){}
+ b.title = pending.length ? "فایل ضمیمه شده؛ حرف بزن تا همراه پیامت بره" : "پیوست، جستجوی وب و حالت تفکر";
 }
 fileInput.onchange = () => { addFiles([...fileInput.files]); fileInput.value = ""; };
 
