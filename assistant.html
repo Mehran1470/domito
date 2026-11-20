@@ -602,7 +602,10 @@ textarea::placeholder{color:var(--muted)}
  </div>
  <div class="set sw">
   <span>📞 شارژ لایو<small id="liveInfo">...</small></span>
-  <button type="button" class="buy-btn" id="buyLive" disabled>خرید ۵ دقیقه</button>
+  <span style="display:flex;gap:6px;align-items:center">
+   <select id="liveBuyAmount" aria-label="مقدار سکه"></select>
+   <button type="button" class="buy-btn" id="buyLive" disabled>خرید</button>
+  </span>
  </div>
  <div class="set" id="verLine" style="font-size:11px;color:var(--muted);text-align:center">نسخه صفحه: ۲۰۲۶-۱۱-۱۵ / ۵</div>
  <button id="closeSheet" type="button">تأیید</button>
@@ -669,7 +672,7 @@ import {
  getMyAccess, getUserAccess, setUserAccess, resetUserAccess, createRoom,
  GAMES, getPublicProfile, getFriendNames, buyItem,
  readShop, SHOP_CATEGORIES, ITEM_BY_ID, itemsOf,
- getLiveInfo, buyLiveCharge, spendLiveSeconds
+ getLiveInfo, buyLiveCharge, spendLiveCharge
 } from "./js/app.js";
 import {
  cleanText, describeAdmin, matchFriendNames, isMutualFriend, describeFriend, describeSelf,
@@ -1952,16 +1955,17 @@ $("mic").onclick = () => {
 // دوباره روی 📞 بزنی تمام می‌شود. هر پیام همان مسیر عادی (سهمیه، دسترسی، دستورهای ادمین) را می‌رود.
 // ======================================
 
+let liveEndAfterReply = false;
 let liveMode = false, liveHold = false, liveSilence = 0, liveRecog = null, liveWarnedVoice = false;
 
 // ۶ صدا: ۳ زن و ۳ مرد. صدای واقعی را خود دستگاه می‌دهد؛ اگر صدای زن یا مردِ جدا نداشت، با زیر و بمی (pitch) فرق می‌گذاریم.
 const LIVE_PRESETS = [
- { id:"f1", label:"زن ۱", g:"f", pitch:1.1,  rate:1.0 },
- { id:"f2", label:"زن ۲", g:"f", pitch:1.3,  rate:1.05 },
- { id:"f3", label:"زن ۳", g:"f", pitch:0.98, rate:0.95 },
- { id:"m1", label:"مرد ۱", g:"m", pitch:0.8,  rate:1.0 },
- { id:"m2", label:"مرد ۲", g:"m", pitch:0.65, rate:0.95 },
- { id:"m3", label:"مرد ۳", g:"m", pitch:0.9,  rate:1.08 }
+ { id:"f1", label:"Kore", g:"f", pitch:1.1,  rate:1.0 },
+ { id:"f2", label:"Aoede", g:"f", pitch:1.3,  rate:1.05 },
+ { id:"f3", label:"Leda", g:"f", pitch:0.98, rate:0.95 },
+ { id:"m1", label:"Charon", g:"m", pitch:0.8,  rate:1.0 },
+ { id:"m2", label:"Orus", g:"m", pitch:0.65, rate:0.95 },
+ { id:"m3", label:"Fenrir", g:"m", pitch:0.9,  rate:1.08 }
 ];
 const MALE_RE = /(\bmale\b|\bman\b|david|mark|james|george|daniel|alex\b|fred|guy|ryan|brian|matthew|thomas|arthur|oliver|rishi|aaron|مرد|-x-(iom|iog|tpd|rjs|iol|tpc))/i;
 const FEMALE_RE = /(female|woman|samantha|zira|susan|karen|moira|tessa|fiona|victoria|hazel|kate|serena|ava|allison|زن|-x-(sfg|tpf|iob|tpc|ena|enb))/i;
@@ -1986,70 +1990,80 @@ function liveVoiceFor(preset){
 const LIVE_MAX_SILENCE = 3;
 
 
-// شارژ لایو: ۳۰ سکه = ۵ دقیقه؛ با حرف زدن در لایو کم می‌شود
-const fmtTime = sec => { sec = Math.max(0, Math.floor(sec)); return toFa(Math.floor(sec / 60)) + ":" + toFa(String(sec % 60).padStart(2, "0")); };
-let liveLeftSec = 0, liveUnlimited = false;
+// شارژ لایو: هر ۱ سکه = ۳ شارژ؛ هر کلمه‌ای که تو می‌گویی یا دستیار می‌خواند ۱ شارژ کم می‌کند
+const wordCount = t => (String(t).trim().match(/\S+/g) || []).length;
+let liveCharge = 0, liveUnlimited = false, liveBuyOptions = [10, 30, 50, 100, 200], livePerCoin = 3;
+
+function showCharge(){
+ $("liveLeft").textContent = liveUnlimited ? "" : "شارژ: " + toFa(liveCharge);
+}
 
 async function refreshLiveCharge(){
- const btn = $("buyLive"), info = $("liveInfo");
+ const btn = $("buyLive"), info = $("liveInfo"), sel = $("liveBuyAmount");
  btn.disabled = true;
  if(!authReady || !uid){ info.textContent = "اول با حساب دومیتو وارد شو."; return; }
  try{
   const s = await getLiveInfo();
   liveUnlimited = !!s.unlimited;
-  if(s.unlimited){ info.textContent = "حساب نامحدود نیازی به شارژ ندارد."; $("liveLeft").textContent = ""; return; }
-  liveLeftSec = s.seconds;
-  info.textContent = "باقی‌مانده: " + fmtTime(s.seconds) + " • سکه‌ات: " + toFa(s.coins);
-  $("liveLeft").textContent = "شارژ: " + fmtTime(s.seconds);
-  btn.textContent = "خرید " + toFa(Math.round(s.pack / 60)) + " دقیقه · " + toFa(s.price) + " 🪙";
-  btn.disabled = s.coins < s.price || s.seconds + s.pack > s.max;
+  livePerCoin = s.perCoin; liveBuyOptions = s.options;
+  if(s.unlimited){ info.textContent = "حساب نامحدود نیازی به شارژ ندارد."; showCharge(); return; }
+  liveCharge = s.charge;
+  info.textContent = "شارژ: " + toFa(s.charge) + " • سکه‌ات: " + toFa(s.coins) + " (هر ۱ سکه = " + toFa(s.perCoin) + " شارژ، هر کلمه = ۱ شارژ)";
+  showCharge();
+  const keep = sel.value;
+  sel.innerHTML = "";
+  s.options.forEach(c => {
+   const o = document.createElement("option");
+   o.value = c; o.textContent = toFa(c) + " سکه ← " + toFa(c * s.perCoin) + " شارژ";
+   o.disabled = c > s.coins;
+   sel.appendChild(o);
+  });
+  if(keep && !sel.querySelector('option[value="' + keep + '"]:disabled')) sel.value = keep;
+  const cur = Number(sel.value);
+  btn.disabled = !cur || cur > s.coins || s.charge + cur * s.perCoin > s.max;
  }catch(e){
   info.textContent = "خواندن شارژ ممکن نشد.";
  }
 }
 
+$("liveBuyAmount").onchange = () => refreshLiveCharge();
+
 $("buyLive").onclick = async () => {
  $("buyLive").disabled = true;
  try{
-  const r = await buyLiveCharge();
-  if(r.ok) toast("📞 شارژ لایو اضافه شد؛ " + fmtTime(r.seconds) + " باقی مانده");
+  const r = await buyLiveCharge(Number($("liveBuyAmount").value));
+  if(r.ok) toast("📞 شارژ اضافه شد؛ " + toFa(r.charge) + " شارژ داری");
   else{
-   const msg = { insufficient:"سکه‌ات کافی نیست.", max:"موجودی شارژ به سقف رسیده.", "no-profile":"پروفایل پیدا نشد.", "no-access":"خرید برای حساب تو بسته شده.", unlimited:"حساب نامحدود نیازی به شارژ ندارد." };
+   const msg = { insufficient:"سکه‌ات کافی نیست.", max:"موجودی شارژ به سقف رسیده.", "no-profile":"پروفایل پیدا نشد.", "no-access":"خرید برای حساب تو بسته شده.", unlimited:"حساب نامحدود نیازی به شارژ ندارد.", "bad-amount":"مقدار درست نیست." };
    toast(msg[r.reason] || "خرید انجام نشد.");
   }
  }catch(e){ toast("خرید انجام نشد. دوباره تلاش کن."); }
  refreshLiveCharge();
 };
 
-// شمارش مصرف: فقط وقتی حرف می‌زنی یا دستیار جواب را می‌خواند (نه وقتی منتظر جواب مدل هستی).
 function setLiveState(st){
  liveState = st;
  const sc = $("liveScreen"); if(sc) sc.dataset.state = st;
  const label = { listen:"🎙️ گوش می‌دم…", think:"💭 دارم فکر می‌کنم…", speak:"🔊 دارم جواب می‌دم…", idle:"آماده‌ای؟" };
  $("liveState").textContent = (liveLang === "en" && st !== "idle") ? ({ listen:"Listening…", think:"Thinking…", speak:"Speaking…" })[st] : (label[st] || "");
 }
-let liveState = "idle", liveUnflushed = 0, liveTicker = null, liveFlushing = false;
+let liveState = "idle", liveFlushing = false, liveOwed = 0;
 
-async function liveFlush(){
- if(liveFlushing || liveUnflushed <= 0) return;
- liveFlushing = true;
- const n = liveUnflushed; liveUnflushed = 0;
- try{ await spendLiveSeconds(n); }catch(e){ liveUnflushed += n; }
- liveFlushing = false;
-}
-
-function liveTick(){
- if(!liveMode || liveUnlimited) return;
- if(liveState === "listen" || liveState === "speak"){
-  liveLeftSec = Math.max(0, liveLeftSec - 1);
-  liveUnflushed++;
-  $("liveLeft").textContent = "شارژ: " + fmtTime(liveLeftSec);
-  if(liveUnflushed >= 10) liveFlush();
-  if(liveLeftSec <= 0){ liveFlush(); liveStop("شارژ لایو تمام شد. از تنظیمات ⚙️ شارژ کن."); }
+// کم کردن شارژ: همان لحظه در صفحه، و بی‌درنگ در Firebase. نتیجه: false یعنی شارژ تمام شد.
+async function liveSpendWords(words){
+ if(liveUnlimited || words <= 0) return true;
+ liveCharge = Math.max(0, liveCharge - words);
+ liveOwed += words;
+ showCharge();
+ if(!liveFlushing){
+  liveFlushing = true;
+  try{
+   while(liveOwed > 0){ const n = liveOwed; liveOwed = 0; try{ await spendLiveCharge(n); }catch(e){ liveOwed += n; break; } }
+  }finally{ liveFlushing = false; }
  }
+ return liveCharge > 0;
 }
-function liveMeterStart(){ liveUnflushed = 0; clearInterval(liveTicker); liveTicker = setInterval(liveTick, 1000); }
-function liveMeterStop(){ clearInterval(liveTicker); liveTicker = null; setLiveState("idle"); liveFlush(); }
+function liveMeterStop(){ setLiveState("idle"); }
 
 function liveStatus(text){ if(liveMode) setStatus(text); }
 
@@ -2134,7 +2148,9 @@ async function liveFinishUtterance(){
   if(text.length < 2 || WHISPER_JUNK.test(text)){ liveListen(); return; }
   $("liveCaption").textContent = text;
   liveNoSpeechRuns = 0;
+  const okU = await liveSpendWords(wordCount(text));
   liveSend(text);
+  if(!okU) liveEndAfterReply = true;
  }catch(e){
   if(!liveMode) return;
   toast("شنیدن انجام نشد؛ دوباره حرف بزن.");
@@ -2355,6 +2371,8 @@ async function liveAfterReply(){
  if(!liveMode) return;
  const last = conv && conv.messages[conv.messages.length - 1];
  if(last && last.role === "assistant" && last.content){
+  const okA = await liveSpendWords(wordCount(liveCleanText(last.content)));
+  if(!okA) liveEndAfterReply = true;
   setLiveState("speak");
   $("liveCaption").textContent = last.content.replace(/[*#`>_|~]/g, "").slice(0, 600);
   liveStatus("🔊 دارم جواب می‌دم…");
@@ -2362,6 +2380,7 @@ async function liveAfterReply(){
   setLiveState("think");
  }
  liveHold = false;
+ if(liveEndAfterReply && liveMode){ liveEndAfterReply = false; liveStop("شارژ لایو تمام شد. از تنظیمات ⚙️ شارژ کن."); return; }
  if(liveMode) setTimeout(liveListen, 300);
 }
 
@@ -2373,7 +2392,7 @@ function renderLiveBar(){
   const pick = liveVoiceFor(p);
   const o = document.createElement("option");
   o.value = p.id;
-  o.textContent = (p.g === "m" ? "👨 " : "👩 ") + p.label + (pick && !pick.exact ? " (تغییر زیر و بم)" : "");
+  o.textContent = (p.g === "m" ? "👨 " : "👩 ") + p.label;
   sel.appendChild(o);
  });
  sel.value = livePreset;
@@ -2412,7 +2431,7 @@ if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { rend
 async function liveBegin(){
  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ toast("مرورگرت دسترسی به میکروفون رو پشتیبانی نمی‌کنه."); return; }
  await refreshLiveCharge();
- if(!liveUnlimited && liveLeftSec <= 0){
+ if(!liveUnlimited && liveCharge <= 0){
   toast("شارژ لایو نداری؛ با 🪙 یا از تنظیمات ⚙️ شارژ کن.");
   return;
  }
@@ -2420,8 +2439,7 @@ async function liveBegin(){
  $("liveBar").hidden = true;
  $("liveEnd").hidden = false;
  liveMode = true; liveHold = false; liveSilence = 0; liveNoSpeechRuns = 0;
- liveMeterStart();
- $("live").classList.add("on");
+  $("live").classList.add("on");
  liveListen();
 }
 $("liveGo").onclick = liveBegin;

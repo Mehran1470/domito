@@ -4860,21 +4860,21 @@ async function maybeAwardSoloBonus(gameId) {
 }
 
 // ============================================================
-// شارژ لایو (مکالمه‌ی صوتی دستیار): با سکه خریده می‌شود و با حرف زدن کم می‌شود.
-// profiles/{نام}/liveSeconds = ثانیه‌های باقی‌مانده. ادمین (نامحدود) شارژ لازم ندارد.
+// شارژ لایو (مکالمه‌ی صوتی دستیار): هر ۱ سکه = ۳ شارژ، و هر کلمه‌ای که در مکالمه گفته یا خوانده می‌شود ۱ شارژ مصرف می‌کند.
+// profiles/{نام}/liveCharge = شارژ باقی‌مانده. ادمین (نامحدود) شارژ لازم ندارد.
 // ============================================================
 
-export const LIVE_PACK_SECONDS = 300;   // هر بسته ۵ دقیقه
-export const LIVE_PACK_PRICE = 30;      // قیمت هر بسته به سکه
-export const LIVE_MAX_SECONDS = 7200;   // حداکثر موجودی ۲ ساعت
+export const LIVE_CHARGE_PER_COIN = 3;
+export const LIVE_MAX_CHARGE = 30000;
+export const LIVE_BUY_OPTIONS = [10, 30, 50, 100, 200]; // مقدار سکه‌ی قابل خرید در هر بار
 
-function liveSafeSeconds(v) {
+function liveSafeCharge(v) {
   const n = Math.floor(Number(v));
-  return Number.isFinite(n) && n > 0 ? Math.min(LIVE_MAX_SECONDS, n) : 0;
+  return Number.isFinite(n) && n > 0 ? Math.min(LIVE_MAX_CHARGE, n) : 0;
 }
 
 export async function getLiveInfo() {
-  const base = { seconds: 0, coins: 0, price: LIVE_PACK_PRICE, pack: LIVE_PACK_SECONDS, max: LIVE_MAX_SECONDS, unlimited: false };
+  const base = { charge: 0, coins: 0, perCoin: LIVE_CHARGE_PER_COIN, max: LIVE_MAX_CHARGE, options: LIVE_BUY_OPTIONS, unlimited: false };
   const username = getSavedName();
   if (!currentUid() || !username) return base;
   if (await aiIsUnlimited()) return { ...base, unlimited: true };
@@ -4882,43 +4882,46 @@ export async function getLiveInfo() {
   const val = snap.val() || {};
   return {
     ...base,
-    seconds: liveSafeSeconds(val.liveSeconds),
+    charge: liveSafeCharge(val.liveCharge),
     coins: Math.max(0, Math.floor(Number(val.coins) || 0))
   };
 }
 
-// خرید یک بسته: کم‌شدن سکه و اضافه‌شدن ثانیه‌ها در یک تراکنش.
-export async function buyLiveCharge() {
+// خرید شارژ: coinsToSpend سکه کم می‌شود و ۳ برابرش شارژ اضافه می‌شود (در یک تراکنش).
+export async function buyLiveCharge(coinsToSpend) {
   if (await aiIsUnlimited()) return { ok: false, reason: "unlimited" };
   try { await assertAllowed("buy"); } catch (e) { return { ok: false, reason: "no-access" }; }
+  const spend = Math.floor(Number(coinsToSpend));
+  if (!LIVE_BUY_OPTIONS.includes(spend)) return { ok: false, reason: "bad-amount" };
   const username = getSavedName();
   if (!currentUid() || !username) throw new Error("وارد نشده‌ای.");
   let result = { ok: false, reason: "unknown" };
   const tx = await runTransaction(profileRef(username), cur => {
     if (!cur || typeof cur !== "object") { result = { ok: false, reason: "no-profile" }; return cur; }
     const coins = Number(cur.coins || 0);
-    const have = liveSafeSeconds(cur.liveSeconds);
-    if (have + LIVE_PACK_SECONDS > LIVE_MAX_SECONDS) { result = { ok: false, reason: "max" }; return cur; }
-    if (!Number.isFinite(coins) || coins < LIVE_PACK_PRICE) { result = { ok: false, reason: "insufficient" }; return cur; }
-    cur.coins = coins - LIVE_PACK_PRICE;
-    cur.liveSeconds = have + LIVE_PACK_SECONDS;
+    const have = liveSafeCharge(cur.liveCharge);
+    const add = spend * LIVE_CHARGE_PER_COIN;
+    if (have + add > LIVE_MAX_CHARGE) { result = { ok: false, reason: "max" }; return cur; }
+    if (!Number.isFinite(coins) || coins < spend) { result = { ok: false, reason: "insufficient" }; return cur; }
+    cur.coins = coins - spend;
+    cur.liveCharge = have + add;
     result = { ok: true, reason: "bought" };
     return cur;
   });
   if (!tx.committed) throw new Error("خرید انجام نشد.");
   if (result.ok) {
-    try { await logTransaction(username, { type: "purchase", amount: -LIVE_PACK_PRICE, note: "خرید شارژ لایو" }); } catch (e) { /* ثبت تاریخچه اختیاری است */ }
+    try { await logTransaction(username, { type: "purchase", amount: -spend, note: "خرید شارژ لایو" }); } catch (e) { /* ثبت تاریخچه اختیاری است */ }
   }
   const val = tx.snapshot.val() || {};
-  return { ...result, coins: Math.max(0, Math.floor(Number(val.coins) || 0)), seconds: liveSafeSeconds(val.liveSeconds) };
+  return { ...result, coins: Math.max(0, Math.floor(Number(val.coins) || 0)), charge: liveSafeCharge(val.liveCharge) };
 }
 
-// مصرف ثانیه‌ها در حین مکالمه. موجودی باقی‌مانده را برمی‌گرداند (ادمین: null = نامحدود).
-export async function spendLiveSeconds(seconds) {
+// مصرف شارژ (تعداد کلمه). موجودی باقی‌مانده را برمی‌گرداند (ادمین: null = نامحدود).
+export async function spendLiveCharge(words) {
   if (await aiIsUnlimited()) return null;
   const username = getSavedName();
   if (!currentUid() || !username) return 0;
-  const spend = Math.max(0, Math.min(600, Math.floor(Number(seconds) || 0)));
-  const tx = await runTransaction(profileRef(username, "liveSeconds"), cur => Math.max(0, liveSafeSeconds(cur) - spend));
-  return liveSafeSeconds(tx.snapshot.val());
+  const spend = Math.max(0, Math.min(5000, Math.floor(Number(words) || 0)));
+  const tx = await runTransaction(profileRef(username, "liveCharge"), cur => Math.max(0, liveSafeCharge(cur) - spend));
+  return liveSafeCharge(tx.snapshot.val());
 }
