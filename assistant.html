@@ -275,6 +275,9 @@ textarea::placeholder{color:var(--muted)}
 #liveScreen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 18px) 18px calc(env(safe-area-inset-bottom,0px) + 28px);background:radial-gradient(120% 90% at 50% 35%,#16213f 0%,#0a0f1f 70%);color:#eaf0ff}
 #liveScreen[hidden]{display:none}
 #liveScreen .lv-top{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#9db0d8}
+#liveScreen .lv-right{display:flex;gap:8px;align-items:center}
+#liveAttach{position:relative}
+#liveAttach .cnt{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#ff9d5c;color:#111;font-size:11px;line-height:16px;text-align:center;padding:0 3px}
 #liveScreen .lv-top button{background:#ffffff14;color:#eaf0ff;border:0;border-radius:50%;width:38px;height:38px;font-size:16px}
 #liveScreen .lv-mid{flex:1;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;min-height:0}
 #liveOrb{width:170px;height:170px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#9ec1ff,#4d8dff 45%,#2a3fd6 100%);box-shadow:0 0 60px #4d8dff66,0 0 140px #4d8dff33;transition:transform .25s,filter .3s;will-change:transform}
@@ -644,7 +647,7 @@ textarea::placeholder{color:var(--muted)}
  <div class="lv-top">
   <button type="button" id="liveClose" title="بستن">✕</button>
   <span id="liveLeft"></span>
-  <button type="button" id="liveCharge" title="شارژ">🪙</button>
+  <span class="lv-right"><button type="button" id="liveAttach" title="پیوست عکس یا فایل">📎</button><button type="button" id="liveCharge" title="شارژ">🪙</button></span>
  </div>
  <div class="lv-mid">
   <div id="liveOrb"></div>
@@ -2628,6 +2631,7 @@ async function addFiles(files){
   }catch(err){ toast(err.message || "فایل خوانده نشد"); }
  }
  renderTray();
+ if(liveMode && pending.length) toast("ضمیمه شد؛ حرف بزن تا همراه پیامت بره.");
 }
 
 function renderTray(){
@@ -2650,6 +2654,7 @@ function renderTray(){
   c.appendChild(x);
   tray.appendChild(c);
  });
+ renderLiveAttach();
 }
 
 // دکمه‌ی 📎 یک منو باز می‌کند: ارسال فایل و انتخاب حالت تفکر.
@@ -2673,6 +2678,20 @@ document.addEventListener("click", e => {
  if(e.target.closest("#pinMenu") || e.target.closest("#attach")) return;
  closePin();
 });
+$("liveAttach").onclick = () => {
+ if(!canSendMessage()){ showLimitMessage(); return; }
+ fileInput.click();
+};
+function renderLiveAttach(){
+ const b = $("liveAttach");
+ const old = b.querySelector(".cnt"); if(old) old.remove();
+ if(pending.length){
+  const c = document.createElement("span");
+  c.className = "cnt"; c.textContent = pending.length;
+  b.appendChild(c);
+ }
+ b.title = pending.length ? "فایل ضمیمه شده؛ حرف بزن تا همراه پیامت بره" : "پیوست عکس یا فایل";
+}
 fileInput.onchange = () => { addFiles([...fileInput.files]); fileInput.value = ""; };
 
 // ======================================
