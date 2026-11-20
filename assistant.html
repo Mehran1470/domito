@@ -1474,7 +1474,7 @@ async function buildTurnContext(){
   const hint = intentHint(turnIntent);
   if(hint) dataLines.push(hint);
   if(liveMode){
-   dataLines.push("- کاربر الان در مکالمه‌ی صوتی زنده است و جواب تو با صدا خوانده می‌شود؛ کوتاه و محاوره‌ای و طبیعی جواب بده، مثل آدمی که حرف می‌زند: بدون فهرست، بدون علامت‌های markdown، بدون ایموجی، حداکثر چند جمله." +
+   dataLines.push("- حالت فعلی: «مکالمه‌ی صوتی زنده». کاربر با صدای خودش با تو حرف می‌زند (گفتارش به متن تبدیل شده) و جواب تو با صدای طبیعی برایش خوانده می‌شود. تو الان واقعاً با صدا صحبت می‌کنی؛ هرگز نگو «نمی‌توانم صحبت کنم»، «من فقط متن می‌نویسم» یا «نمی‌توانم صدا بدهم». مثل یک آدم در تماس تلفنی حرف بزن: کوتاه (یک تا سه جمله)، گرم و محاوره‌ای، بدون فهرست، بدون علامت‌های markdown، بدون ایموجی و بدون لینک. اگر متنِ کاربر کمی غلط املایی یا بی‌معنی بود، چون از گفتار آمده، منظورش را حدس بزن." +
     (liveLang === "en" ? " کاربر انگلیسی حرف می‌زند؛ به انگلیسی جواب بده." : " به فارسی جواب بده."));
   }
   const wantsSelf = wantsCatalog || needsSelfInfo(userTexts);
@@ -2070,7 +2070,7 @@ function liveStop(msg){
 // Whisper آن را به متن تبدیل می‌کند، بعد جواب گرفته و با صدا خوانده می‌شود. از تشخیص گفتار مرورگر استفاده نمی‌شود،
 // پس به سرورهای گوگل وابسته نیست و صدای «دینگ» هم ندارد.
 const MIC_THRESH_MIN = 0.012;      // کمترین شدت برای «صدا»
-const MIC_END_SILENCE_MS = 1000;   // سکوت برای پایان حرف
+const MIC_END_SILENCE_MS = 800;    // سکوت برای پایان حرف
 const MIC_MIN_VOICE_MS = 350;      // حرف کوتاه‌تر از این نادیده گرفته می‌شود
 const MIC_MAX_UTTER_MS = 25000;
 const MIC_IDLE_STOP_MS = 120000;   // اگر این مدت چیزی نگفتی، مکالمه تمام می‌شود
@@ -2306,23 +2306,44 @@ function speakDevice(parts){
  });
 }
 
+// جمله‌ی اول کوتاه است تا صدا زودتر شروع شود؛ بقیه تکه‌های بزرگ‌تر.
+function splitForSpeech(clean){
+ const first = clean.match(/^[^.!؟?؛\n]{1,140}[.!؟?؛\n]?/);
+ if(!first) return [clean];
+ const parts = [first[0]];
+ const rest = clean.slice(first[0].length).trim();
+ if(rest) parts.push(...(rest.match(/[^.!؟?؛\n]{1,420}[.!؟?؛\n]?/g) || [rest]));
+ return parts.map(x => x.trim()).filter(Boolean);
+}
+
+let livePrefetched = null; // { first, promise }
+function livePrefetch(text){
+ if(!liveMode || cloudOK === false) return;
+ const parts = splitForSpeech(liveCleanText(text));
+ if(!parts.length) return;
+ const promise = fetchCloudAudio(parts[0]);
+ promise.catch(() => {});
+ livePrefetched = { first: parts[0], promise };
+}
+
 async function speakChunks(text){
  const clean = liveCleanText(text);
  if(!clean) return;
- const parts = clean.match(/[^.!؟?؛\n]{1,420}[.!؟?؛\n]?/g) || [clean];
+ const parts = splitForSpeech(clean);
  if(cloudOK !== false){
   try{
-   let nextP = fetchCloudAudio(parts[0]);
+   let nextP = (livePrefetched && livePrefetched.first === parts[0]) ? livePrefetched.promise : fetchCloudAudio(parts[0]);
+   livePrefetched = null;
    for(let i = 0; i < parts.length && liveMode; i++){
     const item = await nextP;
     cloudOK = true;
     nextP = i + 1 < parts.length ? fetchCloudAudio(parts[i + 1]) : null;
-    if(nextP) nextP.catch(() => {}); // خطا هنگام نوبت خودش بررسی می‌شود
+    if(nextP) nextP.catch(() => {});
     await playBlob(item);
    }
    return;
   }catch(e){
-   if(cloudOK === null) cloudOK = false; // اولین بار کار نکرد: از صدای دستگاه استفاده کن
+   if(cloudOK === null) cloudOK = false;
    if(!liveMode) return;
   }
  }
@@ -2362,15 +2383,25 @@ document.querySelectorAll("#liveLangs button").forEach(b => b.onclick = () => {
  try{ localStorage.setItem("liveLang", liveLang); }catch(e){}
  renderLiveBar(); liveVoiceHint();
 });
-$("liveVoice").onchange = e => {
+$("liveVoice").onchange = async e => {
  livePreset = e.target.value;
  try{ localStorage.setItem("livePreset", livePreset); }catch(e2){}
- // نمونه‌ی صدا
+ // نمونه‌ی صدا: همان صدای ابری که در مکالمه می‌شنوی
+ const sample = liveLang === "en" ? "Hi, how can I help you today?" : "سلام، چطور می‌تونم کمکت کنم؟";
+ try{
+  if(liveAudio){ liveAudio.pause(); liveAudio = null; }
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  if(cloudOK !== false){
+   const item = await fetchCloudAudio(sample);
+   cloudOK = true;
+   playBlob(item);
+   return;
+  }
+ }catch(err){ cloudOK = cloudOK === true ? true : false; }
  if(window.speechSynthesis){
   const p = LIVE_PRESETS.find(x => x.id === livePreset);
   const pick = liveVoiceFor(p);
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(liveLang === "en" ? "Hi, how can I help you?" : "سلام، چطور می‌تونم کمکت کنم؟");
+  const u = new SpeechSynthesisUtterance(sample);
   if(pick){ u.voice = pick.voice; u.lang = pick.voice.lang; } else u.lang = liveLang === "en" ? "en-US" : "fa-IR";
   u.pitch = p.pitch; u.rate = p.rate;
   window.speechSynthesis.speak(u);
@@ -2659,7 +2690,8 @@ async function runAssistant(reservationId, lastContent, mode, search){
   persistCurrent();
   success = true;
 
-  await typewrite(msg, answer);
+  if(liveMode){ msg.innerHTML = render(answer); livePrefetch(answer); }
+  else await typewrite(msg, answer);
  }catch(err){
   clearTimeout(timer);
   clearTimeout(timeoutWatch);
