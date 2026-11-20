@@ -2181,7 +2181,7 @@ async function liveTranscribe(chunks, rate){
  try{
   const r = await fetch(API, {
    method:"POST", headers:{ "Content-Type":"application/json" },
-   body: JSON.stringify({ stt:true, audio: bytesToB64(wav), lang: liveLang }),
+   body: JSON.stringify({ stt:true, audio: bytesToB64(wav), lang: liveLang, ctx: (() => { try{ const m = conv && conv.messages.filter(x => x.role === "assistant").pop(); return m ? liveCleanText(m.content).slice(-160) : ""; }catch(e){ return ""; } })() }),
    signal: ctrl.signal
   });
   if(!r.ok) throw new Error("stt " + r.status);
