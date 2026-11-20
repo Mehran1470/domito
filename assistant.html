@@ -2366,6 +2366,19 @@ async function speakChunks(text){
  await speakDevice(parts);
 }
 
+// وقتی شارژ تمام می‌شود، دستیار با اسم کاربر این را با صدا می‌گوید و مکالمه تمام می‌شود (این جمله شارژ نمی‌برد).
+async function liveChargeEnded(){
+ const name = String(userName || getSavedName() || "").trim();
+ const msg = liveLang === "en"
+  ? (name ? name + ", " : "") + "your live charge has run out. If you'd like to keep talking, you can buy more charge with your coins."
+  : (name ? name + "، " : "") + "شارژ لایوت تموم شد. اگه می‌خوای بازم حرف بزنیم، می‌تونی با سکه شارژ بخری.";
+ liveHold = true;
+ $("liveCaption").textContent = msg;
+ setLiveState("speak");
+ try{ await speakChunks(msg); }catch(e){}
+ liveStop("شارژ لایو تمام شد. از ⚙️ تنظیمات با سکه شارژ بخر.");
+}
+
 // بعد از هر جواب دستیار صدا زده می‌شود.
 async function liveAfterReply(){
  if(!liveMode) return;
@@ -2380,7 +2393,7 @@ async function liveAfterReply(){
   setLiveState("think");
  }
  liveHold = false;
- if(liveEndAfterReply && liveMode){ liveEndAfterReply = false; liveStop("شارژ لایو تمام شد. از تنظیمات ⚙️ شارژ کن."); return; }
+ if(liveEndAfterReply && liveMode){ liveEndAfterReply = false; await liveChargeEnded(); return; }
  if(liveMode) setTimeout(liveListen, 300);
 }
 
