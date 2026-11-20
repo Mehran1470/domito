@@ -661,7 +661,7 @@ textarea::placeholder{color:var(--muted)}
     <button type="button" data-lang="en">English</button>
    </div>
    <select id="liveVoice" aria-label="صدا"></select>
-   <button type="button" id="livePremium" title="صدای باکیفیت Gemini (سهمیه‌ی محدود)">✨ پرمیوم</button>
+   <button type="button" id="livePremium" title="صدای باکیفیت Gemini؛ هر کلمه ۵ شارژ">✨ پرمیوم</button>
    <button type="button" id="liveGo">📞 شروع مکالمه</button>
   </div>
   <button type="button" id="liveEnd" hidden title="پایان">📵</button>
@@ -2033,7 +2033,7 @@ async function refreshLiveCharge(){
   livePerCoin = s.perCoin; liveBuyOptions = s.options;
   if(s.unlimited){ info.textContent = "حساب نامحدود نیازی به شارژ ندارد."; showCharge(); return; }
   liveCharge = s.charge;
-  info.textContent = "شارژ: " + toFa(s.charge) + " • سکه‌ات: " + toFa(s.coins) + " (هر ۱ سکه = " + toFa(s.perCoin) + " شارژ، هر کلمه = ۱ شارژ)";
+  info.textContent = "شارژ: " + toFa(s.charge) + " • سکه‌ات: " + toFa(s.coins) + " (هر ۱ سکه = " + toFa(s.perCoin) + " شارژ، هر کلمه = ۱ شارژ؛ در حالت پرمیوم ۵ شارژ)";
   showCharge();
   const keep = sel.value;
   sel.innerHTML = "";
@@ -2075,7 +2075,9 @@ function setLiveState(st){
 let liveState = "idle", liveFlushing = false, liveOwed = 0;
 
 // کم کردن شارژ: همان لحظه در صفحه، و بی‌درنگ در Firebase. نتیجه: false یعنی شارژ تمام شد.
+const PREMIUM_COST = 5; // در حالت پرمیوم هر کلمه ۵ شارژ می‌برد
 async function liveSpendWords(words){
+ if(livePremium) words *= PREMIUM_COST;
  if(liveUnlimited || words <= 0) return true;
  liveCharge = Math.max(0, liveCharge - words);
  liveOwed += words;
@@ -2520,7 +2522,7 @@ $("livePremium").onclick = () => {
  try{ localStorage.setItem("livePremium", livePremium ? "1" : "0"); }catch(e){}
  cloudBlockedUntil = 0;
  renderPremium();
- toast(livePremium ? "صدای پرمیوم (Gemini) روشن شد؛ سهمیه‌ی رایگانش محدوده." : "صدای پیش‌فرض (آفلاین) فعال شد.");
+ toast(livePremium ? "صدای پرمیوم (Gemini) روشن شد؛ هر کلمه ۵ شارژ لایو می‌بره." : "صدای پیش‌فرض (آفلاین) فعال شد.");
 };
 document.querySelectorAll("#liveLangs button").forEach(b => b.onclick = () => {
  liveLang = b.dataset.lang;
