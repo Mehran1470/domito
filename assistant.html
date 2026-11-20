@@ -298,6 +298,8 @@ textarea::placeholder{color:var(--muted)}
 #liveEnd[hidden]{display:none}
 #liveScreen .lv-bot{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
 #liveHint{font-size:11.5px;color:#8ea0c8;text-align:center;min-height:1em}
+#livePremium{padding:8px 10px;border-radius:12px;border:1px solid #3a4a7a;background:#18224a;color:#cdd8ff;font:inherit;font-size:12.5px;cursor:pointer}
+#livePremium.on{background:linear-gradient(135deg,#7c5cff,#ff9d5c);color:#fff;border-color:transparent}
 #quotaInfo{text-align:center;font-size:11px;color:var(--muted);padding:7px 0 1px}
 #quotaInfo.finished{color:var(--danger)}
 #quotaInfo a{color:var(--accent)}
@@ -656,6 +658,7 @@ textarea::placeholder{color:var(--muted)}
     <button type="button" data-lang="en">English</button>
    </div>
    <select id="liveVoice" aria-label="صدا"></select>
+   <button type="button" id="livePremium" title="صدای باکیفیت Gemini (سهمیه‌ی محدود)">✨ پرمیوم</button>
    <button type="button" id="liveGo">📞 شروع مکالمه</button>
   </div>
   <button type="button" id="liveEnd" hidden title="پایان">📵</button>
@@ -1992,6 +1995,9 @@ try{
  if(LIVE_PRESETS.some(p => p.id === sp)) livePreset = sp;
 }catch(e){}
 
+let livePremium = false;
+try{ livePremium = localStorage.getItem("livePremium") === "1"; }catch(e){}
+
 function liveVoiceFor(preset){
  const voices = (window.speechSynthesis ? window.speechSynthesis.getVoices() : []).filter(v => v.lang && v.lang.toLowerCase().startsWith(liveLang));
  if(!voices.length) return null;
@@ -2280,20 +2286,23 @@ function cloudDown(err){
   cloudToastAt = Date.now();
   toast(err && err.why === "tts_quota"
    ? "سهمیه‌ی رایگان صدای Gemini تمام شده؛ فعلاً با صدای گوشی می‌خونم."
-   : "صدای ابری در دسترس نیست؛ فعلاً با صدای گوشی می‌خونم.");
+   : (liveLang === "fa" && !livePremium)
+     ? "صدای آفلاین فارسی بارگذاری نشد (اینترنت یا حافظه)؛ فعلاً با صدای گوشی می‌خونم."
+     : "صدای ابری در دسترس نیست؛ فعلاً با صدای گوشی می‌خونم.");
  }
  liveWarnedVoice = true; // پیام «صدای فارسی نصب نیست» را دوباره نشان نده
 }
 
 function fetchCloudAudio(text, langOv){
  const lang = langOv || liveLang;
+ if(lang === "fa" && !livePremium) return piperSpeak(text);
  const [voice, pitch, rate] = (CLOUD_VOICES[lang] || CLOUD_VOICES.fa)[livePreset] || CLOUD_VOICES.fa.f1;
  const ctrl = new AbortController();
  const timer = setTimeout(() => ctrl.abort(), 20000);
  return fetch(API, {
   method:"POST",
   headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({ tts:true, text, voice, pitch, rate, preset: livePreset, lang }),
+  body: JSON.stringify({ tts:true, text, voice, pitch, rate, preset: livePreset, lang, premium: livePremium }),
   signal: ctrl.signal
  }).then(async r => {
   if(!r.ok){
@@ -2310,13 +2319,62 @@ function fetchCloudAudio(text, langOv){
 // اگر Worker مجبور شد از صدای ساده‌ی گوگل استفاده کند (فقط یک صدا)، فرق ۶ صدا با سرعت/زیر و بم پخش ساخته می‌شود.
 const GOOGLE_RATE = { f1:1.0, f2:1.12, f3:0.96, m1:0.86, m2:0.78, m3:0.92 };
 
+// صدای فارسی پیش‌فرض: Piper (متن‌باز) که داخل خود مرورگر اجرا می‌شود؛ بدون سهمیه. مدل از طریق Worker دانلود و روی گوشی ذخیره می‌شود.
+// دو صدای مرد داریم؛ برای ۶ حالت، سرعت/زیر و بم پخش تغییر می‌کند (حالت‌های زنانه همان صدا با زیر و بم بالاترند).
+const PIPER_VOICES = { f1:["fa_IR-gyro-medium",1.18], f2:["fa_IR-amir-medium",1.22], f3:["fa_IR-gyro-medium",1.1],
+                       m1:["fa_IR-amir-medium",1.0],  m2:["fa_IR-gyro-medium",0.96], m3:["fa_IR-amir-medium",0.9] };
+let piperLib = null, piperChain = Promise.resolve(), piperToasted = false;
+function patchHfFetch(){
+ if(window.__hfPatched) return;
+ window.__hfPatched = true;
+ const orig = window.fetch.bind(window);
+ window.fetch = (input, init) => {
+  try{
+   const u = typeof input === "string" ? input : ((input && input.url) || "");
+   if(u.startsWith("https://huggingface.co/")) return orig(API + "/hf/" + u.slice("https://huggingface.co/".length), init);
+  }catch(e){}
+  return orig(input, init);
+ };
+}
+async function loadPiper(){
+ if(piperLib) return piperLib;
+ patchHfFetch();
+ let err = null;
+ for(const u of ["https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web/+esm", "https://esm.sh/@mintplex-labs/piper-tts-web"]){
+  try{
+   const m = await import(u);
+   const lib = m && m.predict ? m : (m && m.default && m.default.predict ? m.default : null);
+   if(lib){ piperLib = lib; return lib; }
+  }catch(e){ err = e; }
+ }
+ throw err || new Error("piper load failed");
+}
+function piperSpeak(text){
+ const run = async () => {
+  if(!piperToasted){ piperToasted = true; toast("در حال آماده‌سازی صدای فارسی؛ بار اول حدود ۶۰ مگابایت دانلود می‌شه."); }
+  const lib = await loadPiper();
+  const voiceId = (PIPER_VOICES[livePreset] || PIPER_VOICES.f1)[0];
+  let wav;
+  try{ wav = await lib.predict({ text, voiceId }); }
+  catch(e1){
+   if(voiceId === "fa_IR-amir-medium") throw e1;
+   wav = await lib.predict({ text, voiceId: "fa_IR-amir-medium" }); // اگر صدای دوم در دسترس نبود
+  }
+  if(!wav || wav.size < 500) throw new Error("piper empty");
+  return { blob: wav, engine: "piper" };
+ };
+ const p = piperChain.then(run, run);
+ piperChain = p.catch(() => {});
+ return p;
+}
+
 function playBlob(item){
  return new Promise(resolve => {
   const url = URL.createObjectURL(item.blob);
   const a = new Audio(url);
-  if(item.engine === "google"){
+  if(item.engine === "google" || item.engine === "piper"){
    try{ a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; }catch(e){}
-   a.playbackRate = GOOGLE_RATE[livePreset] || 1;
+   a.playbackRate = item.engine === "piper" ? ((PIPER_VOICES[livePreset] || PIPER_VOICES.f1)[1]) : (GOOGLE_RATE[livePreset] || 1);
   }
   liveAudio = a;
   const end = () => { URL.revokeObjectURL(url); if(liveAudio === a) liveAudio = null; resolve(); };
@@ -2447,7 +2505,20 @@ function renderLiveBar(){
   sel.appendChild(o);
  });
  sel.value = livePreset;
+ renderPremium();
 }
+function renderPremium(){
+ const b = $("livePremium");
+ b.classList.toggle("on", livePremium);
+ b.textContent = livePremium ? "✨ پرمیوم: روشن" : "✨ پرمیوم";
+}
+$("livePremium").onclick = () => {
+ livePremium = !livePremium;
+ try{ localStorage.setItem("livePremium", livePremium ? "1" : "0"); }catch(e){}
+ cloudBlockedUntil = 0;
+ renderPremium();
+ toast(livePremium ? "صدای پرمیوم (Gemini) روشن شد؛ سهمیه‌ی رایگانش محدوده." : "صدای پیش‌فرض (آفلاین) فعال شد.");
+};
 document.querySelectorAll("#liveLangs button").forEach(b => b.onclick = () => {
  liveLang = b.dataset.lang;
  try{ localStorage.setItem("liveLang", liveLang); }catch(e){}
