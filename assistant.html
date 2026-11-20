@@ -2056,8 +2056,7 @@ function liveStatus(text){ if(liveMode) setStatus(text); }
 function liveStop(msg){
  liveMeterStop();
  liveMode = false; liveHold = false; liveSilence = 0;
- try{ if(liveRecog){ liveRecog.onend = null; liveRecog.abort(); } }catch(e){}
- liveRecog = null;
+ liveStopMic();
  try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
  try{ if(liveAudio){ const a0 = liveAudio; a0.pause(); if(a0.onended) a0.onended(); liveAudio = null; } }catch(e){}
  $("live").classList.remove("on");
@@ -2067,56 +2066,148 @@ function liveStop(msg){
  if(msg) toast(msg);
 }
 
-// میکروفون یک بار روشن می‌شود و تا پایان مکالمه می‌ماند (continuous)، پس صدای «دینگ» شروع/پایان تشخیص گفتار هر بار تکرار نمی‌شود.
-// وقتی دستیار فکر می‌کند یا حرف می‌زند، هرچه شنیده شود نادیده گرفته می‌شود (تا صدای خودش را نشنود).
-let liveIgnoreIdx = 0, liveRecogTries = 0, liveNoSpeechRuns = 0;
+// گوش دادن به روش ChatGPT: میکروفون صدا را ضبط می‌کند، وقتی حرفت تمام شد (سکوت) صدا به Worker می‌رود،
+// Whisper آن را به متن تبدیل می‌کند، بعد جواب گرفته و با صدا خوانده می‌شود. از تشخیص گفتار مرورگر استفاده نمی‌شود،
+// پس به سرورهای گوگل وابسته نیست و صدای «دینگ» هم ندارد.
+const MIC_THRESH_MIN = 0.012;      // کمترین شدت برای «صدا»
+const MIC_END_SILENCE_MS = 1000;   // سکوت برای پایان حرف
+const MIC_MIN_VOICE_MS = 350;      // حرف کوتاه‌تر از این نادیده گرفته می‌شود
+const MIC_MAX_UTTER_MS = 25000;
+const MIC_IDLE_STOP_MS = 120000;   // اگر این مدت چیزی نگفتی، مکالمه تمام می‌شود
+let liveMic = null;                // { stream, ctx, node, src }
+let liveBuf = [], livePre = [], liveSpeaking = false, liveVoiceMs = 0, liveLastVoiceAt = 0, liveUtterStart = 0, liveNoise = 0.004, liveListenSince = 0;
 
-function liveEnsureRecog(){
- if(liveRecog || !liveMode) return;
- const r = new SR();
- liveRecog = r;
- r.lang = liveLang === "en" ? "en-US" : "fa-IR";
- r.interimResults = true;
- r.continuous = true;
- liveIgnoreIdx = 0;
- r.onresult = ev => {
-  if(liveRecog !== r) return;
-  if(liveState !== "listen"){ liveIgnoreIdx = ev.results.length; return; } // صدای خود دستیار یا حرف وسط فکر کردن
-  liveNoSpeechRuns = 0;
-  let interim = "";
-  for(let i = Math.max(ev.resultIndex, liveIgnoreIdx); i < ev.results.length; i++){
-   const res = ev.results[i];
-   const text = res[0].transcript.trim();
-   if(res.isFinal){
-    liveIgnoreIdx = i + 1;
-    if(text){ $("liveCaption").textContent = text; liveSend(text); return; }
-   }else{
-    interim += text + " ";
-   }
-  }
-  if(interim.trim()) $("liveCaption").textContent = interim.trim();
- };
- r.onerror = ev => {
-  if(ev.error === "not-allowed" || ev.error === "service-not-allowed"){ liveStop("اجازه میکروفون داده نشد."); }
-  else if(ev.error === "network"){ liveStop("تشخیص گفتار به اینترنت نیاز دارد و وصل نشد. اگه داخل ایران هستی ممکنه بدون VPN کار نکنه."); }
- };
- r.onend = () => {
-  // مرورگر بعد از مدتی سکوت خودش تمام می‌کند؛ بی‌صدا دوباره روشن می‌کنیم.
-  if(liveRecog !== r) return;
-  liveRecog = null;
-  if(!liveMode) return;
-  if(liveState === "listen"){
-   liveNoSpeechRuns++;
-   if(liveNoSpeechRuns >= LIVE_MAX_SILENCE){ liveStop("چیزی نشنیدم؛ مکالمه تمام شد."); return; }
-  }
-  setTimeout(liveEnsureRecog, 300);
- };
- try{ r.start(); }catch(e){ liveRecog = null; setTimeout(liveEnsureRecog, 600); }
+function floatsTo16kWav(chunks, inRate){
+ let total = 0; chunks.forEach(c => total += c.length);
+ const all = new Float32Array(total); let o = 0; chunks.forEach(c => { all.set(c, o); o += c.length; });
+ const ratio = inRate / 16000;
+ const outLen = Math.floor(all.length / ratio);
+ const pcm = new Int16Array(outLen);
+ for(let i = 0; i < outLen; i++){
+  const pos = i * ratio, i0 = Math.floor(pos), i1 = Math.min(all.length - 1, i0 + 1), f = pos - i0;
+  const v = all[i0] * (1 - f) + all[i1] * f;
+  pcm[i] = Math.max(-1, Math.min(1, v)) * 0x7fff;
+ }
+ const buf = new ArrayBuffer(44 + pcm.length * 2), dv = new DataView(buf);
+ const w = (off, str) => { for(let i = 0; i < str.length; i++) dv.setUint8(off + i, str.charCodeAt(i)); };
+ w(0, "RIFF"); dv.setUint32(4, 36 + pcm.length * 2, true); w(8, "WAVE"); w(12, "fmt ");
+ dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+ dv.setUint32(24, 16000, true); dv.setUint32(28, 32000, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+ w(36, "data"); dv.setUint32(40, pcm.length * 2, true);
+ new Int16Array(buf, 44).set(pcm);
+ return new Uint8Array(buf);
+}
+function bytesToB64(u8){
+ let bin = ""; const step = 0x8000;
+ for(let i = 0; i < u8.length; i += step) bin += String.fromCharCode.apply(null, u8.subarray(i, i + step));
+ return btoa(bin);
 }
 
-function liveListen(){
+const WHISPER_JUNK = /^(thanks for watching|thank you\.?|subtitles by.*|www\..*|\.+|you)$/i;
+
+async function liveTranscribe(chunks, rate){
+ const wav = floatsTo16kWav(chunks, rate);
+ const ctrl = new AbortController();
+ const timer = setTimeout(() => ctrl.abort(), 25000);
+ try{
+  const r = await fetch(API, {
+   method:"POST", headers:{ "Content-Type":"application/json" },
+   body: JSON.stringify({ stt:true, audio: bytesToB64(wav), lang: liveLang }),
+   signal: ctrl.signal
+  });
+  if(!r.ok) throw new Error("stt " + r.status);
+  const j = await r.json();
+  return String(j.text || "").trim();
+ }finally{ clearTimeout(timer); }
+}
+
+async function liveFinishUtterance(){
+ const chunks = liveBuf; const rate = liveMic ? liveMic.ctx.sampleRate : 48000;
+ const voiced = liveVoiceMs;
+ liveBuf = []; livePre = []; liveSpeaking = false; liveVoiceMs = 0;
+ if(voiced < MIC_MIN_VOICE_MS){ return; }
+ setLiveState("think");
+ $("liveCaption").textContent = "…";
+ try{
+  const text = await liveTranscribe(chunks, rate);
+  if(!liveMode) return;
+  if(text.length < 2 || WHISPER_JUNK.test(text)){ liveListen(); return; }
+  $("liveCaption").textContent = text;
+  liveNoSpeechRuns = 0;
+  liveSend(text);
+ }catch(e){
+  if(!liveMode) return;
+  toast("شنیدن انجام نشد؛ دوباره حرف بزن.");
+  liveListen();
+ }
+}
+
+function liveOnAudio(ev){
+ if(!liveMode) return;
+ const data = ev.inputBuffer.getChannelData(0);
+ const copy = new Float32Array(data);
+ if(liveState !== "listen"){ liveBuf = []; livePre = []; liveSpeaking = false; liveVoiceMs = 0; return; } // صدای خود دستیار یا وقت فکر کردن
+ let sum = 0; for(let i = 0; i < copy.length; i++) sum += copy[i] * copy[i];
+ const rms = Math.sqrt(sum / copy.length);
+ const now = Date.now();
+ const ms = copy.length / liveMic.ctx.sampleRate * 1000;
+ const thr = Math.max(MIC_THRESH_MIN, liveNoise * 3.2);
+ if(rms > thr){
+  if(!liveSpeaking){ liveSpeaking = true; liveUtterStart = now; liveBuf = livePre.slice(); }
+  liveLastVoiceAt = now; liveVoiceMs += ms;
+  liveBuf.push(copy);
+ }else{
+  liveNoise = liveNoise * 0.97 + rms * 0.03;
+  if(liveSpeaking){
+   liveBuf.push(copy);
+   if(now - liveLastVoiceAt > MIC_END_SILENCE_MS || now - liveUtterStart > MIC_MAX_UTTER_MS) liveFinishUtterance();
+  }else{
+   livePre.push(copy); if(livePre.length > 4) livePre.shift();
+   if(now - liveListenSince > MIC_IDLE_STOP_MS) liveStop("چیزی نشنیدم؛ مکالمه تمام شد.");
+  }
+ }
+ if(liveSpeaking && now - liveUtterStart > MIC_MAX_UTTER_MS) liveFinishUtterance();
+}
+
+async function liveEnsureMic(){
+ if(liveMic || !liveMode) return;
+ try{
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+  if(!liveMode){ stream.getTracks().forEach(t => t.stop()); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC();
+  const src = ctx.createMediaStreamSource(stream);
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  node.onaudioprocess = liveOnAudio;
+  const mute = ctx.createGain(); mute.gain.value = 0; // خروجی را قطع می‌کنیم تا خودت را نشنوی
+  src.connect(node); node.connect(mute); mute.connect(ctx.destination);
+  liveMic = { stream, ctx, node, src };
+  liveListenSince = Date.now();
+ }catch(e){
+  liveStop("اجازه میکروفون داده نشد.");
+ }
+}
+
+function liveStopMic(){
+ try{
+  if(liveMic){
+   liveMic.node.onaudioprocess = null;
+   liveMic.src.disconnect(); liveMic.node.disconnect();
+   liveMic.stream.getTracks().forEach(t => t.stop());
+   liveMic.ctx.close();
+  }
+ }catch(e){}
+ liveMic = null; liveBuf = []; livePre = []; liveSpeaking = false; liveVoiceMs = 0;
+}
+
+let liveNoSpeechRuns = 0;
+
+async function liveListen(){
  if(!liveMode || busy || liveHold) return;
- liveEnsureRecog();
+ await liveEnsureMic();
+ if(!liveMode) return;
+ liveBuf = []; livePre = []; liveSpeaking = false; liveVoiceMs = 0;
+ liveListenSince = Date.now();
  $("liveCaption").textContent = "";
  setLiveState("listen");
  liveStatus("🎙️ گوش می‌دم…");
@@ -2288,7 +2379,7 @@ $("liveVoice").onchange = e => {
 if(window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { renderLiveBar(); liveVoiceHint(); };
 
 async function liveBegin(){
- if(!SR){ toast("مرورگرت ورودی صوتی رو پشتیبانی نمی‌کنه."); return; }
+ if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ toast("مرورگرت دسترسی به میکروفون رو پشتیبانی نمی‌کنه."); return; }
  await refreshLiveCharge();
  if(!liveUnlimited && liveLeftSec <= 0){
   toast("شارژ لایو نداری؛ با 🪙 یا از تنظیمات ⚙️ شارژ کن.");
