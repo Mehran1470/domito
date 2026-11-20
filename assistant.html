@@ -2249,7 +2249,7 @@ function fetchCloudAudio(text){
  return fetch(API, {
   method:"POST",
   headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({ tts:true, text, voice, pitch, rate }),
+  body: JSON.stringify({ tts:true, text, voice, pitch, rate, preset: livePreset, lang: liveLang }),
   signal: ctrl.signal
  }).then(async r => {
   if(!r.ok) throw new Error("tts " + r.status);
@@ -2309,7 +2309,7 @@ function speakDevice(parts){
 async function speakChunks(text){
  const clean = liveCleanText(text);
  if(!clean) return;
- const parts = clean.match(/[^.!؟?؛\n]{1,200}[.!؟?؛\n]?/g) || [clean];
+ const parts = clean.match(/[^.!؟?؛\n]{1,420}[.!؟?؛\n]?/g) || [clean];
  if(cloudOK !== false){
   try{
    let nextP = fetchCloudAudio(parts[0]);
