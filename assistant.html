@@ -2314,6 +2314,9 @@ const CLOUD_VOICES = {
 let cloudOK = null, liveAudio = null; // cloudOK فقط برای نمایش راهنما؛ خطا دائمی نیست
 let cloudBlockedUntil = 0, cloudToastAt = 0;
 function cloudDown(err){
+ if(liveLang === "fa" && !livePremium && piperLastErr){
+  const h = $("liveHint"); if(h) h.textContent = "خطای صدا: " + piperLastErr;
+ }
  cloudBlockedUntil = Date.now() + 60000; // یک دقیقه سراغ صدای ابری نمی‌رویم تا مکالمه کند نشود
  if(Date.now() - cloudToastAt > 120000){
   cloudToastAt = Date.now();
@@ -2375,15 +2378,16 @@ function patchHfFetch(){
 async function loadPiper(){
  if(piperLib) return piperLib;
  patchHfFetch();
- let err = null;
+ const errs = [];
  for(const u of ["https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web/+esm", "https://esm.sh/@mintplex-labs/piper-tts-web"]){
   try{
    const m = await import(u);
    const lib = m && m.predict ? m : (m && m.default && m.default.predict ? m.default : null);
    if(lib){ piperLib = lib; return lib; }
-  }catch(e){ err = e; }
+   errs.push(u.split("/")[2] + ": no predict export (" + Object.keys(m || {}).slice(0, 6).join(",") + ")");
+  }catch(e){ errs.push(u.split("/")[2] + ": " + ((e && e.message) || e)); }
  }
- throw err || new Error("piper load failed");
+ throw new Error("کتابخونه‌ی صدا بارگذاری نشد → " + errs.join(" | "));
 }
 let piperReady = new Set();
 try{ piperReady = new Set(JSON.parse(localStorage.getItem("piperReady") || "[]")); }catch(e){}
@@ -2420,7 +2424,8 @@ async function liveEnsureVoice(){
    dlUi("hide");
    toast("صدای فارسی آماده شد ✅");
   }catch(e){
-   dlUi("error", 0, "دانلود انجام نشد. اینترنتت رو چک کن و دوباره امتحان کن.");
+   piperLastErr = piperErrText(e);
+   dlUi("error", 0, "دانلود انجام نشد: " + piperLastErr);
   }finally{ piperDl = null; }
  })();
 }
@@ -2431,8 +2436,11 @@ $("liveDlSkip").onclick = () => {
  toast("فعلاً با صدای گوشی می‌خونم.");
 };
 
+let piperLastErr = "";
+function piperErrText(e){ return String((e && (e.message || e)) || e).replace(/\s+/g, " ").slice(0, 220); }
 function piperSpeak(text){
- const run = async () => {
+ const run = async () => { try{ return await run0(); }catch(e){ piperLastErr = piperErrText(e); console.error("piper:", e); throw e; } };
+ const run0 = async () => {
   const lib = await loadPiper();
   const voiceId = (PIPER_VOICES[livePreset] || PIPER_VOICES.f1)[0];
   let wav;
