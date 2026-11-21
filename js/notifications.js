@@ -83,6 +83,7 @@ async function boot() {
   #dnBadge{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;border-radius:10px;background:#ff3b4e;color:#fff;font:800 11px/19px Vazirmatn,Tahoma,sans-serif;text-align:center;padding:0 5px;display:none}
   #dnPanel{position:fixed;top:62px;left:12px;z-index:99991;width:min(350px,calc(100vw - 24px));max-height:min(75vh,560px);overflow:auto;background:rgba(12,18,34,.98);border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.5);color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;display:none}
   #dnPanel.open{display:block}
+  #dnPanel.inline{position:static;width:100%;max-height:none;overflow:visible;box-shadow:none;display:block}
   .dnH{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800}
   .dnX{background:none;border:0;color:#fff;font-size:18px;cursor:pointer}
   .dnPerm{margin:10px 12px 0;padding:10px;border-radius:12px;background:rgba(255,210,58,.12);border:1px solid rgba(255,210,58,.35);font-size:12.5px;line-height:1.8}
@@ -105,12 +106,15 @@ async function boot() {
   `;
   document.head.appendChild(css);
 
+  const pageEl = document.getElementById("dnPage");
+  const pageMode = !!pageEl;
   const bell = document.createElement("button");
   bell.id = "dnBell"; bell.type = "button"; bell.setAttribute("aria-label", "اعلان‌ها");
   bell.innerHTML = `🔔<span id="dnBadge"></span>`;
   const panel = document.createElement("div"); panel.id = "dnPanel";
   const toast = document.createElement("div"); toast.id = "dnToast";
-  document.body.append(bell, panel, toast);
+  document.body.append(toast);
+  if (pageMode) { panel.classList.add("inline"); pageEl.appendChild(panel); } else document.body.append(bell, panel);
   const badge = bell.querySelector("#dnBadge");
 
   function unreadCount() { return allItems().filter(i => (i.at || 0) > seenAt).length; }
@@ -125,7 +129,7 @@ async function boot() {
   function render() {
     const items = allItems();
     const perm = permState();
-    let html = `<div class="dnH"><span>🔔 اعلان‌ها</span><button class="dnX" id="dnClose" type="button">✕</button></div>`;
+    let html = `<div class="dnH"><span>🔔 اعلان‌ها</span>${pageMode ? "" : '<button class="dnX" id="dnClose" type="button">✕</button>'}</div>`;
     if (perm === "default") {
       html += `<div class="dnPerm">اجازه می‌دهی دومیتو برایت اعلان بفرستد؟ (پیام ادمین، درخواست دوستی، بازی جدید و…)<br><button class="dnBtn" id="dnAllow" type="button">اجازه می‌دهم</button></div>`;
     } else if (perm === "denied") {
@@ -146,7 +150,7 @@ async function boot() {
       </div>`;
     }
     panel.innerHTML = html;
-    panel.querySelector("#dnClose").onclick = () => closePanel();
+    const cl = panel.querySelector("#dnClose"); if (cl) cl.onclick = () => closePanel();
     const allow = panel.querySelector("#dnAllow");
     if (allow) allow.onclick = askPermission;
     bindDel();
@@ -208,8 +212,8 @@ async function boot() {
     toast.classList.remove("show");
   }
   function closePanel() { panelOpen = false; panel.classList.remove("open"); }
-  bell.onclick = () => (panelOpen ? closePanel() : openPanel());
-  document.addEventListener("click", e => { if (panelOpen && e.target.isConnected && !panel.contains(e.target) && !bell.contains(e.target)) closePanel(); });
+  bell.onclick = () => { location.href = "./notifications.html"; };
+  document.addEventListener("click", e => { if (!pageMode && panelOpen && e.target.isConnected && !panel.contains(e.target) && !bell.contains(e.target)) closePanel(); });
 
   async function askPermission() {
     try { await Notification.requestPermission(); } catch (e) {}
@@ -235,7 +239,7 @@ async function boot() {
     toast.classList.add("show");
     if (!noRing) { bell.classList.remove("ring"); void bell.offsetWidth; bell.classList.add("ring"); }
     clearTimeout(toastT); toastT = setTimeout(() => toast.classList.remove("show"), 5000);
-    toast.onclick = () => { toast.classList.remove("show"); openPanel(); };
+    toast.onclick = () => { toast.classList.remove("show"); if (pageMode) openPanel(); else location.href = "./notifications.html"; };
   }
 
   // ---------- اعلان تازه: نوتیفیکیشن سیستم (اگر صفحه پنهان است) یا توست داخل سایت ----------
@@ -284,5 +288,6 @@ async function boot() {
 
   updateBadge();
   refresh(false);
+  if (pageMode) openPanel();
   document.addEventListener("visibilitychange", () => { if (!document.hidden) updateBadge(); });
 }
