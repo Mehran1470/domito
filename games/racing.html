@@ -145,9 +145,7 @@ function viewSize(){
   return rot?[innerHeight,innerWidth]:[innerWidth,innerHeight];
 }
 function resize(){
-  const portrait=innerHeight>innerWidth&&matchMedia('(pointer:coarse)').matches;
-  root.classList.toggle('rot',portrait);
-  const [w,h]=viewSize();
+    const [w,h]=viewSize();
   renderer.setSize(w,h,false);
   canvas.style.width=w+'px';canvas.style.height=h+'px';
   camera.aspect=w/h;camera.updateProjectionMatrix();
@@ -594,7 +592,7 @@ let loop=0,last=0;
 function startCountdown(){
   audioInit();if(AC&&AC.state==='suspended')AC.resume();
   setupRace();state='countdown';countT=3.99;$('menu').style.display='none';$('hud').style.display='block';$('end').style.display='none';
-  if(matchMedia('(pointer:coarse)').matches){$('touch').style.display='block';try{const el=document.documentElement;(el.requestFullscreen||el.webkitRequestFullscreen||(()=>Promise.resolve())).call(el).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}}
+  if(matchMedia('(pointer:coarse)').matches)$('touch').style.display='block';
   lastCount=4;
 }
 let lastCount=4;
