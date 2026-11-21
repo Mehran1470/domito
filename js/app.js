@@ -1964,8 +1964,13 @@ function coinRewardFor(gameId, won) {
 export async function recordRoundResult(
   name,
   gameId,
-  { won }
+  { won, coins }
 ) {
+
+  const rewardCoins =
+    Number.isFinite(Number(coins)) && coins !== undefined && coins !== null
+      ? Math.max(0, Math.min(15, Math.floor(Number(coins))))
+      : coinRewardFor(gameId, won);
 
   await runTransaction(
     profileRef(name),
@@ -2025,7 +2030,7 @@ export async function recordRoundResult(
       }
 
       curr.coins +=
-        coinRewardFor(gameId, won);
+        rewardCoins;
 
 
       const game =
@@ -2066,7 +2071,7 @@ export async function recordRoundResult(
           : "play",
 
       amount:
-        coinRewardFor(gameId, won),
+        rewardCoins,
 
       note:
         won

@@ -76,9 +76,9 @@ select{font:700 14px Vazirmatn,Tahoma;border-radius:8px;padding:4px 8px;backgrou
 </div>
 <div class="ov" id="menu">
   <h1>🏎️ اپکس اُوردرایو</h1>
-  <p>۶ ابرخودرو · ۳ ثانیه تا استارت · نفر اول: ۱۵ سکه · غیر از آن: ۵ سکه</p>
+  <p>آسان و سخت: ۵ سکه · غیرممکن + نفر اول: ۱۵ سکه</p>
   <div id="carpick"></div>
-  <div><span class="hint">تعداد دور: </span><select id="laps"><option value="1">۱</option><option value="2" selected>۲</option><option value="3">۳</option></select></div>
+  <div><span class="hint">سختی: </span><select id="diff"><option value="easy">آسان (۵ سکه)</option><option value="hard" selected>سخت (۵ سکه)</option><option value="imp">غیرممکن (نفر اول ۱۵ سکه)</option></select> &nbsp; <span class="hint">تعداد دور: </span><select id="laps"><option value="1">۱</option><option value="2" selected>۲</option><option value="3">۳</option></select></div>
   <button class="btn" id="go">شروع مسابقه</button>
   <a class="btn alt" href="../index.html" id="back">بازگشت</a>
   <p class="hint">کیبورد: W/A/S/D · Shift دریفت · Space نیترو · C دوربین · T دنده دستی · E/Q دنده</p>
@@ -110,7 +110,9 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const lerp=(a,b,t)=>a+(b-a)*t;
 const TAU=Math.PI*2;
 const rand=(a,b)=>a+Math.random()*(b-a);
-const CFG={laps:2,topSpeed:72,turbo:150,accel:42,brake:64,turn:2.3,turboRecharge:0.22,aiCount:5};
+const DIFF={easy:{lo:.8,hi:.9,rbMin:.93,rbMax:1.05,coins:5},hard:{lo:.95,hi:1.0,rbMin:.97,rbMax:1.07,coins:5},imp:{lo:1.04,hi:1.09,rbMin:1.0,rbMax:1.1,coins:15}};
+let diff='hard';
+const CFG={laps:2,topSpeed:86,turbo:175,accel:48,brake:72,turn:2.3,turboRecharge:0.22,aiCount:5};
 const W=18; // road width
 const params=new URLSearchParams(location.search);
 
@@ -355,7 +357,7 @@ function addCar(def,ai,slot){
   const m=makeCar(def,!ai);scene.add(m.group);
   const row=slot>>1,col=slot&1;const s=posAt(-(10+row*10),col?3.6:-3.6);
   const c={def,ai,m,x:s.x,z:s.z,h:s.h,vx:0,vz:0,vf:0,vl:0,idx:s.i,lat:0,frac:0,total:-(10+row*10)/TL,prev:0,lap:1,finished:false,finT:0,place:0,
-    steer:0,thr:0,brk:0,drift:false,turbo:false,tb:1,gear:1,rpm:1000,skill:rand(.9,.99),lane:rand(-5,5),laneT:0,turboT:rand(5,15),pitch:0,roll:0,spin:0,bounce:0,smokeT:0,name:def.name,ctrlAI:ai};
+    steer:0,thr:0,brk:0,drift:false,turbo:false,tb:1,gear:1,rpm:1000,skill:rand(DIFF[diff].lo,DIFF[diff].hi),lane:rand(-5,5),laneT:0,turboT:rand(5,15),pitch:0,roll:0,spin:0,bounce:0,smokeT:0,name:def.name,ctrlAI:ai};
   nearest(c,true);c.prev=c.frac;c.total=-(10+row*10)/TL;
   cars.push(c);return c;
 }
@@ -446,8 +448,9 @@ function aiControl(c,dt){
   c.steer=clamp(da*2.6,-1,1);
   const a=P[(c.idx+4)%N],b=P[(c.idx+14+Math.round(Math.abs(c.vf)*.35))%N];let ang=Math.abs(Math.atan2(a.tx*b.tz-a.tz*b.tx,a.tx*b.tx+a.tz*b.tz));
   const top=CFG.topSpeed*c.def.top*c.skill;
-  let rb=1;if(player&&!c.finished){const diff=player.total-c.total;rb=clamp(1+diff*1.4,.93,1.06);}
+  let rb=1;if(player&&!c.finished){rb=clamp(1+(player.total-c.total)*1.4,DIFF[diff].rbMin,DIFF[diff].rbMax);}
   let ts=top*clamp(1.2-ang*1.1,.6,1)*rb;
+  if(c.turbo)ts*=1.3;
   if(c.finished)ts=top*.5;
   c.thr=c.vf<ts?1:0;c.brk=c.vf>ts*1.12?.7:0;c.drift=false;
   c.turboT-=dt;
@@ -603,13 +606,13 @@ function onPlayerFinish(){
 }
 function endRace(place,timeout){
   $('hud').style.display='none';$('touch').style.display='none';
-  const won=place===1;
+  const won=place===1;const coins=(won&&diff==='imp')?15:5;
   $('endTitle').textContent=timeout?'⏱ وقتت تموم شد':(won?'🏆 نفر اول شدی!':'🏁 رتبهٔ '+fa(place)+' شدی');
   $('endSub').innerHTML='زمان: <bdi dir="ltr">'+fmt(player.finT||raceTime)+'</bdi> · '+fa(CFG.laps)+' دور';
-  $('endCoins').textContent=won?'+۱۵ سکه':'+۵ سکه';
+  $('endCoins').textContent='+'+fa(coins)+' سکه';
   $('endMsg').textContent='در حال ثبت نتیجه در دومیتو...';
   $('end').style.display='flex';
-  if(window.__onRaceEnd)window.__onRaceEnd(place,won,msg=>{$('endMsg').textContent=msg;});
+  if(window.__onRaceEnd)window.__onRaceEnd(place,won,coins,msg=>{$('endMsg').textContent=msg;});
   else $('endMsg').textContent='حالت آزمایشی (بدون ثبت)';
 }
 function update(dt,t){
@@ -673,6 +676,7 @@ $('home').onclick=()=>{location.href='../index.html';};
 /* menu */
 const lapSel=$('laps');
 lapSel.onchange=()=>{CFG.laps=+lapSel.value;};
+const diffSel=$('diff');diffSel.onchange=()=>{diff=diffSel.value;};
 function buildMenu(){
   const box=$('carpick');box.innerHTML='';
   CARS.forEach((d,i)=>{const b=document.createElement('button');b.className='cp'+(i===selected?' sel':'');
@@ -704,11 +708,11 @@ if(App){
     myName=App.getSavedName();
     if(!user||!myName){location.href="../index.html";}
   }catch(e){console.warn(e);}
-  window.__onRaceEnd=async(place,won,say)=>{
+  window.__onRaceEnd=async(place,won,coins,say)=>{
     try{
       if(!myName){say("⚠️ حساب دومیتو پیدا نشد.");return;}
-      await App.recordRoundResult(myName,GID,{won});
-      say(won?"🏆 برد! ۱۵ سکه به حساب دومیتوت اضافه شد":"✅ ۵ سکه به حساب دومیتوت اضافه شد");
+      await App.recordRoundResult(myName,GID,{won,coins});
+      say((won?"🏆 برد! ":"✅ ")+coins.toLocaleString("fa")+" سکه به حساب دومیتوت اضافه شد");
       try{ if(App.getSavedRoom&&App.getSavedRoom()&&!new URLSearchParams(location.search).has("solo")){await App.submitResult(GID,App.currentUid(),myName,7-place);} }catch(_){}
     }catch(e){console.error(e);say("⚠️ نتیجه بازی ذخیره نشد.");}
   };
