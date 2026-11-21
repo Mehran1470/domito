@@ -227,7 +227,7 @@ async function boot() {
 
   function systemNotify(title, body, tag) {
     if (permState() !== "granted") return;
-    const opts = { body: body || "", tag: tag || undefined, icon: "./logo.png", badge: "./logo.png", dir: "rtl", lang: "fa", data: { url: "./index.html" } };
+    const opts = { body: body || "", tag: tag || undefined, icon: "./logo.png", badge: "./badge.png", dir: "rtl", lang: "fa", data: { url: "./index.html" } };
     try {
       if (swReg && swReg.showNotification) swReg.showNotification(title, opts);
       else new Notification(title, opts);
