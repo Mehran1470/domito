@@ -2431,6 +2431,7 @@ async function liveEnsureVoice(){
    try{ localStorage.setItem("piperReady", JSON.stringify([...piperReady])); }catch(e){}
    dlUi("hide");
    toast("صدای فارسی آماده شد ✅");
+   piperWarm();
   }catch(e){
    piperLastErr = piperErrText(e);
    dlUi("error", 0, "دانلود انجام نشد: " + piperLastErr);
@@ -2445,6 +2446,22 @@ $("liveDlSkip").onclick = () => {
 };
 
 let piperLastErr = "";
+const piperSessions = {};
+let piperNoSession = false;
+function piperGetSession(lib, voiceId){
+ if(!piperSessions[voiceId]){
+  piperSessions[voiceId] = lib.TtsSession.create({ voiceId, progress: () => {}, logger: () => {} })
+   .catch(e => { delete piperSessions[voiceId]; throw e; });
+ }
+ return piperSessions[voiceId];
+}
+async function piperWarm(){
+ try{
+  if(liveLang !== "fa" || livePremium) return;
+  const lib = await loadPiper();
+  if(lib.TtsSession && !piperNoSession) await piperGetSession(lib, piperVoiceId());
+ }catch(e){ piperNoSession = true; }
+}
 function piperErrText(e){ return String((e && (e.message || e)) || e).replace(/\s+/g, " ").slice(0, 220); }
 function piperSpeak(text){
  const run = async () => { try{ return await run0(); }catch(e){ piperLastErr = piperErrText(e); console.error("piper:", e); throw e; } };
@@ -2452,7 +2469,18 @@ function piperSpeak(text){
   const lib = await loadPiper();
   const voiceId = (PIPER_VOICES[livePreset] || PIPER_VOICES.f1)[0];
   let wav;
-  try{ wav = await lib.predict({ text, voiceId }); }
+  try{
+   let sess = null;
+   if(lib.TtsSession && !piperNoSession){
+    try{ sess = await piperGetSession(lib, voiceId); }catch(e0){ piperNoSession = true; sess = null; }
+   }
+   if(sess){
+    try{ wav = await sess.predict(text); }
+    catch(e2){ piperNoSession = true; delete piperSessions[voiceId]; wav = await lib.predict({ text, voiceId }); }
+   }else{
+    wav = await lib.predict({ text, voiceId });
+   }
+  }
   catch(e1){
    if(voiceId === "fa_IR-amir-medium") throw e1;
    wav = await lib.predict({ text, voiceId: "fa_IR-amir-medium" }); // اگر صدای دوم در دسترس نبود
@@ -2517,11 +2545,14 @@ function speakDevice(parts){
 
 // جمله‌ی اول کوتاه است تا صدا زودتر شروع شود؛ بقیه تکه‌های بزرگ‌تر.
 function splitForSpeech(clean){
- const first = clean.match(/^[^.!؟?؛\n]{1,140}[.!؟?؛\n]?/);
+ const small = liveLang === "fa" && !livePremium; // صدای آفلاین: تکه‌های کوتاه‌تر تا زودتر شروع شود
+ const firstRe = small ? /^[^.!؟?؛،,\n]{1,70}[.!؟?؛،,\n]?/ : /^[^.!؟?؛\n]{1,140}[.!؟?؛\n]?/;
+ const restRe = small ? /[^.!؟?؛،,\n]{1,160}[.!؟?؛،,\n]?/g : /[^.!؟?؛\n]{1,800}[.!؟?؛\n]?/g;
+ const first = clean.match(firstRe);
  if(!first) return [clean];
  const parts = [first[0]];
  const rest = clean.slice(first[0].length).trim();
- if(rest) parts.push(...(rest.match(/[^.!؟?؛\n]{1,800}[.!؟?؛\n]?/g) || [rest]));
+ if(rest) parts.push(...(rest.match(restRe) || [rest]));
  return parts.map(x => x.trim()).filter(Boolean);
 }
 
@@ -2682,6 +2713,7 @@ $("live").onclick = () => {
  setLiveState("idle");
  renderLiveBar(); refreshLiveCharge(); liveVoiceHint();
  liveEnsureVoice();
+ if(!liveNeedsVoice()) piperWarm();
 };
 
 // ======================================
