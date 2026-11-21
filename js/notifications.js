@@ -55,7 +55,7 @@ async function boot() {
   const lastVisit = lsGet(K("lastvisit"), 0);
   if (lastVisit && Date.now() - lastVisit > 24 * 3600 * 1000) {
     const days = Math.floor((Date.now() - lastVisit) / 86400000);
-    addLocal("w_" + Date.now(), "👋", "خوش برگشتی!", `${fa(days)} روز بود که به دومیتو نیامده بودی. بازی‌ها منتظرت‌اند.`);
+    addLocal("w_" + Date.now(), "👋", `${me}، خوش برگشتی!`, `${fa(days)} روز بود که به دومیتو نیومده بودی؛ بازی‌ها منتظرتن.`);
   }
   lsSet(K("lastvisit"), Date.now());
   try {
@@ -64,7 +64,7 @@ async function boot() {
     if (known) {
       ids.filter(id => !known.includes(id)).forEach(id => {
         const g = GAMES.find(x => x.id === id);
-        addLocal("g_" + id, g.icon || "🎮", "بازی جدید", `«${g.name}» به دومیتو اضافه شد!`);
+        addLocal("g_" + id, g.icon || "🎮", `${me}، بازی جدید اومد!`, `«${g.name}» اومده؛ سریع‌تر از بقیه بیا بازی کن 🏁`);
       });
     }
     lsSet(K("games"), ids);
@@ -277,7 +277,7 @@ async function boot() {
   onValue(profileRef(me, "friendRequests"), snap => {
     const v = snap.val() || {};
     sources.friend = Object.entries(v).map(([from, ts]) => ({
-      id: "f_" + from + "_" + (Number(ts) || 0), icon: "🤝", title: "درخواست دوستی", body: `«${from}» می‌خواهد دوست تو شود. از بخش دوستان بپذیر.`, at: Number(ts) || Date.now()
+      id: "f_" + from + "_" + (Number(ts) || 0), icon: "🤝", title: "درخواست دوستی 🤝", body: `${me}، ${from} بهت درخواست دوستی داده؛ قبول می‌کنی؟`, at: Number(ts) || Date.now()
     }));
     refresh(!first.friend); first.friend = false;
   }, e => console.warn("friendRequests:", e && e.message));
