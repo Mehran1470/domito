@@ -110,7 +110,7 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const lerp=(a,b,t)=>a+(b-a)*t;
 const TAU=Math.PI*2;
 const rand=(a,b)=>a+Math.random()*(b-a);
-const CFG={laps:2,topSpeed:38,turbo:54,accel:24,brake:38,turn:2.2,turboRecharge:0.22,aiCount:5};
+const CFG={laps:2,topSpeed:72,turbo:150,accel:42,brake:64,turn:2.3,turboRecharge:0.22,aiCount:5};
 const W=18; // road width
 const params=new URLSearchParams(location.search);
 
@@ -145,6 +145,7 @@ function viewSize(){
   return rot?[innerHeight,innerWidth]:[innerWidth,innerHeight];
 }
 function resize(){
+  root.classList.toggle('rot',innerHeight>innerWidth&&matchMedia('(pointer:coarse)').matches);
     const [w,h]=viewSize();
   renderer.setSize(w,h,false);
   canvas.style.width=w+'px';canvas.style.height=h+'px';
@@ -398,7 +399,7 @@ function stepCar(c,dt){
   if(c.limit<max)max=c.limit;
   const go=state==='race'||c.finished;
   let acc=CFG.accel*c.def.acc*(1.45-.75*clamp(vf/top,0,1.2));
-  if(c.turbo&&c.tb>0){acc*=2.1;}
+  if(c.turbo&&c.tb>0){acc*=2.6;}
   if(go&&c.thr>0&&vf<max)vf+=acc*c.thr*dt;
   if(go&&c.brk>0){if(vf>0.5)vf-=CFG.brake*c.brk*dt;else vf-=CFG.accel*.5*c.brk*dt;vf=Math.max(vf,-8);}
   if(!c.thr||vf>max){vf-=Math.sign(vf)*Math.min(Math.abs(vf),(vf>max?16:3.2)*dt);}
@@ -406,7 +407,7 @@ function stepCar(c,dt){
   const grip=c.drift&&Math.abs(vf)>12?1.5:(offRoad?5:9);
   vl*=Math.exp(-grip*dt);
   const sf=clamp(Math.abs(vf)/9,0,1)*(vf>=0?1:-1);
-  const rate=CFG.turn/(1+Math.abs(vf)/70)*(c.drift?1.55:1);
+  const rate=CFG.turn/(1+Math.abs(vf)/150)*(c.drift?1.55:1);
   const yaw=c.steer*rate*sf;
   c.h+=yaw*dt;c.yaw=yaw;
   const s2=Math.sin(c.h),c2=Math.cos(c.h);
@@ -418,7 +419,7 @@ function stepCar(c,dt){
   if(Math.abs(c.lat)>lim){const p=P[c.idx];const side=Math.sign(c.lat);const over=Math.abs(c.lat)-lim;
     c.x-=p.nx*over*side;c.z-=p.nz*over*side;
     const vn=c.vx*p.nx*side+c.vz*p.nz*side;if(vn>0){c.vx-=p.nx*side*vn*1.3;c.vz-=p.nz*side*vn*1.3;}
-    c.vx*=.93;c.vz*=.93;c.lat=lim*side;c.bounce=.6;if(c===player&&vn>6)sfx('hit');}
+    c.vx*=.985;c.vz*=.985;c.lat=lim*side;c.bounce=.6;if(c===player&&vn>6)sfx('hit');}
   // lap progress
   let d=c.frac-c.prev;if(d<-.5)d+=1;else if(d>.5)d-=1;c.total+=d;c.prev=c.frac;
   c.lap=clamp(Math.floor(c.total)+1,1,CFG.laps);
@@ -437,16 +438,16 @@ function collide(){
 }
 /* AI */
 function aiControl(c,dt){
-  const look=Math.round(7+Math.abs(c.vf)*.35/DS*3);
+  const look=Math.max(3,Math.round((10+Math.abs(c.vf)*.42)/DS));
   const ti=(c.idx+look)%N;const tp=P[ti];
   c.laneT-=dt;if(c.laneT<=0){c.lane=clamp(c.lane+rand(-4,4),-5.5,5.5);c.laneT=rand(2,5);}
   const tx=tp.x+tp.nx*c.lane,tz=tp.z+tp.nz*c.lane;
   const want=Math.atan2(tx-c.x,tz-c.z);let da=want-c.h;while(da>Math.PI)da-=TAU;while(da<-Math.PI)da+=TAU;
   c.steer=clamp(da*2.6,-1,1);
-  const a=P[(c.idx+6)%N],b=P[(c.idx+30)%N];let ang=Math.abs(Math.atan2(a.tx*b.tz-a.tz*b.tx,a.tx*b.tx+a.tz*b.tz));
+  const a=P[(c.idx+4)%N],b=P[(c.idx+14+Math.round(Math.abs(c.vf)*.35))%N];let ang=Math.abs(Math.atan2(a.tx*b.tz-a.tz*b.tx,a.tx*b.tx+a.tz*b.tz));
   const top=CFG.topSpeed*c.def.top*c.skill;
   let rb=1;if(player&&!c.finished){const diff=player.total-c.total;rb=clamp(1+diff*1.4,.93,1.06);}
-  let ts=top*clamp(1.08-ang*.95,.55,1)*rb;
+  let ts=top*clamp(1.2-ang*1.1,.6,1)*rb;
   if(c.finished)ts=top*.5;
   c.thr=c.vf<ts?1:0;c.brk=c.vf>ts*1.12?.7:0;c.drift=false;
   c.turboT-=dt;
@@ -495,7 +496,7 @@ function updateCamera(dt){
   const p=player;if(!p)return;
   const fwd=tmpV.set(Math.sin(p.h),0,Math.cos(p.h));
   const spdF=clamp(Math.abs(p.vf)/CFG.topSpeed,0,1.4);
-  let fov=62+spdF*10+(p.turbo&&p.tb>0?14:0);
+  let fov=62+Math.min(spdF,1.1)*12+(p.turbo&&p.tb>0?22:0);
   const asp=camera.aspect;
   const mode=camMode;
   p.m.inner.visible=true;p.m.cabin.forEach(o=>o.visible=true);
@@ -592,7 +593,7 @@ let loop=0,last=0;
 function startCountdown(){
   audioInit();if(AC&&AC.state==='suspended')AC.resume();
   setupRace();state='countdown';countT=3.99;$('menu').style.display='none';$('hud').style.display='block';$('end').style.display='none';
-  if(matchMedia('(pointer:coarse)').matches)$('touch').style.display='block';
+  if(matchMedia('(pointer:coarse)').matches){$('touch').style.display='block';try{const el=document.documentElement;(el.requestFullscreen||el.webkitRequestFullscreen||(()=>Promise.resolve())).call(el).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}}
   lastCount=4;
 }
 let lastCount=4;
