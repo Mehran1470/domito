@@ -50,6 +50,10 @@ canvas#c{position:absolute;inset:0;display:block}
 select{font:700 14px Vazirmatn,Tahoma;border-radius:8px;padding:4px 8px;background:#14203a;color:#fff;border:1px solid #fff4}
 #endCoins{font:900 30px Vazirmatn,Tahoma;color:#ffd23a}
 .hint{font-size:11px;opacity:.6}
+.row{display:flex;justify-content:space-between;gap:10px;padding:6px 12px;margin:4px 0;border-radius:10px;background:#ffffff14;font-weight:700;font-size:14px}
+.row.me{background:#ffd23a33;border:1px solid #ffd23a88}
+.row b{min-width:22px;color:#ffd23a}
+.btn:disabled{opacity:.5}
 </style>
 </head>
 <body>
@@ -76,15 +80,16 @@ select{font:700 14px Vazirmatn,Tahoma;border-radius:8px;padding:4px 8px;backgrou
 </div>
 <div class="ov" id="menu">
   <h1>🏎️ اپکس اُوردرایو</h1>
-  <p>آسان و سخت: ۵ سکه · غیرممکن + نفر اول: ۱۵ سکه</p>
+  <p id="menuInfo">آسان و سخت: ۵ سکه · غیرممکن + نفر اول: ۱۵ سکه</p>
   <div id="carpick"></div>
-  <div><span class="hint">سختی: </span><select id="diff"><option value="easy">آسان (۵ سکه)</option><option value="hard" selected>سخت (۵ سکه)</option><option value="imp">غیرممکن (نفر اول ۱۵ سکه)</option></select> &nbsp; <span class="hint">تعداد دور: </span><select id="laps"><option value="1">۱</option><option value="2" selected>۲</option><option value="3">۳</option></select></div>
+  <div id="soloOpts"><span class="hint">سختی: </span><select id="diff"><option value="easy">آسان (۵ سکه)</option><option value="hard" selected>سخت (۵ سکه)</option><option value="imp">غیرممکن (نفر اول ۱۵ سکه)</option></select> &nbsp; <span class="hint">تعداد دور: </span><select id="laps"><option value="1">۱</option><option value="2" selected>۲</option><option value="3">۳</option></select></div>
+  <div id="roomBox" style="display:none;width:min(420px,90%)"><div id="roomInfo" class="hint" style="font-size:13px;margin-bottom:6px"></div><div id="roomList"></div><button class="btn" id="roomStart" style="display:none;margin-top:8px">شروع با همین نفرات</button></div>
   <button class="btn" id="go">شروع مسابقه</button>
   <a class="btn alt" href="../index.html" id="back">بازگشت</a>
   <p class="hint">کیبورد: W/A/S/D · Shift دریفت · Space نیترو · C دوربین · T دنده دستی · E/Q دنده</p>
 </div>
 <div class="ov" id="end">
-  <h2 id="endTitle"></h2><p id="endSub"></p><div id="endCoins"></div><p id="endMsg"></p>
+  <h2 id="endTitle"></h2><p id="endSub"></p><div id="endList" style="width:min(420px,90%)"></div><div id="endCoins"></div><p id="endMsg"></p>
   <button class="btn" id="again">مسابقهٔ دوباره</button>
   <button class="btn alt" id="home">بازگشت به خانه</button>
 </div>
@@ -112,6 +117,7 @@ const TAU=Math.PI*2;
 const rand=(a,b)=>a+Math.random()*(b-a);
 const DIFF={easy:{lo:.8,hi:.9,rbMin:.93,rbMax:1.05,coins:5},hard:{lo:.95,hi:1.0,rbMin:.97,rbMax:1.07,coins:5},imp:{lo:1.04,hi:1.09,rbMin:1.0,rbMax:1.1,coins:15}};
 let diff='hard';
+let NET=null,roomPlayers={},roomSession=null,roomStartAt=0,roomJoined=false,roomFinalized=false,sendT=0,waitTimer=0;
 const CFG={laps:2,topSpeed:86,turbo:175,accel:48,brake:72,turn:2.3,turboRecharge:0.22,aiCount:5};
 const W=18; // road width
 const params=new URLSearchParams(location.search);
@@ -361,6 +367,10 @@ function addCar(def,ai,slot){
   nearest(c,true);c.prev=c.frac;c.total=-(10+row*10)/TL;
   cars.push(c);return c;
 }
+function nameSprite(txt){
+  const c=cvs(256,64,(g,w,h)=>{g.font='800 30px Tahoma,sans-serif';g.textAlign='center';g.textBaseline='middle';const tw=Math.min(w-8,g.measureText(txt).width+26);g.fillStyle='rgba(8,14,26,.72)';g.beginPath();g.roundRect?g.roundRect((w-tw)/2,10,tw,44,14):g.rect((w-tw)/2,10,tw,44);g.fill();g.fillStyle='#fff';g.fillText(txt,w/2,33);});
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex(c),transparent:true,depthWrite:false,fog:false}));sp.scale.set(5,1.25,1);sp.position.y=2.6;return sp;
+}
 function clearCars(){cars.forEach(c=>scene.remove(c.m.group));cars.length=0;}
 function setupRace(){
   clearCars();finishedCount=0;raceTime=0;
@@ -372,6 +382,40 @@ function setupRace(){
   for(let k=0;k<n;k++){addCar(CARS[order[k]],true,others[k]);}
   cars.forEach(c=>{c.m.group.position.set(c.x,0,c.z);c.m.group.rotation.y=c.h;});
   camPos.set(player.x-Math.sin(player.h)*9,4,player.z-Math.cos(player.h)*9);camH=player.h;
+}
+
+function setupRoomRace(sess){
+  clearCars();finishedCount=0;raceTime=0;roomFinalized=false;CFG.laps=sess.laps||2;
+  (sess.order||[]).forEach((uid,i)=>{
+    const info=roomPlayers[uid]||{};const me=uid===NET.uid;
+    const c=addCar(CARS[(info.car|0)%CARS.length],false,i);c.uid=uid;c.pname=info.name||'؟';
+    if(!me){c.remote=true;c.m.group.add(nameSprite(c.pname));}else player=c;
+  });
+  if(!player){return false;}
+  cars.forEach(c=>{c.m.group.position.set(c.x,0,c.z);c.m.group.rotation.y=c.h;});
+  camPos.set(player.x-Math.sin(player.h)*9,4,player.z-Math.cos(player.h)*9);camH=player.h;
+  ingestRemote();return true;
+}
+function ingestRemote(){
+  cars.forEach(c=>{if(!c.remote)return;const info=roomPlayers[c.uid];if(info&&info.s)c.rs=info.s;});
+}
+function remoteUpdate(c,dt){
+  const r=c.rs;if(!r){return;}
+  const age=clamp((NET.now()-r.ts)/1000,0,.35);
+  const k=Math.min(1,dt*14);
+  c.x+=(r.x+r.vx*age-c.x)*k;c.z+=(r.z+r.vz*age-c.z)*k;
+  let dh=r.h+r.yw*age-c.h;while(dh>Math.PI)dh-=TAU;while(dh<-Math.PI)dh+=TAU;c.h+=dh*k;
+  c.vx=r.vx;c.vz=r.vz;c.vf=r.vf;c.vl=r.vl;c.steer=r.st;c.brk=r.brk;c.thr=r.thr;c.turbo=!!r.tb;c.tb=r.tbm;c.drift=!!r.dr;c.yaw=r.yw;
+  c.total=r.tot+(r.vf/TL)*age;c.finished=!!r.fin;if(r.fin)c.finT=r.finT;
+  c.stale=(NET.now()-r.ts)>9000;c.m.group.visible=!c.stale||c.finished;
+  nearest(c,false);c.lap=clamp(Math.floor(c.total)+1,1,CFG.laps);
+}
+function packState(){
+  const c=player;return {x:+c.x.toFixed(2),z:+c.z.toFixed(2),h:+c.h.toFixed(3),vx:+c.vx.toFixed(2),vz:+c.vz.toFixed(2),vf:+c.vf.toFixed(1),vl:+c.vl.toFixed(1),st:+c.steer.toFixed(2),brk:c.brk?1:0,thr:c.thr?1:0,tb:(c.turbo&&c.tb>0)?1:0,tbm:+c.tb.toFixed(2),dr:c.drift?1:0,yw:+(c.yaw||0).toFixed(2),tot:+c.total.toFixed(4),fin:c.finished?1:0,finT:+(c.finT||0).toFixed(2),ts:NET.now()};
+}
+function sendState(){
+  if(!NET||NET.mode!=='room'||!player||!roomJoined)return;
+  NET.set('players/'+NET.uid,{name:NET.name,car:selected,ready:true,s:packState()}).catch(()=>{});
 }
 
 /* gearbox */
@@ -432,7 +476,11 @@ function stepCar(c,dt){
 }
 function collide(){
   for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
-    const a=cars[i],b=cars[j];const dx=b.x-a.x,dz=b.z-a.z;const d=Math.hypot(dx,dz);const R=2.5;
+    const a=cars[i],b=cars[j];if(a.remote&&b.remote)continue;const dx=b.x-a.x,dz=b.z-a.z;const d=Math.hypot(dx,dz);const R=2.5;
+    if(a.remote||b.remote){
+      if(d<R&&d>1e-3){const loc=a.remote?b:a,rem=a.remote?a:b;const nx=(loc.x-rem.x)/d,nz=(loc.z-rem.z)/d;loc.x+=nx*(R-d);loc.z+=nz*(R-d);
+        const rv=(loc.vx-rem.vx)*nx+(loc.vz-rem.vz)*nz;if(rv<0){loc.vx-=nx*rv*1.1;loc.vz-=nz*rv*1.1;loc.vx*=.99;loc.vz*=.99;sfx('hit');}}
+      continue;}
     if(d<R&&d>1e-3){const nx=dx/d,nz=dz/d,ov=(R-d)/2;a.x-=nx*ov;a.z-=nz*ov;b.x+=nx*ov;b.z+=nz*ov;
       const rv=(b.vx-a.vx)*nx+(b.vz-a.vz)*nz;if(rv<0){const j2=-rv*.55;a.vx-=nx*j2;a.vz-=nz*j2;b.vx+=nx*j2;b.vz+=nz*j2;a.vx*=.985;a.vz*=.985;b.vx*=.985;b.vz*=.985;
         if(a===player||b===player)sfx('hit');}}
@@ -565,7 +613,7 @@ function drawMini(){
   g.fillStyle='#fff';g.fillRect(X(P[0].x)-4,Y(P[0].z)-1,8,3);
   cars.forEach(c=>{g.fillStyle='#'+c.def.color.toString(16).padStart(6,'0');g.beginPath();g.arc(X(c.x),Y(c.z),c===player?5:3.5,0,TAU);g.fill();if(c===player){g.strokeStyle='#fff';g.lineWidth=2;g.stroke();}});
 }
-function ranks(){const s=cars.slice().sort((a,b)=>{if(a.finished&&b.finished)return a.place-b.place;if(a.finished)return -1;if(b.finished)return 1;return b.total-a.total;});s.forEach((c,i)=>c.rank=i+1);return s;}
+function ranks(){const s=cars.slice().sort((a,b)=>{if(a.finished&&b.finished)return (a.finT-b.finT)||(a.place-b.place);if(a.finished)return -1;if(b.finished)return 1;return b.total-a.total;});s.forEach((c,i)=>c.rank=i+1);return s;}
 const fmt=t=>{const m=Math.floor(t/60),s=t-m*60;return fa(String(m).padStart(2,'0')+':'+s.toFixed(1).padStart(4,'0'));};
 function updateHUD(){
   const p=player;if(!p)return;ranks();
@@ -601,8 +649,37 @@ function startCountdown(){
 }
 let lastCount=4;
 function onPlayerFinish(){
+  if(NET&&NET.mode==='room'){setTimeout(roomWaitScreen,1500);return;}
   const place=player.place;
   setTimeout(()=>{if(state!=='race')return;state='done';endRace(place,false);},1800);
+}
+function roomStandings(){
+  const list=cars.map(c=>({c,uid:c.uid,name:c.pname||'؟',fin:!!c.finished,finT:c.finT||0,total:c.total||0,gone:!!c.stale&&!c.finished}));
+  list.sort((a,b)=>a.fin&&b.fin?a.finT-b.finT:a.fin?-1:b.fin?1:b.total-a.total);
+  return list;
+}
+function roomWaitScreen(){
+  if(waitTimer)return;
+  $('hud').style.display='none';$('touch').style.display='none';
+  $('end').style.display='flex';$('endCoins').textContent='';$('again').style.display='none';
+  waitTimer=setInterval(()=>{
+    const st=roomStandings();
+    const pending=st.filter(x=>!x.fin&&!x.gone&&!(x.c===player&&raceTime>CFG.laps*110+60));
+    const tl=player.finished?'🏁 تمام کردی!':'⏱ وقتت تموم شد';
+    $('endTitle').textContent=pending.length?tl:'نتیجهٔ مسابقه';
+    $('endSub').textContent=pending.length?('منتظر '+fa(pending.length)+' نفر دیگر…'):'';
+    $('endList').innerHTML=st.map((x,i)=>'<div class="row'+(x.c===player?' me':'')+'"><b>'+fa(i+1)+'</b><span>'+x.name+'</span><span dir="ltr">'+(x.fin?fmt(x.finT):(x.gone?'قطع شد':'در حال مسابقه'))+'</span></div>').join('');
+    if(!pending.length&&!roomFinalized){roomFinalized=true;clearInterval(waitTimer);finalizeRoom(st);}
+  },500);
+}
+function finalizeRoom(st){
+  const place=st.findIndex(x=>x.c===player)+1;const won=place===1&&player.finished;const coins=won?15:5;
+  $('endTitle').textContent=won?'🏆 نفر اول شدی!':'🏁 رتبهٔ '+fa(place)+' شدی';
+  $('endCoins').textContent='+'+fa(coins)+' سکه';$('endMsg').textContent='در حال ثبت نتیجه در دومیتو...';
+  const done=m=>{$('endMsg').textContent=m;};
+  NET.finish(place,won,coins,done);
+  $('home').textContent='بازگشت به سالن';
+  setTimeout(()=>NET.leave(true),12000);
 }
 function endRace(place,timeout){
   $('hud').style.display='none';$('touch').style.display='none';
@@ -612,7 +689,7 @@ function endRace(place,timeout){
   $('endCoins').textContent='+'+fa(coins)+' سکه';
   $('endMsg').textContent='در حال ثبت نتیجه در دومیتو...';
   $('end').style.display='flex';
-  if(window.__onRaceEnd)window.__onRaceEnd(place,won,coins,msg=>{$('endMsg').textContent=msg;});
+  if(NET)NET.finish(place,won,coins,msg=>{$('endMsg').textContent=msg;});
   else $('endMsg').textContent='حالت آزمایشی (بدون ثبت)';
 }
 function update(dt,t){
@@ -621,20 +698,21 @@ function update(dt,t){
     cars.forEach(c=>updateVisuals(c,dt,t));return;
   }
   if(state==='countdown'){
-    countT-=dt;const n=Math.ceil(countT);
-    if(n!==lastCount){lastCount=n;if(n>0){$('count').textContent=fa(n);$('count').style.opacity=1;beep(440,.2);}else{$('count').textContent='برو!';beep(880,.5,.12);}}
+    if(roomStartAt)countT=(roomStartAt-NET.now())/1000;else countT-=dt;const n=Math.ceil(countT);
+    if(n!==lastCount&&n<=3){lastCount=n;if(n>0){$('count').textContent=fa(n);$('count').style.opacity=1;beep(440,.2);}else{$('count').textContent='برو!';beep(880,.5,.12);}}
     if(countT<=0){state='race';setTimeout(()=>{if(state==='race')$('count').style.opacity=0;},700);}
   }
-  if(state==='race')raceTime+=dt;
-  if(state==='race'&&!player.finished&&raceTime>CFG.laps*110+60){state='done';player.finT=raceTime;endRace(cars.length,true);}
+  if(state==='race')raceTime=roomStartAt?Math.max(0,(NET.now()-roomStartAt)/1000):raceTime+dt;
+  if(state==='race'&&!player.finished&&raceTime>CFG.laps*110+60){state='done';player.finT=raceTime;if(roomStartAt)roomWaitScreen();else endRace(cars.length,true);}
+  if(roomStartAt){ingestRemote();sendT-=dt;if(sendT<=0){sendT=.07;sendState();}}
   const steps=Math.ceil(dt/.0167);const h=dt/steps;
   for(let s=0;s<steps;s++){
-    for(const c of cars){if(c.ctrlAI)aiControl(c,h);else if(state==='race')playerControl(c);else{c.thr=0;c.brk=1;c.steer=0;c.turbo=false;}
+    for(const c of cars){if(c.remote)continue;if(c.ctrlAI)aiControl(c,h);else if(state==='race')playerControl(c);else{c.thr=0;c.brk=1;c.steer=0;c.turbo=false;}
       if(state==='countdown'&&c.ai){c.thr=0;c.brk=1;}
       gearLogic(c,h);stepCar(c,h);}
     collide();
   }
-  cars.forEach(c=>updateVisuals(c,dt,t));
+  cars.forEach(c=>{if(c.remote)remoteUpdate(c,dt);updateVisuals(c,dt,t);});
   updateSmoke(dt);updateCamera(dt);updateAudio();
   updateHUD();drawSpeedLines();
   if(((t*8)|0)!==lastMini){lastMini=(t*8)|0;drawMini();}
@@ -670,9 +748,11 @@ bindHold('bL','left');bindHold('bR','right');bindHold('bGas','gas');bindHold('bB
 $('cBtn').onclick=cycleCam;$('tBtn').onclick=toggleTrans;$('qBtn').onclick=cycleQ;
 $('mBtn').onclick=()=>{muted=!muted;$('mBtn').textContent=muted?'🔇':'🔊';updateAudio();};
 $('gUp').onclick=()=>shift(1);$('gDn').onclick=()=>shift(-1);
-$('go').onclick=startCountdown;
+$('go').onclick=()=>{if(NET&&NET.mode==='room')readyUp();else startCountdown();};
 $('again').onclick=()=>{startCountdown();};
-$('home').onclick=()=>{location.href='../index.html';};
+$('home').onclick=()=>{if(NET&&NET.mode==='room')NET.leave(true);else location.href='../index.html';};
+$('back').onclick=e=>{if(NET&&NET.mode==='room'){e.preventDefault();NET.leave(true);}};
+$('roomStart').onclick=()=>tryStartSession(true);
 /* menu */
 const lapSel=$('laps');
 lapSel.onchange=()=>{CFG.laps=+lapSel.value;};
@@ -687,35 +767,119 @@ function previewCar(){clearCars();const s=posAt(0,0);const c=addCar(CARS[selecte
   cars.length=0;previewObj=c;cars.push(c);}
 let previewObj=null;
 
+/* ---------------- room (multiplayer) ---------------- */
+function readyUp(){
+  if(roomJoined)return;roomJoined=true;audioInit();
+  $('go').style.display='none';$('carpick').style.pointerEvents='none';$('roomBox').style.display='block';
+  NET.set('players/'+NET.uid,{name:NET.name,car:selected,ready:true,ts:NET.now()}).then(()=>{NET.onDisc('players/'+NET.uid);}).catch(e=>NET.fail(e));
+  NET.listen('players',v=>{roomPlayers=v||{};ingestRemote();renderRoom();tryStartSession(false);},e=>NET.fail(e));
+  NET.listen('session',v=>{if(v&&v.startAt&&!roomSession){roomSession=v;beginRoomRace(v);}},e=>NET.fail(e));
+}
+function readyList(){return Object.entries(roomPlayers).filter(([u,p])=>p&&p.ready);}
+function renderRoom(){
+  const L=readyList();
+  $('roomList').innerHTML=L.map(([u,p])=>'<div class="row'+(u===NET.uid?' me':'')+'"><span>'+(p.name||'؟')+'</span><span>'+CARS[(p.car|0)%CARS.length].name+' ✓</span></div>').join('');
+  $('roomInfo').textContent=fa(L.length)+' از '+fa(Math.max(NET.expectedN,L.length))+' نفر آماده‌اند…';
+  $('roomStart').style.display=(L.length>=2&&!roomSession)?'inline-block':'none';
+}
+function tryStartSession(force){
+  if(roomSession)return;const L=readyList();
+  if(!(force&&L.length>=2)&&!(L.length>=2&&L.length>=NET.expectedN))return;
+  const order=L.map(x=>x[0]).sort().slice(0,10);
+  NET.tx('session',cur=>cur||{startAt:NET.now()+5500,order,laps:CFG.laps,by:NET.uid}).catch(e=>NET.fail(e));
+}
+function beginRoomRace(sess){
+  if(!(sess.order||[]).includes(NET.uid)){$('roomInfo').textContent='مسابقه بدون تو شروع شد.';return;}
+  if(!setupRoomRace(sess))return;
+  roomStartAt=sess.startAt;state='countdown';countT=(roomStartAt-NET.now())/1000;lastCount=9;
+  $('menu').style.display='none';$('hud').style.display='block';$('end').style.display='none';
+  if(matchMedia('(pointer:coarse)').matches){$('touch').style.display='block';try{const el=document.documentElement;(el.requestFullscreen||el.webkitRequestFullscreen||(()=>Promise.resolve())).call(el).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}}
+  addEventListener('pagehide',()=>{try{NET.remove('players/'+NET.uid);}catch(_){}});
+}
+function initNet(n){
+  NET=n;$('go').disabled=false;
+  if(NET&&NET.mode==='room'){
+    $('soloOpts').style.display='none';$('go').textContent='آماده‌ام';
+    $('menuInfo').textContent='رقابت زنده با دوستان داخل اتاق · نفر اول: ۱۵ سکه · بقیه: ۵ سکه';
+  }else{$('go').textContent='شروع مسابقه';}
+}
+$('go').disabled=true;$('go').textContent='در حال اتصال...';
+new Promise(r=>{window.__netSet=r;setTimeout(()=>r(null),12000);}).then(initNet);
+
 /* init */
 resize();
 camera.position.set(0,10,-140);
 buildMenu();previewCar();applyQuality();
 $('menu').style.display='flex';
 last=performance.now();loop=requestAnimationFrame(tick);
-window.__apex={get state(){return state;},start:startCountdown,cars,P,camera,renderer,scene,keys,step(n,dt){for(let i=0;i<n;i++)update(dt||.0167,performance.now()/1000+i*.0167);}};
+window.__apex={get roomStartAt(){return roomStartAt;},setNet(n){initNet(n);},get state(){return state;},start:startCountdown,cars,P,camera,renderer,scene,keys,step(n,dt){for(let i=0;i<n;i++)update(dt||.0167,performance.now()/1000+i*.0167);}};
 })();
 
 </script>
 <script type="module">
 let App=null;
 try{App=await import("../js/app.js");}catch(e){console.warn("standalone mode",e);}
-if(App){
+if(!App){ if(window.__netSet)window.__netSet(null); }
+else{
   const GID="racing";
-  let myName=null;
+  const params=new URLSearchParams(location.search);
+  let myName=null,myUid="";
   try{
     const user=await App.waitForUser();
-    myName=App.getSavedName();
+    myName=App.getSavedName();myUid=App.currentUid();
     if(!user||!myName){location.href="../index.html";}
   }catch(e){console.warn(e);}
-  window.__onRaceEnd=async(place,won,coins,say)=>{
+  const record=async(won,coins,say)=>{
     try{
       if(!myName){say("⚠️ حساب دومیتو پیدا نشد.");return;}
       await App.recordRoundResult(myName,GID,{won,coins});
-      say((won?"🏆 برد! ":"✅ ")+coins.toLocaleString("fa")+" سکه به حساب دومیتوت اضافه شد");
-      try{ if(App.getSavedRoom&&App.getSavedRoom()&&!new URLSearchParams(location.search).has("solo")){await App.submitResult(GID,App.currentUid(),myName,7-place);} }catch(_){}
+      say((won?"🏆 برد! ":"✅ ")+Number(coins).toLocaleString("fa")+" سکه به حساب دومیتوت اضافه شد");
     }catch(e){console.error(e);say("⚠️ نتیجه بازی ذخیره نشد.");}
   };
+  const soloNet={mode:"solo",uid:myUid,name:myName,finish:(place,won,coins,say)=>record(won,coins,say)};
+  const code=String(App.getSavedRoom()||"").trim().toUpperCase();
+  let expectedN=1;
+  const inRoom=!params.has("solo")&&!!code&&!!myUid;
+  if(inRoom){
+    try{await App.joinLobby(myName);}catch(e){console.warn(e);}
+    try{const s=await App.get(App.roomRef(code,"players"));expectedN=Object.keys(s.val()||{}).length||1;}catch(e){console.warn(e);}
+  }
+  if(!inRoom||expectedN<2){
+    window.__netSet(soloNet);
+  }else{
+    const round=String(params.get("round")||"r").replace(/[^A-Za-z0-9_-]/g,"").slice(0,40)||"r";
+    const {db,ref,set,remove,onValue,runTransaction,onDisconnect}=App;
+    const base=p=>ref(db,`rooms/${code}/racing/${round}${p?"/"+p:""}`);
+    let offset=0;
+    onValue(ref(db,".info/serverTimeOffset"),s=>{offset=s.val()||0;});
+    const NET={
+      mode:"room",uid:myUid,name:myName,expectedN,
+      now:()=>Date.now()+offset,
+      set:(p,v)=>set(base(p),v),
+      remove:p=>remove(base(p)),
+      listen:(p,cb,err)=>onValue(base(p),s=>cb(s.val()),err),
+      tx:(p,fn)=>runTransaction(base(p),fn,{applyLocally:false}).then(r=>r.snapshot.val()),
+      onDisc:p=>onDisconnect(base(p)).remove(),
+      fail(e){
+        console.error(e);
+        const perm=/PERMISSION/i.test(String(e&&(e.code||e.message)));
+        const el=document.getElementById("roomInfo");
+        if(el)el.innerHTML=perm
+          ?'قوانین Firebase اجازهٔ نوشتن در <b dir="ltr">rooms/{code}/racing</b> را نمی‌دهد.<br>در Rules زیر <b dir="ltr">rooms ← $code</b> این را اضافه کن:<br><b dir="ltr">"racing": {".read":"auth != null", ".write":"auth != null"}</b><br><a href="?solo=1" style="color:#ffd23a">بازی تک‌نفره با ربات</a>'
+          :"ارتباط با اتاق قطع‌وصل می‌شود؛ اینترنت را بررسی کن.";
+      },
+      async finish(place,won,coins,say){
+        try{await App.submitResult(GID,myUid,myName,100-place);}catch(e){console.warn(e);}
+        await record(won,coins,say);
+      },
+      async leave(){
+        try{await remove(base("players/"+myUid));}catch(e){}
+        try{await App.resetSessionForNextRound();}catch(e){}
+        location.href="../lobby.html";
+      }
+    };
+    window.__netSet(NET);
+  }
 }
 </script>
 </body>
