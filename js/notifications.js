@@ -113,16 +113,16 @@ async function boot() {
   #dnBadge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#ff3b4e;color:#fff;font:800 11px/20px Vazirmatn,Tahoma,sans-serif;text-align:center;padding:0 5px;display:none}
   #dnPanel{color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;display:none}
   #dnPanel.inline{display:block;width:100%}
-  .dnCard{background:#141827;border:1px solid rgba(255,255,255,.12);border-radius:22px;margin-bottom:22px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .dnCard{background:linear-gradient(160deg,rgba(27,31,58,.9),rgba(16,19,36,.9));border:1px solid rgba(255,255,255,.07);border-radius:20px;margin-bottom:22px;overflow:hidden;box-shadow:0 10px 30px -14px rgba(0,0,0,.6);backdrop-filter:blur(10px)}
   .dnH{padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800;font-size:18px}
   .dnBody{padding:18px 20px}
   .dnNote{font-size:15px;line-height:2;margin-bottom:12px;opacity:.92}
   .dnHint{font-size:13px;opacity:.6;line-height:1.9;margin-top:12px}
-  .dnBtn{font:800 16px Vazirmatn,Tahoma,sans-serif;border:0;border-radius:14px;padding:13px 22px;background:linear-gradient(#ffe27a,#ffb02e);color:#1b1300;cursor:pointer;margin:4px 0 0 10px}
+  .dnBtn{font:800 16px Vazirmatn,Tahoma,sans-serif;border:0;border-radius:14px;padding:13px 22px;background:linear-gradient(135deg,#FFC845,#ff8c00);color:#2b1000;cursor:pointer;margin:4px 0 0 10px}
   .dnBtn.alt{background:rgba(255,255,255,.14);color:#fff}
   .dnItem{display:flex;gap:16px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.07)}
   .dnItem:last-child{border-bottom:0}
-  .dnItem.new{background:rgba(80,160,255,.12)}
+  .dnItem.new{background:rgba(79,124,255,.14)}
   .dnIc{font-size:32px;line-height:1.2}
   .dnT{font-weight:800;font-size:17px;line-height:1.7}
   .dnB{font-size:15px;opacity:.88;margin-top:4px;line-height:1.9;white-space:pre-wrap;word-break:break-word}
@@ -130,7 +130,7 @@ async function boot() {
   .dnDel{background:none;border:0;color:#ff8f8f;font-size:13px;cursor:pointer;padding:0}
   .dnEmpty{padding:40px 20px;text-align:center;opacity:.6;font-size:15px}
   .dnAdm label{display:block;font-size:14px;font-weight:700;margin:14px 0 6px;opacity:.85}
-  .dnAdm input,.dnAdm textarea,.dnAdm select{width:100%;box-sizing:border-box;font:15px Vazirmatn,Tahoma,sans-serif;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:12px 14px}
+  .dnAdm input,.dnAdm textarea,.dnAdm select{width:100%;box-sizing:border-box;font:15px Vazirmatn,Tahoma,sans-serif;background:#1B1F3A;color:#EAF0FF;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px}
   .dnAdm textarea{min-height:110px;resize:vertical}
   .dnAdm .dnBtn{margin:18px 0 0}
   #dnMsg{font-size:14px;margin-top:12px;min-height:20px;line-height:1.8}
