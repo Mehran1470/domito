@@ -30,6 +30,16 @@ async function boot() {
     return fa(Math.floor(s / 86400)) + " روز پیش";
   };
 
+  // ---------- حافظهٔ مشترک با service worker (IndexedDB) ----------
+  const idb = () => new Promise((res, rej) => {
+    const r = indexedDB.open("domito-sw", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+  const kvGet = async k => { try { const d = await idb(); return await new Promise(r => { const q = d.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => r(q.result); q.onerror = () => r(undefined); }); } catch (e) { return undefined; } };
+  const kvSet = async (k, v) => { try { const d = await idb(); await new Promise(r => { const t = d.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = r; t.onerror = r; }); } catch (e) {} };
+  const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
   // ---------- service worker (برای نوتیفیکیشن روی اندروید لازم است) ----------
   let swReg = null;
   try { if ("serviceWorker" in navigator) swReg = await navigator.serviceWorker.register("./sw.js"); } catch (e) { console.warn(e); }
@@ -43,6 +53,26 @@ async function boot() {
   let seenAt = lsGet(K("seen"), 0);
   let firstRun = !localStorage.getItem(K("seen"));
   if (firstRun) { seenAt = Date.now(); lsSet(K("seen"), seenAt); }
+
+  let muted = lsGet(K("muted"), false);
+  async function syncSwState() {
+    await kvSet("name", me);
+    await kvSet("lastVisitDay", dayKey());
+    await kvSet("muted", !!muted);
+  }
+  await syncSwState();
+  // پیام‌هایی که service worker وقتی سایت بسته بود نشان داده (مثلاً «امروز نیومدی»)
+  try {
+    const pend = (await kvGet("pending")) || [];
+    if (pend.length) { await kvSet("pending", []); pend.forEach(p => { if (!sources.local.some(x => x.id === p.id)) sources.local.unshift(p); }); sources.local = sources.local.slice(0, 30); lsSet(K("local"), sources.local); }
+  } catch (e) {}
+  // یادآوری روزانهٔ پس‌زمینه (روی اندروید برای سایتی که به صفحهٔ اصلی اضافه شده)
+  try {
+    if (swReg && "periodicSync" in swReg) {
+      const st = await navigator.permissions.query({ name: "periodic-background-sync" });
+      if (st.state === "granted") await swReg.periodicSync.register("domito-daily", { minInterval: 12 * 3600 * 1000 });
+    }
+  } catch (e) {}
 
   function addLocal(id, icon, title, body) {
     if (sources.local.some(x => x.id === id)) return;
@@ -77,31 +107,34 @@ async function boot() {
   // ---------- UI ----------
   const css = document.createElement("style");
   css.textContent = `
-  #dnBell{position:fixed;top:12px;left:12px;z-index:99990;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(15,20,36,.92);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);padding:0}
+  #dnBell{position:fixed;top:12px;left:12px;z-index:99990;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(15,20,36,.92);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);padding:0}
   #dnBell.ring{animation:dnring .9s ease 2}
   @keyframes dnring{0%,100%{transform:rotate(0)}20%{transform:rotate(18deg)}40%{transform:rotate(-16deg)}60%{transform:rotate(10deg)}80%{transform:rotate(-6deg)}}
-  #dnBadge{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;border-radius:10px;background:#ff3b4e;color:#fff;font:800 11px/19px Vazirmatn,Tahoma,sans-serif;text-align:center;padding:0 5px;display:none}
-  #dnPanel{position:fixed;top:62px;left:12px;z-index:99991;width:min(350px,calc(100vw - 24px));max-height:min(75vh,560px);overflow:auto;background:rgba(12,18,34,.98);border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.5);color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;display:none}
-  #dnPanel.open{display:block}
-  #dnPanel.inline{position:static;width:100%;max-height:none;overflow:visible;box-shadow:none;display:block}
-  .dnH{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800}
-  .dnX{background:none;border:0;color:#fff;font-size:18px;cursor:pointer}
-  .dnPerm{margin:10px 12px 0;padding:10px;border-radius:12px;background:rgba(255,210,58,.12);border:1px solid rgba(255,210,58,.35);font-size:12.5px;line-height:1.8}
-  .dnBtn{font:800 13px Vazirmatn,Tahoma,sans-serif;border:0;border-radius:10px;padding:7px 14px;background:linear-gradient(#ffe27a,#ffb02e);color:#1b1300;cursor:pointer;margin-top:6px}
+  #dnBadge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#ff3b4e;color:#fff;font:800 11px/20px Vazirmatn,Tahoma,sans-serif;text-align:center;padding:0 5px;display:none}
+  #dnPanel{color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;display:none}
+  #dnPanel.inline{display:block;width:100%}
+  .dnCard{background:#141827;border:1px solid rgba(255,255,255,.12);border-radius:22px;margin-bottom:22px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .dnH{padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800;font-size:18px}
+  .dnBody{padding:18px 20px}
+  .dnNote{font-size:15px;line-height:2;margin-bottom:12px;opacity:.92}
+  .dnHint{font-size:13px;opacity:.6;line-height:1.9;margin-top:12px}
+  .dnBtn{font:800 16px Vazirmatn,Tahoma,sans-serif;border:0;border-radius:14px;padding:13px 22px;background:linear-gradient(#ffe27a,#ffb02e);color:#1b1300;cursor:pointer;margin:4px 0 0 10px}
   .dnBtn.alt{background:rgba(255,255,255,.14);color:#fff}
-  .dnItem{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .dnItem{display:flex;gap:16px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .dnItem:last-child{border-bottom:0}
   .dnItem.new{background:rgba(80,160,255,.12)}
-  .dnIc{font-size:22px;line-height:1.2}
-  .dnT{font-weight:800;font-size:14px}
-  .dnB{font-size:13px;opacity:.85;margin-top:2px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
-  .dnM{font-size:11px;opacity:.55;margin-top:3px;display:flex;gap:10px}
-  .dnDel{background:none;border:0;color:#ff8f8f;font-size:11px;cursor:pointer;padding:0}
-  .dnEmpty{padding:28px 14px;text-align:center;opacity:.6;font-size:13px}
-  .dnAdm{padding:12px 14px;border-top:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
-  .dnAdm input,.dnAdm textarea,.dnAdm select{width:100%;box-sizing:border-box;margin-top:6px;font:13px Vazirmatn,Tahoma,sans-serif;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:9px;padding:8px}
-  .dnAdm textarea{min-height:64px;resize:vertical}
-  #dnMsg{font-size:12px;margin-top:6px;min-height:16px}
-  #dnToast{position:fixed;top:62px;left:12px;z-index:99992;width:min(320px,calc(100vw - 24px));padding:11px 14px;border-radius:14px;background:rgba(12,18,34,.97);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;box-shadow:0 14px 40px rgba(0,0,0,.45);transform:translateY(-16px);opacity:0;pointer-events:none;transition:.25s}
+  .dnIc{font-size:32px;line-height:1.2}
+  .dnT{font-weight:800;font-size:17px;line-height:1.7}
+  .dnB{font-size:15px;opacity:.88;margin-top:4px;line-height:1.9;white-space:pre-wrap;word-break:break-word}
+  .dnM{font-size:12.5px;opacity:.55;margin-top:8px;display:flex;gap:14px}
+  .dnDel{background:none;border:0;color:#ff8f8f;font-size:13px;cursor:pointer;padding:0}
+  .dnEmpty{padding:40px 20px;text-align:center;opacity:.6;font-size:15px}
+  .dnAdm label{display:block;font-size:14px;font-weight:700;margin:14px 0 6px;opacity:.85}
+  .dnAdm input,.dnAdm textarea,.dnAdm select{width:100%;box-sizing:border-box;font:15px Vazirmatn,Tahoma,sans-serif;background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:12px 14px}
+  .dnAdm textarea{min-height:110px;resize:vertical}
+  .dnAdm .dnBtn{margin:18px 0 0}
+  #dnMsg{font-size:14px;margin-top:12px;min-height:20px;line-height:1.8}
+  #dnToast{position:fixed;top:66px;left:12px;z-index:99992;width:min(340px,calc(100vw - 24px));padding:13px 16px;border-radius:16px;background:rgba(12,18,34,.97);border:1px solid rgba(255,255,255,.2);color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;box-shadow:0 14px 40px rgba(0,0,0,.45);transform:translateY(-16px);opacity:0;pointer-events:none;transition:.25s}
   #dnToast.show{transform:none;opacity:1;pointer-events:auto}
   `;
   document.head.appendChild(css);
@@ -129,30 +162,38 @@ async function boot() {
   function render() {
     const items = allItems();
     const perm = permState();
-    let html = `<div class="dnH"><span>🔔 اعلان‌ها</span>${pageMode ? "" : '<button class="dnX" id="dnClose" type="button">✕</button>'}</div>`;
-    if (perm === "default") {
-      html += `<div class="dnPerm">اجازه می‌دهی دومیتو برایت اعلان بفرستد؟ (پیام ادمین، درخواست دوستی، بازی جدید و…)<br><button class="dnBtn" id="dnAllow" type="button">اجازه می‌دهم</button></div>`;
-    } else if (perm === "denied") {
-      html += `<div class="dnPerm">اعلان‌های مرورگر بسته است. برای فعال‌سازی از تنظیمات سایت در مرورگر، «اعلان‌ها» را روی «اجازه» بگذار. پیام‌ها همین‌جا در زنگوله دیده می‌شوند.</div>`;
-    } else if (perm === "unsupported") {
-      html += `<div class="dnPerm">این مرورگر اعلان سیستمی را پشتیبانی نمی‌کند؛ پیام‌ها همین‌جا دیده می‌شوند.</div>`;
-    }
-    html += `<div id="dnList">${listHtml(items)}</div>`;
+    let st = "";
+    if (perm === "default") st = `<div class="dnNote">دومیتو می‌تواند برایت اعلان بفرستد: پیام ادمین، درخواست دوستی، بازی جدید و بروزرسانی‌ها.</div><button class="dnBtn" id="dnAllow" type="button">اجازه می‌دهم</button>`;
+    else if (perm === "denied") st = `<div class="dnNote">اعلان‌های مرورگر بسته است. از تنظیمات سایت در مرورگر، «اعلان‌ها» را روی «اجازه» بگذار. پیام‌ها همین‌جا هم دیده می‌شوند.</div>`;
+    else if (perm === "unsupported") st = `<div class="dnNote">این مرورگر اعلان سیستمی را پشتیبانی نمی‌کند؛ پیام‌ها همین‌جا دیده می‌شوند.</div>`;
+    else st = `<div class="dnNote">اعلان‌های مرورگر <b>${muted ? "خاموش" : "روشن"}</b> است.</div>`;
+    let html = `<section class="dnCard">
+      <div class="dnH"><span>⚙️ تنظیم اعلان</span></div>
+      <div class="dnBody">${st}
+        <button class="dnBtn ${muted ? "" : "alt"}" id="dnMute" type="button">${muted ? "🔔 روشن کردن اعلان" : "🔕 خاموش کردن اعلان"}</button>
+        <div class="dnHint">با خاموش‌کردن، پیام‌ها فقط همین‌جا جمع می‌شوند و نوتیفیکیشن و پنجرهٔ بالا نمی‌آید.</div>
+      </div></section>
+      <section class="dnCard"><div class="dnH"><span>📨 پیام‌ها</span></div><div id="dnList">${listHtml(items)}</div></section>`;
     if (admin) {
-      html += `<div class="dnAdm">
-        <div style="font-weight:800;font-size:13px">✉️ ارسال پیام (ادمین)</div>
+      html += `<section class="dnCard"><div class="dnH"><span>✉️ ارسال پیام (ادمین)</span></div>
+        <div class="dnBody dnAdm">
+        <label>گیرنده</label>
         <select id="dnTo"><option value="all">برای همه</option><option value="user">برای یک نفر</option></select>
         <input id="dnUser" placeholder="نام کاربری گیرنده" style="display:none">
+        <label>عنوان</label>
         <input id="dnTitle" placeholder="عنوان پیام" maxlength="80">
+        <label>متن پیام</label>
         <textarea id="dnBody" placeholder="متن پیام" maxlength="400"></textarea>
         <button class="dnBtn" id="dnSend" type="button">ارسال</button>
         <div id="dnMsg"></div>
-      </div>`;
+      </div></section>`;
     }
     panel.innerHTML = html;
-    const cl = panel.querySelector("#dnClose"); if (cl) cl.onclick = () => closePanel();
     const allow = panel.querySelector("#dnAllow");
     if (allow) allow.onclick = askPermission;
+    panel.querySelector("#dnMute").onclick = async () => {
+      muted = !muted; lsSet(K("muted"), muted); await kvSet("muted", muted); render();
+    };
     bindDel();
     if (admin) wireAdmin();
   }
@@ -218,15 +259,15 @@ async function boot() {
   async function askPermission() {
     try { await Notification.requestPermission(); } catch (e) {}
     if (panelOpen) render();
-    if (permState() === "granted") systemNotify("اعلان‌ها فعال شد ✓", "از این به بعد پیام‌های دومیتو را اینجا می‌بینی.", "welcome");
+    if (permState() === "granted") systemNotify("اعلان‌ها فعال شد ✓", "از این به بعد پیام‌های دومیتو را اینجا می‌بینی.", "welcome", true);
   }
   // درخواست اجازه به‌صورت نرم: یک نوار کوچک بعد از ورود (مرورگرها اجازه را فقط با کلیک کاربر می‌دهند)
   if (permState() === "default" && Date.now() - lsGet(K("askedAt"), 0) > 3 * 86400000) {
-    setTimeout(() => { lsSet(K("askedAt"), Date.now()); showToast("🔔", "اعلان‌ها", "برای دریافت پیام‌ها روی زنگوله بزن و اجازه بده.", true); }, 2500);
+    setTimeout(() => { lsSet(K("askedAt"), Date.now()); showToast("🔔", "اعلان‌ها", "برای دریافت پیام‌ها روی زنگوله بزن و اجازه بده.", true, false); }, 2500);
   }
 
-  function systemNotify(title, body, tag) {
-    if (permState() !== "granted") return;
+  function systemNotify(title, body, tag, force) {
+    if (permState() !== "granted" || (muted && !force)) return;
     const opts = { body: body || "", tag: tag || undefined, icon: "./logo.png", badge: "./badge.png", dir: "rtl", lang: "fa", data: { url: "./index.html" } };
     try {
       if (swReg && swReg.showNotification) swReg.showNotification(title, opts);
@@ -234,7 +275,8 @@ async function boot() {
     } catch (e) { try { new Notification(title, opts); } catch (_) {} }
   }
   let toastT = 0;
-  function showToast(icon, title, body, noRing) {
+  function showToast(icon, title, body, noRing, force) {
+    if (muted && !force) return;
     toast.innerHTML = `<div style="display:flex;gap:10px"><div style="font-size:22px">${esc(icon)}</div><div><div style="font-weight:800;font-size:14px">${esc(title)}</div><div style="font-size:12.5px;opacity:.85;margin-top:2px">${esc(body)}</div></div></div>`;
     toast.classList.add("show");
     if (!noRing) { bell.classList.remove("ring"); void bell.offsetWidth; bell.classList.add("ring"); }
@@ -285,6 +327,26 @@ async function boot() {
     }));
     refresh(!first.friend); first.friend = false;
   }, e => console.warn("friendRequests:", e && e.message));
+
+  // خبر بروزرسانی سایت: فایل version.json را بررسی می‌کنیم
+  async function checkVersion() {
+    try {
+      const r = await fetch("./version.json?_=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+      const old = localStorage.getItem("domito_site_ver");
+      if (j && j.v && old !== String(j.v)) {
+        localStorage.setItem("domito_site_ver", String(j.v));
+        if (old) {
+          addLocal("u_" + j.v, "🔄", "دومیتو آپدیت شد", (j.notes ? j.notes + "\n" : "") + "برای دیدن تغییرات، صفحه را یک بار تازه کن.");
+          refresh(true);
+        }
+      }
+    } catch (e) {}
+  }
+  checkVersion();
+  setInterval(checkVersion, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkVersion(); });
 
   updateBadge();
   refresh(false);
