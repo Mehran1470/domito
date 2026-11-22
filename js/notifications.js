@@ -148,6 +148,12 @@ async function boot() {
   .dnB{font-size:15px;opacity:.88;margin-top:4px;line-height:1.9;white-space:pre-wrap;word-break:break-word}
   .dnM{font-size:12.5px;opacity:.55;margin-top:8px;display:flex;gap:14px}
   .dnDel{background:none;border:0;color:#ff8f8f;font-size:13px;cursor:pointer;padding:0}
+  .dnCnt{font-size:12.5px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(79,124,255,.2);color:#cfe0ff}
+  .dnChips{display:flex;gap:8px;padding:14px 16px 2px;overflow-x:auto;scrollbar-width:none}
+  .dnChip{flex:none;font:700 13.5px Vazirmatn,Tahoma,sans-serif;color:#EAF0FF;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;cursor:pointer}
+  .dnChip.on{background:linear-gradient(135deg,#4F7CFF,#9B5CFF);border-color:transparent}
+  .dnChip span{opacity:.75;font-size:12px;margin-right:4px}
+  .dnFoot{padding:4px 20px 16px;text-align:center}
   .dnEmpty{padding:48px 20px;text-align:center;opacity:.65;font-size:15px}
   .dnEmpty::before{content:'🔔';display:block;font-size:44px;margin-bottom:10px;filter:grayscale(.4)}
   .dnAdm label{display:block;font-size:14px;font-weight:700;margin:14px 0 6px;opacity:.85}
@@ -194,7 +200,7 @@ async function boot() {
         <div class="dnRow"><button class="dnBtn ${muted ? "" : "alt"}" id="dnMute" type="button">${muted ? "🔔 روشن کردن اعلان" : "🔕 خاموش کردن اعلان"}</button>${perm === "granted" ? `<button class="dnBtn alt" id="dnTest" type="button">🧪 اعلان آزمایشی</button>` : ""}</div><div class="dnHint">وضعیت اعلان وقتی سایت بسته است: <b id="dnPushState">${esc(pushState)}</b></div><div id="dnTestMsg" class="dnHint"></div>
         <div class="dnHint">با خاموش‌کردن، پیام‌ها فقط همین‌جا جمع می‌شوند و نوتیفیکیشن و پنجرهٔ بالا نمی‌آید.</div>
       </div></section>
-      <section class="dnCard"><div class="dnH"><span>📨 پیام‌ها</span></div><div id="dnList">${listHtml(items)}</div></section>`;
+      <section class="dnCard"><div class="dnH"><span>📨 پیام‌ها</span><span id="dnCount" class="dnCnt"></span></div><div id="dnChips" class="dnChips"></div><div id="dnList">${listHtml(items)}</div><div class="dnFoot"><button class="dnDel" id="dnClear" type="button">🗑 پاک کردن پیام‌های محلی</button></div></section>`;
     if (admin) {
       html += `<section class="dnCard"><div class="dnH"><span>✉️ ارسال پیام (ادمین)</span></div>
         <div class="dnBody dnAdm">
@@ -222,6 +228,9 @@ async function boot() {
       muted = !muted; lsSet(K("muted"), muted); await kvSet("muted", muted); pushSubscribe(); render();
     };
     bindDel();
+    renderList();
+    const clr = panel.querySelector("#dnClear");
+    if (clr) clr.onclick = () => { if (!confirm("پیام‌های محلی (بازی جدید، آپدیت، نیومدی…) پاک شوند؟")) return; sources.local = []; lsSet(K("local"), []); renderList(); updateBadge(); };
     if (admin) wireAdmin();
   }
   function bindDel() {
@@ -229,10 +238,22 @@ async function boot() {
       try { await remove(ref(db, "announcements/" + b.dataset.del)); } catch (e) { alert("حذف نشد."); }
     });
   }
+  let filter = "all";
+  const catOf = i => String(i.id).startsWith("a_") ? "msg" : String(i.id).startsWith("f_") ? "friend" : String(i.id).startsWith("u_") ? "update" : "other";
+  const CHIPS = [["all", "همه"], ["msg", "📣 پیام‌ها"], ["friend", "🤝 دوستی"], ["update", "🔄 آپدیت"], ["other", "🎮 بقیه"]];
   function renderList() {
     const l = panel.querySelector("#dnList");
     if (!l) return;
-    l.innerHTML = listHtml(allItems());
+    const all = allItems();
+    const chips = panel.querySelector("#dnChips");
+    if (chips) chips.innerHTML = CHIPS.map(([k, t]) => {
+      const n = k === "all" ? all.length : all.filter(i => catOf(i) === k).length;
+      return `<button type="button" class="dnChip${filter === k ? " on" : ""}" data-f="${k}">${t}${n ? ` <span>${fa(n)}</span>` : ""}</button>`;
+    }).join("");
+    if (chips) chips.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { filter = b.dataset.f; renderList(); });
+    const cnt = panel.querySelector("#dnCount");
+    if (cnt) { const un = all.filter(i => (i.at || 0) > seenAtView).length; cnt.textContent = un ? `${fa(un)} جدید` : "همه خوانده شد"; }
+    l.innerHTML = listHtml(filter === "all" ? all : all.filter(i => catOf(i) === filter));
     bindDel();
   }
   function listHtml(items) {
