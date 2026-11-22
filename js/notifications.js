@@ -114,21 +114,25 @@ async function boot() {
   #dnPanel{color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;display:none}
   #dnPanel.inline{display:block;width:100%}
   .dnCard{background:linear-gradient(160deg,rgba(27,31,58,.9),rgba(16,19,36,.9));border:1px solid rgba(255,255,255,.07);border-radius:20px;margin-bottom:22px;overflow:hidden;box-shadow:0 10px 30px -14px rgba(0,0,0,.6);backdrop-filter:blur(10px)}
-  .dnH{padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.1);font-weight:800;font-size:18px}
+  .dnH{padding:18px 22px;border-bottom:1px solid rgba(255,255,255,.07);font-weight:900;font-size:18px;background:linear-gradient(90deg,rgba(79,124,255,.16),rgba(155,92,255,.10),transparent);display:flex;align-items:center;justify-content:space-between}
+  .dnRow{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .dnRow .dnBtn{margin:0}
   .dnBody{padding:18px 20px}
   .dnNote{font-size:15px;line-height:2;margin-bottom:12px;opacity:.92}
   .dnHint{font-size:13px;opacity:.6;line-height:1.9;margin-top:12px}
   .dnBtn{font:800 16px Vazirmatn,Tahoma,sans-serif;border:0;border-radius:14px;padding:13px 22px;background:linear-gradient(135deg,#FFC845,#ff8c00);color:#2b1000;cursor:pointer;margin:4px 0 0 10px}
   .dnBtn.alt{background:rgba(255,255,255,.14);color:#fff}
-  .dnItem{display:flex;gap:16px;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.07)}
-  .dnItem:last-child{border-bottom:0}
-  .dnItem.new{background:rgba(79,124,255,.14)}
-  .dnIc{font-size:32px;line-height:1.2}
+  .dnItem{display:flex;gap:14px;padding:16px 18px;margin:12px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.035);transition:.15s;position:relative}
+  .dnItem:hover{background:rgba(255,255,255,.06);transform:translateY(-1px)}
+  .dnItem.new::after{content:'جدید';position:absolute;top:12px;left:14px;font-size:11px;font-weight:800;color:#fff;background:linear-gradient(135deg,#4F7CFF,#9B5CFF);padding:2px 10px;border-radius:99px}
+  .dnItem.new{border-color:rgba(79,124,255,.55);background:rgba(79,124,255,.10)}
+  .dnIc{width:52px;height:52px;flex:none;border-radius:16px;background:linear-gradient(145deg,rgba(79,124,255,.35),rgba(155,92,255,.35));display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:inset 0 1px 0 rgba(255,255,255,.15)}
   .dnT{font-weight:800;font-size:17px;line-height:1.7}
   .dnB{font-size:15px;opacity:.88;margin-top:4px;line-height:1.9;white-space:pre-wrap;word-break:break-word}
   .dnM{font-size:12.5px;opacity:.55;margin-top:8px;display:flex;gap:14px}
   .dnDel{background:none;border:0;color:#ff8f8f;font-size:13px;cursor:pointer;padding:0}
-  .dnEmpty{padding:40px 20px;text-align:center;opacity:.6;font-size:15px}
+  .dnEmpty{padding:48px 20px;text-align:center;opacity:.65;font-size:15px}
+  .dnEmpty::before{content:'🔔';display:block;font-size:44px;margin-bottom:10px;filter:grayscale(.4)}
   .dnAdm label{display:block;font-size:14px;font-weight:700;margin:14px 0 6px;opacity:.85}
   .dnAdm input,.dnAdm textarea,.dnAdm select{width:100%;box-sizing:border-box;font:15px Vazirmatn,Tahoma,sans-serif;background:#1B1F3A;color:#EAF0FF;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px 14px}
   .dnAdm textarea{min-height:110px;resize:vertical}
@@ -170,7 +174,7 @@ async function boot() {
     let html = `<section class="dnCard">
       <div class="dnH"><span>⚙️ تنظیم اعلان</span></div>
       <div class="dnBody">${st}
-        <button class="dnBtn ${muted ? "" : "alt"}" id="dnMute" type="button">${muted ? "🔔 روشن کردن اعلان" : "🔕 خاموش کردن اعلان"}</button>
+        <div class="dnRow"><button class="dnBtn ${muted ? "" : "alt"}" id="dnMute" type="button">${muted ? "🔔 روشن کردن اعلان" : "🔕 خاموش کردن اعلان"}</button>${perm === "granted" ? `<button class="dnBtn alt" id="dnTest" type="button">🧪 اعلان آزمایشی</button>` : ""}</div><div id="dnTestMsg" class="dnHint"></div>
         <div class="dnHint">با خاموش‌کردن، پیام‌ها فقط همین‌جا جمع می‌شوند و نوتیفیکیشن و پنجرهٔ بالا نمی‌آید.</div>
       </div></section>
       <section class="dnCard"><div class="dnH"><span>📨 پیام‌ها</span></div><div id="dnList">${listHtml(items)}</div></section>`;
@@ -191,6 +195,11 @@ async function boot() {
     panel.innerHTML = html;
     const allow = panel.querySelector("#dnAllow");
     if (allow) allow.onclick = askPermission;
+    const tb = panel.querySelector("#dnTest");
+    if (tb) tb.onclick = async () => {
+      const ok = await systemNotify(`${me}، اعلان دومیتو کار می‌کند ✓`, "اگر این را در نوار اعلان گوشی می‌بینی همه‌چیز درست است.", "test", true);
+      panel.querySelector("#dnTestMsg").textContent = ok ? "فرستاده شد؛ نوار اعلان گوشی را نگاه کن. اگر نیامد، در تنظیمات گوشی اعلان مرورگر را روشن کن." : "ارسال نشد؛ مرورگر اجازهٔ نمایش نداد.";
+    };
     panel.querySelector("#dnMute").onclick = async () => {
       muted = !muted; lsSet(K("muted"), muted); await kvSet("muted", muted); render();
     };
@@ -266,13 +275,15 @@ async function boot() {
     setTimeout(() => { lsSet(K("askedAt"), Date.now()); showToast("🔔", "اعلان‌ها", "برای دریافت پیام‌ها روی زنگوله بزن و اجازه بده.", true, false); }, 2500);
   }
 
-  function systemNotify(title, body, tag, force) {
-    if (permState() !== "granted" || (muted && !force)) return;
-    const opts = { body: body || "", tag: tag || undefined, icon: "./logo.png", badge: "./badge.png", dir: "rtl", lang: "fa", data: { url: "./index.html" } };
+  async function systemNotify(title, body, tag, force) {
+    if (permState() !== "granted" || (muted && !force)) return false;
+    const opts = { body: body || "", tag: tag || undefined, renotify: !!tag, icon: "./logo.png", badge: "./badge.png", dir: "rtl", lang: "fa", vibrate: [120, 60, 120], data: { url: "./index.html" } };
     try {
-      if (swReg && swReg.showNotification) swReg.showNotification(title, opts);
-      else new Notification(title, opts);
-    } catch (e) { try { new Notification(title, opts); } catch (_) {} }
+      const reg = ("serviceWorker" in navigator) ? await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 3000))]) : null;
+      if (reg && reg.showNotification) { await reg.showNotification(title, opts); return true; }
+    } catch (e) { console.warn("sw notify:", e); }
+    try { new Notification(title, opts); return true; } catch (e) { console.warn("notify:", e); }
+    return false;
   }
   let toastT = 0;
   function showToast(icon, title, body, noRing, force) {
@@ -291,13 +302,10 @@ async function boot() {
     if (!fresh.length) return;
     fresh.forEach(i => shown.add(i.id));
     lsSet(K("shown"), [...shown].slice(-200));
-    if (panelOpen) { renderList(); return; }
+    if (panelOpen) renderList();
     const last = fresh[fresh.length - 1];
-    if (document.hidden) {
-      fresh.slice(-3).forEach(i => systemNotify(i.title, i.body, i.id));
-    } else if (live) {
-      showToast(last.icon || "🔔", last.title, last.body || "");
-    }
+    if (document.hidden || live) fresh.slice(-3).forEach(i => systemNotify(i.title, i.body, i.id));
+    if (!document.hidden && live && !panelOpen) showToast(last.icon || "🔔", last.title, last.body || "");
   }
   // آیتم‌هایی که قبلاً دیده‌ایم دوباره اعلان نشوند
   allItems().forEach(i => { if ((i.at || 0) <= seenAt) shown.add(i.id); });
