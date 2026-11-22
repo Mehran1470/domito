@@ -488,21 +488,51 @@ waitForUser().then(async (user) => {
       f("pwBtn").addEventListener("click", () => m.classList.add("show"));
       f("pwCancel").addEventListener("click", close);
       m.addEventListener("click", e => { if (e.target === m) close(); });
+      const b64 = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+      const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+      async function bioVerify() {
+        if (!window.PublicKeyCredential || !navigator.credentials) throw new Error("bio-unsupported");
+        const who = getSavedName() || "user";
+        const key = "domito_bio_" + encodeURIComponent(who);
+        const ch = crypto.getRandomValues(new Uint8Array(32));
+        const id = localStorage.getItem(key);
+        if (id) {
+          try {
+            await navigator.credentials.get({ publicKey: { challenge: ch, allowCredentials: [{ type: "public-key", id: unb64(id) }], userVerification: "required", timeout: 60000 } });
+            return;
+          } catch (e) {
+            if (e && (e.name === "NotAllowedError" || e.name === "AbortError")) throw e;
+            localStorage.removeItem(key); // اعتبارنامهٔ قدیمی؛ دوباره ثبت می‌کنیم
+          }
+        }
+        const cred = await navigator.credentials.create({ publicKey: {
+          challenge: ch, rp: { name: "Domito" },
+          user: { id: new TextEncoder().encode(who), name: who, displayName: who },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "discouraged" },
+          timeout: 60000
+        } });
+        localStorage.setItem(key, b64(cred.rawId));
+      }
       f("pwSave").addEventListener("click", async () => {
         msg.style.color = "#ff9b9b";
         const n = f("pwNew").value, n2 = f("pwNew2").value;
         if (!n) { msg.textContent = "رمز جدید را بنویس."; return; }
         if (n.length < 6) { msg.textContent = "رمز جدید حداقل ۶ حرف باشد."; return; }
         if (n !== n2) { msg.textContent = "تکرار رمز جدید یکسان نیست."; return; }
-        f("pwSave").disabled = true; msg.style.color = "#cfd6ff"; msg.textContent = "در حال تغییر…";
+        f("pwSave").disabled = true; msg.style.color = "#cfd6ff"; msg.textContent = "اثر انگشتت را تأیید کن…";
         try {
+          await bioVerify();
+          msg.textContent = "در حال تغییر…";
           await changePassword(n);
           msg.style.color = "#7dffb0"; msg.textContent = "رمز عبور تغییر کرد ✓";
           setTimeout(close, 1400);
         } catch (e) {
-          const c = String((e && (e.code || e.message)) || "");
+          const c = String((e && ((e.name || "") + " " + (e.code || "") + " " + (e.message || ""))) || "");
           msg.style.color = "#ff9b9b";
-          msg.textContent = /requires-recent-login/.test(c) ? "برای امنیت، یک بار از حساب خارج شو و دوباره وارد شو، بعد رمز را عوض کن."
+          msg.textContent = /bio-unsupported/.test(c) ? "این گوشی یا مرورگر تأیید اثر انگشت را پشتیبانی نمی‌کند."
+            : /NotAllowed|AbortError|cancel/i.test(c) ? "تأیید اثر انگشت انجام نشد؛ رمز تغییر نکرد."
+            : /requires-recent-login/.test(c) ? "برای امنیت، یک بار از حساب خارج شو و دوباره وارد شو، بعد رمز را عوض کن."
             : /weak-password/.test(c) ? "رمز جدید ضعیف است."
             : /too-many/.test(c) ? "تلاش زیاد؛ کمی بعد دوباره امتحان کن."
             : /network/.test(c) ? "اینترنت را بررسی کن." : "تغییر انجام نشد.";
