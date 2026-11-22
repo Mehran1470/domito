@@ -333,8 +333,7 @@
 <div id="pwModal" class="logout-modal">
   <div class="logout-box">
     <div class="logout-message">🔑 تغییر رمز عبور</div>
-    <input type="password" id="pwOld" placeholder="رمز فعلی" autocomplete="current-password" style="margin-top:12px">
-    <input type="password" id="pwNew" placeholder="رمز جدید (حداقل ۶ حرف)" autocomplete="new-password" style="margin-top:10px">
+    <input type="password" id="pwNew" placeholder="رمز جدید (حداقل ۶ حرف)" autocomplete="new-password" style="margin-top:12px">
     <input type="password" id="pwNew2" placeholder="تکرار رمز جدید" autocomplete="new-password" style="margin-top:10px">
     <div id="pwMsg" style="min-height:22px;margin-top:10px;font-size:14px;line-height:1.8"></div>
     <div class="logout-actions">
@@ -485,26 +484,25 @@ waitForUser().then(async (user) => {
     {
       const m = document.getElementById("pwModal"), msg = document.getElementById("pwMsg");
       const f = id => document.getElementById(id);
-      const close = () => { m.classList.remove("show"); ["pwOld","pwNew","pwNew2"].forEach(i => f(i).value = ""); msg.textContent = ""; };
+      const close = () => { m.classList.remove("show"); ["pwNew","pwNew2"].forEach(i => f(i).value = ""); msg.textContent = ""; };
       f("pwBtn").addEventListener("click", () => m.classList.add("show"));
       f("pwCancel").addEventListener("click", close);
       m.addEventListener("click", e => { if (e.target === m) close(); });
       f("pwSave").addEventListener("click", async () => {
         msg.style.color = "#ff9b9b";
-        const o = f("pwOld").value, n = f("pwNew").value, n2 = f("pwNew2").value;
-        if (!o || !n) { msg.textContent = "رمز فعلی و جدید را بنویس."; return; }
+        const n = f("pwNew").value, n2 = f("pwNew2").value;
+        if (!n) { msg.textContent = "رمز جدید را بنویس."; return; }
         if (n.length < 6) { msg.textContent = "رمز جدید حداقل ۶ حرف باشد."; return; }
         if (n !== n2) { msg.textContent = "تکرار رمز جدید یکسان نیست."; return; }
-        if (n === o) { msg.textContent = "رمز جدید با رمز فعلی یکی است."; return; }
         f("pwSave").disabled = true; msg.style.color = "#cfd6ff"; msg.textContent = "در حال تغییر…";
         try {
-          await changePassword(o, n);
+          await changePassword(n);
           msg.style.color = "#7dffb0"; msg.textContent = "رمز عبور تغییر کرد ✓";
           setTimeout(close, 1400);
         } catch (e) {
           const c = String((e && (e.code || e.message)) || "");
           msg.style.color = "#ff9b9b";
-          msg.textContent = /wrong-password|invalid-credential|invalid-login/.test(c) ? "رمز فعلی درست نیست."
+          msg.textContent = /requires-recent-login/.test(c) ? "برای امنیت، یک بار از حساب خارج شو و دوباره وارد شو، بعد رمز را عوض کن."
             : /weak-password/.test(c) ? "رمز جدید ضعیف است."
             : /too-many/.test(c) ? "تلاش زیاد؛ کمی بعد دوباره امتحان کن."
             : /network/.test(c) ? "اینترنت را بررسی کن." : "تغییر انجام نشد.";
