@@ -7,7 +7,10 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
@@ -654,6 +657,21 @@ export async function loginUser(
 
   return cred.user;
 
+}
+
+
+// ============================================================
+// تغییر رمز عبور
+// ============================================================
+
+export async function changePassword(oldPassword, newPassword) {
+  const user = auth.currentUser;
+  if (!user || !user.email) throw new Error("not-logged-in");
+  if (!oldPassword) throw new Error("invalid-credentials");
+  if (String(newPassword || "").length < 6) throw new Error("weak-password");
+  const cred = EmailAuthProvider.credential(user.email, oldPassword);
+  await reauthenticateWithCredential(user, cred);
+  await updatePassword(user, newPassword);
 }
 
 

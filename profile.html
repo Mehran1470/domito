@@ -304,6 +304,15 @@
       </a>
     </div>
 
+    <!-- CHANGE PASSWORD -->
+    <button
+      id="pwBtn"
+      class="btn-full btn-ghost"
+      style="display:none;margin-bottom:10px;"
+    >
+      🔑 تغییر رمز عبور
+    </button>
+
     <!-- LOGOUT -->
     <button
       id="logoutBtn"
@@ -321,6 +330,20 @@
 </div>
 
 <!-- LOGOUT MODAL -->
+<div id="pwModal" class="logout-modal">
+  <div class="logout-box">
+    <div class="logout-message">🔑 تغییر رمز عبور</div>
+    <input type="password" id="pwOld" placeholder="رمز فعلی" autocomplete="current-password" style="margin-top:12px">
+    <input type="password" id="pwNew" placeholder="رمز جدید (حداقل ۶ حرف)" autocomplete="new-password" style="margin-top:10px">
+    <input type="password" id="pwNew2" placeholder="تکرار رمز جدید" autocomplete="new-password" style="margin-top:10px">
+    <div id="pwMsg" style="min-height:22px;margin-top:10px;font-size:14px;line-height:1.8"></div>
+    <div class="logout-actions">
+      <button id="pwSave" class="btn btn-gold" type="button">ذخیره</button>
+      <button id="pwCancel" class="btn btn-ghost" type="button">انصراف</button>
+    </div>
+  </div>
+</div>
+
 <div id="logoutModal" class="logout-modal">
 
   <div id="logoutBox" class="logout-box">
@@ -365,6 +388,7 @@ import {
   GAMES,
   waitForUser,
   logoutUser,
+  changePassword,
   getPublicProfile,
   sendFriendRequest,
   getFriendStatus,
@@ -457,6 +481,37 @@ waitForUser().then(async (user) => {
 
     document.getElementById("fullShopLinkCard").style.display = "block";
     document.getElementById("logoutBtn").style.display = "block";
+    document.getElementById("pwBtn").style.display = "block";
+    {
+      const m = document.getElementById("pwModal"), msg = document.getElementById("pwMsg");
+      const f = id => document.getElementById(id);
+      const close = () => { m.classList.remove("show"); ["pwOld","pwNew","pwNew2"].forEach(i => f(i).value = ""); msg.textContent = ""; };
+      f("pwBtn").addEventListener("click", () => m.classList.add("show"));
+      f("pwCancel").addEventListener("click", close);
+      m.addEventListener("click", e => { if (e.target === m) close(); });
+      f("pwSave").addEventListener("click", async () => {
+        msg.style.color = "#ff9b9b";
+        const o = f("pwOld").value, n = f("pwNew").value, n2 = f("pwNew2").value;
+        if (!o || !n) { msg.textContent = "رمز فعلی و جدید را بنویس."; return; }
+        if (n.length < 6) { msg.textContent = "رمز جدید حداقل ۶ حرف باشد."; return; }
+        if (n !== n2) { msg.textContent = "تکرار رمز جدید یکسان نیست."; return; }
+        if (n === o) { msg.textContent = "رمز جدید با رمز فعلی یکی است."; return; }
+        f("pwSave").disabled = true; msg.style.color = "#cfd6ff"; msg.textContent = "در حال تغییر…";
+        try {
+          await changePassword(o, n);
+          msg.style.color = "#7dffb0"; msg.textContent = "رمز عبور تغییر کرد ✓";
+          setTimeout(close, 1400);
+        } catch (e) {
+          const c = String((e && (e.code || e.message)) || "");
+          msg.style.color = "#ff9b9b";
+          msg.textContent = /wrong-password|invalid-credential|invalid-login/.test(c) ? "رمز فعلی درست نیست."
+            : /weak-password/.test(c) ? "رمز جدید ضعیف است."
+            : /too-many/.test(c) ? "تلاش زیاد؛ کمی بعد دوباره امتحان کن."
+            : /network/.test(c) ? "اینترنت را بررسی کن." : "تغییر انجام نشد.";
+        }
+        f("pwSave").disabled = false;
+      });
+    }
 
     privCard.style.display = "block";
 
