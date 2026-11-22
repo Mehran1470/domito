@@ -71,14 +71,23 @@ async function boot() {
   const PUSH_URL = "https://domito-push.mhranzary40.workers.dev";
   const VAPID_PUBLIC = "BG-W2XctxHcLB1gbm6saqpCHBmxBKrWltI9VQqQEwvgiqJy-cHs06wsw2_9GLKP4UrM8jJXrnNusxE9C6-2AfuI";
   const u8 = b64 => Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  let pushState = "در حال بررسی…";
   async function pushSubscribe() {
     try {
-      if (permState() !== "granted" || !("PushManager" in window)) return;
-      const reg = await navigator.serviceWorker.ready;
+      if (permState() !== "granted") { pushState = "اجازهٔ اعلان داده نشده"; return; }
+      if (!("PushManager" in window)) { pushState = "این مرورگر push را پشتیبانی نمی‌کند"; return; }
+      pushState = "در حال اتصال…";
+      const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((_, j) => setTimeout(() => j(new Error("service worker آماده نشد")), 8000))]);
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUBLIC) });
-      await fetch(PUSH_URL + "/subscribe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: me, sub: sub.toJSON(), muted: !!muted }) });
-    } catch (e) { console.warn("push subscribe:", e); }
+      const r = await fetch(PUSH_URL + "/subscribe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: me, sub: sub.toJSON(), muted: !!muted }) });
+      if (!r.ok) throw new Error("سرور اعلان پاسخ نداد (" + r.status + ")");
+      pushState = "اعلان پس‌زمینه فعال است ✓";
+    } catch (e) {
+      console.warn("push subscribe:", e);
+      pushState = "اتصال اعلان پس‌زمینه ناموفق: " + (e && e.message ? e.message : e);
+    }
+    const el = document.getElementById("dnPushState"); if (el) el.textContent = pushState;
   }
   pushSubscribe();
 
@@ -182,7 +191,7 @@ async function boot() {
     let html = `<section class="dnCard">
       <div class="dnH"><span>⚙️ تنظیم اعلان</span></div>
       <div class="dnBody">${st}
-        <div class="dnRow"><button class="dnBtn ${muted ? "" : "alt"}" id="dnMute" type="button">${muted ? "🔔 روشن کردن اعلان" : "🔕 خاموش کردن اعلان"}</button>${perm === "granted" ? `<button class="dnBtn alt" id="dnTest" type="button">🧪 اعلان آزمایشی</button>` : ""}</div><div id="dnTestMsg" class="dnHint"></div>
+        <div class="dnRow"><button class="dnBtn ${muted ? "" : "alt"}" id="dnMute" type="button">${muted ? "🔔 روشن کردن اعلان" : "🔕 خاموش کردن اعلان"}</button>${perm === "granted" ? `<button class="dnBtn alt" id="dnTest" type="button">🧪 اعلان آزمایشی</button>` : ""}</div><div class="dnHint">وضعیت اعلان وقتی سایت بسته است: <b id="dnPushState">${esc(pushState)}</b></div><div id="dnTestMsg" class="dnHint"></div>
         <div class="dnHint">با خاموش‌کردن، پیام‌ها فقط همین‌جا جمع می‌شوند و نوتیفیکیشن و پنجرهٔ بالا نمی‌آید.</div>
       </div></section>
       <section class="dnCard"><div class="dnH"><span>📨 پیام‌ها</span></div><div id="dnList">${listHtml(items)}</div></section>`;
@@ -205,6 +214,7 @@ async function boot() {
     if (allow) allow.onclick = askPermission;
     const tb = panel.querySelector("#dnTest");
     if (tb) tb.onclick = async () => {
+      await pushSubscribe();
       const ok = await systemNotify(`${me}، اعلان دومیتو کار می‌کند ✓`, "اگر این را در نوار اعلان گوشی می‌بینی همه‌چیز درست است.", "test", true);
       panel.querySelector("#dnTestMsg").textContent = ok ? "فرستاده شد؛ نوار اعلان گوشی را نگاه کن. اگر نیامد، در تنظیمات گوشی اعلان مرورگر را روشن کن." : "ارسال نشد؛ مرورگر اجازهٔ نمایش نداد.";
     };
