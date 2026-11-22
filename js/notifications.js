@@ -1,6 +1,7 @@
 // ============================================================
 // اعلان‌ها — زنگولهٔ بالا سمت چپ، صندوق پیام، اجازهٔ نوتیفیکیشن و ارسال پیام توسط ادمین
 // ============================================================
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   waitForUser, getSavedName, db, ref, onValue, set, push, remove,
   serverTimestamp, isAdminUser, profileRef, GAMES
@@ -66,13 +67,20 @@ async function boot() {
     const pend = (await kvGet("pending")) || [];
     if (pend.length) { await kvSet("pending", []); pend.forEach(p => { if (!sources.local.some(x => x.id === p.id)) sources.local.unshift(p); }); sources.local = sources.local.slice(0, 30); lsSet(K("local"), sources.local); }
   } catch (e) {}
-  // یادآوری روزانهٔ پس‌زمینه (روی اندروید برای سایتی که به صفحهٔ اصلی اضافه شده)
-  try {
-    if (swReg && "periodicSync" in swReg) {
-      const st = await navigator.permissions.query({ name: "periodic-background-sync" });
-      if (st.state === "granted") await swReg.periodicSync.register("domito-daily", { minInterval: 12 * 3600 * 1000 });
-    }
-  } catch (e) {}
+  // ---------- Push واقعی (حتی وقتی سایت بسته است) ----------
+  const PUSH_URL = "https://domito-push.mhranzary40.workers.dev";
+  const VAPID_PUBLIC = "BG-W2XctxHcLB1gbm6saqpCHBmxBKrWltI9VQqQEwvgiqJy-cHs06wsw2_9GLKP4UrM8jJXrnNusxE9C6-2AfuI";
+  const u8 = b64 => Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  async function pushSubscribe() {
+    try {
+      if (permState() !== "granted" || !("PushManager" in window)) return;
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(VAPID_PUBLIC) });
+      await fetch(PUSH_URL + "/subscribe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: me, sub: sub.toJSON(), muted: !!muted }) });
+    } catch (e) { console.warn("push subscribe:", e); }
+  }
+  pushSubscribe();
 
   function addLocal(id, icon, title, body) {
     if (sources.local.some(x => x.id === id)) return;
@@ -201,7 +209,7 @@ async function boot() {
       panel.querySelector("#dnTestMsg").textContent = ok ? "فرستاده شد؛ نوار اعلان گوشی را نگاه کن. اگر نیامد، در تنظیمات گوشی اعلان مرورگر را روشن کن." : "ارسال نشد؛ مرورگر اجازهٔ نمایش نداد.";
     };
     panel.querySelector("#dnMute").onclick = async () => {
-      muted = !muted; lsSet(K("muted"), muted); await kvSet("muted", muted); render();
+      muted = !muted; lsSet(K("muted"), muted); await kvSet("muted", muted); pushSubscribe(); render();
     };
     bindDel();
     if (admin) wireAdmin();
@@ -242,7 +250,14 @@ async function boot() {
       if (!target) { msg.textContent = "نام کاربری گیرنده را بنویس."; return; }
       if (target === "all" && !confirm("این پیام برای همهٔ کاربران ارسال می‌شود. مطمئنی؟")) return;
       try {
-        await set(push(ref(db, "announcements")), { to: target, title: title || "پیام ادمین", body, by: me, at: serverTimestamp() });
+        const nref = push(ref(db, "announcements"));
+        await set(nref, { to: target, title: title || "پیام ادمین", body, by: me, at: serverTimestamp() });
+        // push واقعی برای کسانی که سایت بسته است
+        try {
+          const u = getAuth().currentUser;
+          const idToken = u ? await u.getIdToken() : "";
+          fetch(PUSH_URL + "/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken, to: target, title: title || "پیام ادمین", body, key: nref.key }) }).catch(() => {});
+        } catch (e) { console.warn("push send:", e); }
         msg.style.color = "#7dffb0"; msg.textContent = target === "all" ? "برای همه ارسال شد ✓" : `برای «${target}» ارسال شد ✓`;
         panel.querySelector("#dnTitle").value = ""; panel.querySelector("#dnBody").value = "";
       } catch (e) {
@@ -268,6 +283,7 @@ async function boot() {
   async function askPermission() {
     try { await Notification.requestPermission(); } catch (e) {}
     if (panelOpen) render();
+    if (permState() === "granted") pushSubscribe();
     if (permState() === "granted") systemNotify("اعلان‌ها فعال شد ✓", "از این به بعد پیام‌های دومیتو را اینجا می‌بینی.", "welcome", true);
   }
   // درخواست اجازه به‌صورت نرم: یک نوار کوچک بعد از ورود (مرورگرها اجازه را فقط با کلیک کاربر می‌دهند)
