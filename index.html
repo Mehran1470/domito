@@ -9,7 +9,6 @@
 <title>دومیتو</title>
 
 <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/home.css">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" href="./logo.png">
 
@@ -270,38 +269,33 @@
       </div>
     </div>
 
-    <!-- WIDGET STACK: رای‌گیری زنده (جلو) + دوستان آنلاین (پشت) — با کشیدن انگشت جابه‌جا می‌شوند -->
-    <div class="wstack" id="widgetStack" tabindex="0" role="group" aria-roledescription="کارت‌های قابل جابه‌جایی" aria-label="رای‌گیری زنده و دوستان آنلاین">
+    <!-- ONLINE FRIENDS -->
+    <div class="card">
+      <h2>👥 دوستان آنلاین</h2>
 
-      <section class="wcard w-vote" data-pos="0" id="voteWidget" aria-label="رای‌گیری زنده">
-        <div class="w-head">
-          <span class="w-title"><i class="w-pulse"></i>رای‌گیری زنده</span>
-          <span class="w-chip" id="voteRoomCode" style="display:none;"></span>
-        </div>
-        <div class="w-body" id="voteBody"></div>
-        <div class="w-actions" id="voteActions"></div>
-      </section>
+      <div id="requestList"></div>
+      <div id="onlineFriendsList"></div>
 
-      <section class="wcard w-friends" data-pos="1" id="friendsWidget" aria-label="دوستان آنلاین">
-        <div class="w-head">
-          <span class="w-title">👥 دوستان آنلاین</span>
-          <span class="w-chip" id="friendsCount">۰</span>
-        </div>
-        <div class="w-scroll">
-          <div id="requestList"></div>
-          <div id="onlineFriendsList"></div>
-          <p class="muted" id="noFriendsMsg" style="display:none;">هنوز دوستی اضافه نکردی</p>
-        </div>
-        <div class="w-actions">
-          <a href="friends.html" class="w-btn ghost">مدیریت دوستان ←</a>
-        </div>
-      </section>
+      <p
+        class="muted"
+        id="noFriendsMsg"
+        style="display:none;"
+      >
+        هنوز دوستی اضافه نکردی
+      </p>
 
-      <div class="wdots" id="wDots">
-        <button type="button" class="wdot on" aria-label="رای‌گیری زنده"></button>
-        <button type="button" class="wdot" aria-label="دوستان آنلاین"></button>
-      </div>
-      <p class="w-hint" id="wHint">بکش تا «دوستان آنلاین» رو ببینی ↔</p>
+      <a
+        href="friends.html"
+        class="btn-full btn-ghost"
+        style="
+          display:block;
+          text-decoration:none;
+          text-align:center;
+          margin-top:10px;
+        "
+      >
+        مدیریت دوستان ←
+      </a>
     </div>
 
     <!-- INVITES -->
@@ -456,10 +450,7 @@ import {
   listenFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,
-  listenFriends,
-  getSavedRoom,
-  roomRef,
-  onValue
+  listenFriends
 } from "./js/app.js";
 
 const authCard = document.getElementById("authCard");
@@ -581,205 +572,6 @@ function renderGameCards() {
   });
 }
 
-/* WIDGET STACK (مثل ویجت آیفون): کشیدن افقی، نقطه‌ها، کلیدهای جهت‌دار */
-let widgetStackReady = false;
-
-function initWidgetStack() {
-  if (widgetStackReady) return;
-  widgetStackReady = true;
-
-  const stack = document.getElementById("widgetStack");
-  const cards = [...stack.querySelectorAll(".wcard")];
-  const dots = [...stack.querySelectorAll(".wdot")];
-  const hint = document.getElementById("wHint");
-  const names = ["رای‌گیری زنده", "دوستان آنلاین"];
-  let order = cards.map((_, i) => i);
-
-  function apply() {
-    cards.forEach((c, i) => {
-      c.dataset.pos = String(order.indexOf(i));
-      c.style.transform = "";
-      c.style.opacity = "";
-      c.classList.remove("dragging");
-      c.setAttribute("aria-hidden", order[0] === i ? "false" : "true");
-    });
-    dots.forEach((d, i) => d.classList.toggle("on", order[0] === i));
-    hint.textContent = "بکش تا «" + names[order[1]] + "» رو ببینی ↔";
-  }
-
-  function flingTo(dir) {
-    const front = cards[order[0]];
-    front.style.transition =
-      "transform .32s cubic-bezier(.4,.1,.6,1), opacity .28s ease";
-    front.style.transform =
-      "translateX(" + dir * 460 + "px) rotate(" + dir * 18 + "deg)";
-    front.style.opacity = "0";
-    setTimeout(() => {
-      order.push(order.shift());
-      front.style.transition = "none";
-      apply();
-      void front.offsetWidth;
-      front.style.transition = "";
-    }, 300);
-  }
-
-  function goTo(index) {
-    if (order[0] === index) return;
-    flingTo(1);
-  }
-
-  let sx = 0, sy = 0, dx = 0, t0 = 0, active = false, moved = false;
-
-  stack.addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (e.target.closest(".wdot")) return;
-    active = true; moved = false;
-    sx = e.clientX; sy = e.clientY; dx = 0; t0 = performance.now();
-    cards[order[0]].classList.add("dragging");
-    cards[order[1]].classList.add("dragging");
-  });
-
-  window.addEventListener("pointermove", (e) => {
-    if (!active) return;
-    dx = e.clientX - sx;
-    const dy = e.clientY - sy;
-    if (!moved && Math.abs(dy) > Math.abs(dx) * 1.3) return;
-    if (Math.abs(dx) > 8) moved = true;
-    if (!moved) return;
-    const p = Math.min(1, Math.abs(dx) / 150);
-    const front = cards[order[0]];
-    const back = cards[order[1]];
-    front.style.transform = "translateX(" + dx + "px) rotate(" + dx / 18 + "deg)";
-    front.style.opacity = String(1 - p * 0.55);
-    back.style.transform =
-      "translateY(" + 24 * (1 - p) + "px) scale(" + (0.92 + 0.08 * p) + ")";
-    back.style.opacity = String(0.78 + 0.22 * p);
-  });
-
-  function end() {
-    if (!active) return;
-    active = false;
-    const front = cards[order[0]];
-    const back = cards[order[1]];
-    front.classList.remove("dragging");
-    back.classList.remove("dragging");
-    const v = Math.abs(dx) / Math.max(1, performance.now() - t0);
-    if (moved && (Math.abs(dx) > 70 || v > 0.5)) {
-      flingTo(dx < 0 ? -1 : 1);
-    } else {
-      front.style.transform = "";
-      front.style.opacity = "";
-      back.style.transform = "";
-      back.style.opacity = "";
-    }
-  }
-
-  window.addEventListener("pointerup", end);
-  window.addEventListener("pointercancel", end);
-
-  stack.addEventListener("click", (e) => {
-    if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
-  }, true);
-
-  dots.forEach((d, i) => d.addEventListener("click", () => goTo(i)));
-
-  stack.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") flingTo(-1);
-    else if (e.key === "ArrowRight") flingTo(1);
-  });
-
-  apply();
-}
-
-/* رای‌گیری زنده روی صفحه اصلی: اتاق فعلی کاربر */
-let voteUnsubs = [];
-
-function startVoteWidget() {
-  voteUnsubs.forEach((f) => { try { f(); } catch (e) {} });
-  voteUnsubs = [];
-
-  const body = document.getElementById("voteBody");
-  const actions = document.getElementById("voteActions");
-  const chip = document.getElementById("voteRoomCode");
-  const code = getSavedRoom();
-
-  function showEmpty(msg) {
-    chip.style.display = "none";
-    body.innerHTML = '<p class="w-note"></p>';
-    body.firstChild.textContent = msg;
-    actions.innerHTML = "";
-
-    const a = document.createElement("button");
-    a.type = "button"; a.className = "w-btn"; a.textContent = "➕ ساخت اتاق";
-    a.addEventListener("click", () => document.getElementById("createRoomBtn").click());
-
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "w-btn ghost"; b.textContent = "🔑 ورود با کد";
-    b.addEventListener("click", () => document.getElementById("openJoinRoomBtn").click());
-
-    actions.append(a, b);
-  }
-
-  if (!code) {
-    showEmpty("الان توی هیچ اتاقی نیستی. اتاق بساز یا با کد وارد شو تا رای‌گیری زنده شروع بشه.");
-    return;
-  }
-
-  chip.style.display = "";
-  chip.textContent = code;
-
-  let players = {};
-  let votes = {};
-  let gone = false;
-
-  function draw() {
-    if (gone) return;
-    const uids = Object.keys(players);
-    const counts = {};
-    GAMES.forEach((g) => { counts[g.id] = 0; });
-    let voted = 0;
-
-    Object.entries(votes).forEach(([uid, v]) => {
-      if (players[uid] && v && counts[v.gameId] !== undefined) {
-        counts[v.gameId]++;
-        voted++;
-      }
-    });
-
-    const top = GAMES
-      .map((g) => ({ g, n: counts[g.id] }))
-      .filter((x) => x.n > 0)
-      .sort((a, b) => b.n - a.n)
-      .slice(0, 3);
-
-    const fa = (n) => Number(n).toLocaleString("fa-IR");
-    let html = '<div class="w-sub">' + fa(uids.length) + " بازیکن در اتاق · " + fa(voted) + " رای ثبت شده</div>";
-
-    if (top.length === 0) {
-      html += '<p class="w-note">هنوز کسی رای نداده. وارد لابی شو و بازی بعدی رو انتخاب کن.</p>';
-    } else {
-      const max = top[0].n;
-      top.forEach((x) => {
-        html +=
-          '<div class="w-vrow"><span class="ic">' + x.g.icon + '</span>' +
-          '<span class="nm">' + escapeHtml(x.g.name) + '</span>' +
-          '<span class="bar"><i style="width:' + Math.round((x.n / max) * 100) + '%"></i></span>' +
-          '<span class="ct">' + fa(x.n) + '</span></div>';
-      });
-    }
-
-    body.innerHTML = html;
-    actions.innerHTML = '<a href="lobby.html" class="w-btn">ورود به لابی و رای دادن ←</a>';
-  }
-
-  const fail = () => { gone = true; showEmpty("اتاق قبلی پیدا نشد. یه اتاق جدید بساز یا با کد وارد شو."); };
-
-  voteUnsubs.push(onValue(roomRef(code, "meta"), (s) => { if (!s.exists()) fail(); }, fail));
-  voteUnsubs.push(onValue(roomRef(code, "players"), (s) => { players = s.val() || {}; draw(); }, fail));
-  voteUnsubs.push(onValue(roomRef(code, "votes"), (s) => { votes = s.val() || {}; draw(); }, fail));
-  draw();
-}
-
 /* HOME */
 function showHome() {
   authCard.style.display = "none";
@@ -791,8 +583,6 @@ function showHome() {
 
   renderGameCards();
   renderLeaderboard();
-  initWidgetStack();
-  startVoteWidget();
 
   /* Wallet */
   listenProfile(myName, (p) => {
@@ -853,8 +643,6 @@ function showHome() {
     const noMsg = document.getElementById("noFriendsMsg");
 
     const online = friends.filter((f) => f.online === true);
-    document.getElementById("friendsCount").textContent =
-      online.length.toLocaleString("fa-IR");
 
     if (friends.length === 0) {
       noMsg.style.display = "block";
