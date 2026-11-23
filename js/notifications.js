@@ -89,7 +89,6 @@ async function boot() {
     }
     const el = document.getElementById("dnPushState"); if (el) el.textContent = pushState;
   }
-  pushSubscribe();
 
   function addLocal(id, icon, title, body) {
     if (sources.local.some(x => x.id === id)) return;
@@ -403,6 +402,7 @@ async function boot() {
   setInterval(checkVersion, 5 * 60 * 1000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) checkVersion(); });
 
+  pushSubscribe();
   updateBadge();
   refresh(false);
   if (pageMode) openPanel();
