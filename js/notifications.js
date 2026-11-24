@@ -147,6 +147,7 @@ async function boot() {
   .dnB{font-size:15px;opacity:.88;margin-top:4px;line-height:1.9;white-space:pre-wrap;word-break:break-word}
   .dnM{font-size:12.5px;opacity:.55;margin-top:8px;display:flex;gap:14px}
   .dnDel{background:none;border:0;color:#ff8f8f;font-size:13px;cursor:pointer;padding:0}
+  .dnDelAll{background:rgba(255,77,109,.16);border:1px solid rgba(255,77,109,.45);border-radius:99px;padding:5px 14px;font:800 12.5px Vazirmatn,Tahoma,sans-serif}
   .dnCnt{font-size:12.5px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(79,124,255,.2);color:#cfe0ff}
   .dnChips{display:flex;gap:8px;padding:14px 16px 2px;overflow-x:auto;scrollbar-width:none}
   .dnChip{flex:none;font:700 13.5px Vazirmatn,Tahoma,sans-serif;color:#EAF0FF;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:99px;padding:8px 14px;cursor:pointer}
@@ -234,6 +235,7 @@ async function boot() {
   }
   function bindDel() {
     panel.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+      if (b.dataset.all && !confirm("این پیام برای همهٔ کاربران حذف می‌شود و دیگر دیده نمی‌شود. مطمئنی؟")) return;
       try { await remove(ref(db, "announcements/" + b.dataset.del)); } catch (e) { alert("حذف نشد."); }
     });
   }
@@ -263,7 +265,7 @@ async function boot() {
         <div style="flex:1;min-width:0">
           <div class="dnT">${esc(i.title)}</div>
           ${i.body ? `<div class="dnB">${esc(i.body)}</div>` : ""}
-          <div class="dnM"><span>${i.at ? ago(i.at) : ""}</span>${admin && i.key ? `<button class="dnDel" data-del="${esc(i.key)}" type="button">حذف</button>` : ""}</div>
+          <div class="dnM"><span>${i.at ? ago(i.at) : ""}</span>${admin && i.key ? (i.to === "all" ? `<button class="dnDel dnDelAll" data-del="${esc(i.key)}" data-all="1" type="button">🗑 حذف برای همه</button>` : `<button class="dnDel" data-del="${esc(i.key)}" type="button">حذف</button>`) : ""}</div>
         </div>
       </div>`).join("");
   }
@@ -369,7 +371,7 @@ async function boot() {
     sources.announce = Object.entries(v).filter(([k, a]) => a && (a.to === "all" || a.to === me || a.by === me))
       .map(([k, a]) => ({
         id: "a_" + k, key: k, icon: a.to === "all" ? "📣" : "✉️", title: a.title || "پیام",
-        body: a.body || "", at: Number(a.at) || 0
+        body: a.body || "", at: Number(a.at) || 0, to: a.to, by: a.by
       })).sort((x, y) => y.at - x.at).slice(0, 60);
     refresh(!first.announce); first.announce = false;
   }, e => console.warn("announcements:", e && e.message));
