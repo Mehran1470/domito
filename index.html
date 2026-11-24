@@ -246,27 +246,31 @@
 
     <!-- HERO -->
     <div class="hero">
+      <div class="hero-art" id="heroArt"></div>
+      <div class="hero-shade"></div>
 
-      <div class="hero-emojis">🎮🕹️👾</div>
+      <div class="hero-content">
+        <span class="hero-tag">🔥 سالن مینی‌گیم‌های آنلاین</span>
 
-      <h1>بازی کن. رقابت کن. لذت ببر.</h1>
+        <h1>بازی کن. رقابت کن. لذت ببر.</h1>
 
-      <p>
-        خوش اومدی
-        <span
-          id="helloName"
-          style="color:var(--gold);font-weight:700;"
-        ></span>
-      </p>
+        <p>
+          خوش اومدی
+          <span
+            id="helloName"
+            style="color:var(--gold);font-weight:700;"
+          ></span>
+        </p>
 
-      <div class="hero-btns">
-        <button id="createRoomBtn">
-          ➕ ساخت اتاق جدید
-        </button>
+        <div class="hero-btns">
+          <button id="createRoomBtn">
+            ➕ ساخت اتاق جدید
+          </button>
 
-        <button id="openJoinRoomBtn" class="btn-ghost">
-          🔑 ورود با کد اتاق
-        </button>
+          <button id="openJoinRoomBtn" class="btn-ghost">
+            🔑 ورود با کد اتاق
+          </button>
+        </div>
       </div>
     </div>
 
@@ -311,7 +315,7 @@
     </div>
 
     <!-- SOLO GAMES -->
-    <div class="section-title">
+    <div class="section-title" id="gamesSection">
       <h2>🎮 بازی تک‌نفره — همین الان بازی کن</h2>
     </div>
 
@@ -461,6 +465,7 @@ import {
   roomRef,
   onValue
 } from "./js/app.js";
+import { sceneSVG, hasScene } from "./js/scenes.js";
 
 const authCard = document.getElementById("authCard");
 const homeContent = document.getElementById("homeContent");
@@ -552,18 +557,13 @@ function renderGameCards() {
     const card = document.createElement("div");
     card.className = "game-card";
 
+    const art = hasScene(g.id)
+      ? sceneSVG(g.id, "60 20 240 150", g.name)
+      : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:40px">${g.icon}</div>`;
+
     card.innerHTML = `
-      <div
-        class="game-thumb"
-        style="
-          background:linear-gradient(
-            160deg,
-            rgba(79,124,255,.3),
-            rgba(155,92,255,.2)
-          );
-        "
-      >
-        ${g.icon}
+      <div class="game-thumb">
+        ${art}
         <span class="solo-badge">تک‌نفره</span>
       </div>
 
@@ -789,6 +789,7 @@ function showHome() {
 
   document.getElementById("helloName").textContent = myName;
 
+  document.getElementById("heroArt").innerHTML = sceneSVG("race", "0 0 360 240", "");
   renderGameCards();
   renderLeaderboard();
   initWidgetStack();
@@ -1085,5 +1086,6 @@ waitForUser()
 </script>
 
 <script type="module" src="./js/notifications.js"></script>
+<script src="./js/nav.js" defer></script>
 </body>
 </html>

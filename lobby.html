@@ -119,6 +119,8 @@
 
   <script type="module">
 
+    import { sceneSVG, hasScene } from "./js/scenes.js";
+
     import {
 
       GAMES,
@@ -458,7 +460,9 @@
 
           el.innerHTML = `
 
-            <div>
+            ${hasScene(game.id) ? `<div class="go-art">${sceneSVG(game.id, "90 40 180 180", game.name)}</div>` : ""}
+
+            <div class="go-text">
 
               <div class="name">
                 ${game.name}
