@@ -19,7 +19,7 @@
       <a class="pg-back" href="index.html" aria-label="خانه">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg>
       </a>
-      <h1>لابی دومیتو</h1>
+      <h1 id="pgTitle">لابی دومیتو</h1>
       <span class="live-chip"><i></i>زنده</span>
     </header>
 
@@ -35,7 +35,7 @@
           <circle class="bg" cx="60" cy="60" r="52"/>
           <circle class="fg" id="ringFg" cx="60" cy="60" r="52"/>
         </svg>
-        <div class="ring-in"><b id="ringNum">0</b><span>رای ثبت‌شده</span></div>
+        <div class="ring-in"><b id="ringNum">0</b><span id="ringLbl">رای ثبت‌شده</span></div>
       </div>
       <h2>بازی بعدی را انتخاب کن</h2>
       <p class="status-line" id="voteStatus">در انتظار رای‌ها...</p>
@@ -89,7 +89,16 @@
       currentUid,
 
       inviteFriendToRoom,
-      listenFriends
+      listenFriends,
+
+      isGlobalRoom,
+      globalSlotFromCode,
+      enterGlobalRoom,
+      leaveGlobalRoomState,
+      whenClockReady,
+      serverNow,
+      GLOBAL_SLOT_MS,
+      GLOBAL_MIN_PLAYERS
 
     } from "./js/app.js";
 
@@ -129,10 +138,19 @@
     }
 
 
-    document
-      .getElementById("roomCodeText")
-      .textContent =
-        `کد: ${code}`;
+    const isGlobal = isGlobalRoom(code);
+
+    if (isGlobal) {
+      document.getElementById("pgTitle").textContent = "رای‌گیری سرتاسری";
+      document.getElementById("ringLbl").textContent = "ثانیه تا شروع";
+      document.getElementById("roomCodeText").textContent = "🌍 همه‌ی بازیکنان";
+      document.getElementById("inviteRoomBtn").style.display = "none";
+    } else {
+      document
+        .getElementById("roomCodeText")
+        .textContent =
+          `کد: ${code}`;
+    }
 
 
     const R =
@@ -438,9 +456,16 @@
       voteStatus.textContent =
         `${validVotes} از ${totalPlayers} نفر رای دادند · وقتی همه رای بدهند بازی شروع می‌شود`;
 
-      document.getElementById("ringNum").textContent = validVotes;
-      document.getElementById("ringFg").style.strokeDashoffset =
-        String(326.7 * (1 - (totalPlayers ? validVotes / totalPlayers : 0)));
+      if (!isGlobal) {
+        document.getElementById("ringNum").textContent = validVotes;
+        document.getElementById("ringFg").style.strokeDashoffset =
+          String(326.7 * (1 - (totalPlayers ? validVotes / totalPlayers : 0)));
+      } else if (totalPlayers < GLOBAL_MIN_PLAYERS) {
+        voteStatus.textContent = "منتظر بازیکن دیگر... (حداقل ۲ نفر)";
+      } else {
+        voteStatus.textContent =
+          `${totalPlayers} بازیکن · ${validVotes} رای · با پایان زمان بازی شروع می‌شود`;
+      }
 
     }
 
@@ -449,91 +474,111 @@
     // شروع بازی
     // ============================================================
 
-    async function maybeStartGame() {
+    async function launchGame() {
 
-      const validVotes =
-        Object.keys(votes)
-          .filter(
-            (uid) =>
-              players[uid]
-          )
-          .length;
+      const counts = tally();
 
+      let winner = GAMES[0].id;
+      let best = -1;
 
-      const totalPlayers =
-        Object.keys(players)
-          .length;
-
-
-      if (
-        started ||
-        totalPlayers === 0 ||
-        validVotes < totalPlayers
-      ) {
-
-        return;
-
-      }
-
-
-      const counts =
-        tally();
-
-
-      let winner =
-        GAMES[0].id;
-
-
-      let best =
-        -1;
-
-
-      GAMES.forEach(
-        (game) => {
-
-          if (
-            counts[game.id] >
-            best
-          ) {
-
-            best =
-              counts[game.id];
-
-            winner =
-              game.id;
-
-          }
-
+      GAMES.forEach((game) => {
+        if (counts[game.id] > best) {
+          best = counts[game.id];
+          winner = game.id;
         }
-      );
+      });
 
+      // اگر کسی رای نداده بود، بازی را بر اساس دور انتخاب می‌کنیم
+      if (best <= 0 && isGlobal) {
+        winner = GAMES[globalSlotFromCode(code).slot % GAMES.length].id;
+      }
 
       await runTransaction(
         R("currentGame"),
         (current) => {
-
-          if (
-            current &&
-            current.gameId
-          ) {
-
-            return current;
-
-          }
-
-
-          return {
-
-            gameId:
-              winner,
-
-            roundId:
-              Date.now()
-
-          };
-
+          if (current && current.gameId) return current;
+          return { gameId: winner, roundId: Date.now() };
         }
       );
+
+    }
+
+
+    async function maybeStartGame() {
+
+      const validVotes =
+        Object.keys(votes).filter((uid) => players[uid]).length;
+
+      const totalPlayers =
+        Object.keys(players).length;
+
+      if (
+        started ||
+        totalPlayers === 0 ||
+        validVotes < totalPlayers ||
+        (isGlobal && totalPlayers < GLOBAL_MIN_PLAYERS)
+      ) {
+        return;
+      }
+
+      await launchGame();
+
+    }
+
+
+    // ============================================================
+    // رای‌گیری سرتاسری: شمارش معکوس هم‌زمان با ساعت سرور
+    // ============================================================
+
+    async function moveToNextGlobalRound() {
+
+      try { await leaveLobby(); } catch (e) { console.warn(e); }
+
+      await enterGlobalRoom();
+
+      location.reload();
+
+    }
+
+
+    function startGlobalTimer() {
+
+      const slot = globalSlotFromCode(code);
+
+      const num = document.getElementById("ringNum");
+      const fg = document.getElementById("ringFg");
+
+      let ended = false;
+
+      setInterval(() => {
+
+        if (started || ended) return;
+
+        const left = slot.endsAt - serverNow();
+
+        num.textContent = Math.max(0, Math.ceil(left / 1000));
+        fg.style.strokeDashoffset =
+          String(326.7 * Math.min(1, Math.max(0, 1 - left / GLOBAL_SLOT_MS)));
+
+        if (left > 0) return;
+
+        ended = true;
+
+        if (Object.keys(players).length >= GLOBAL_MIN_PLAYERS) {
+
+          launchGame().catch((e) => console.error(e));
+
+          // اگر تا چند ثانیه بازی شروع نشد، دور بعد
+          setTimeout(() => { if (!started) moveToNextGlobalRound(); }, 6000);
+
+        } else {
+
+          voteStatus.textContent = "بازیکن کافی نبود؛ می‌رویم دور بعد...";
+          setTimeout(moveToNextGlobalRound, 1200);
+
+        }
+
+      }, 250);
 
     }
 
@@ -787,6 +832,24 @@
         currentUid();
 
 
+      if (isGlobal) {
+
+        await whenClockReady();
+
+        // دور این اتاق تمام شده (مثلاً بعد از برگشت از بازی): برو دور فعلی
+        if (serverNow() >= globalSlotFromCode(code).endsAt - 3000) {
+
+          await enterGlobalRoom();
+
+          location.reload();
+
+          return;
+
+        }
+
+      }
+
+
       // ورود بازیکن به لابی
       await joinLobby(
         myName
@@ -798,6 +861,9 @@
         myName,
         code
       );
+
+
+      if (isGlobal) startGlobalTimer();
 
 
       // نمایش اولیه
@@ -910,7 +976,11 @@
 
           await leaveLobby();
 
-          clearRoom();
+          if (isGlobal) {
+            leaveGlobalRoomState();
+          } else {
+            clearRoom();
+          }
 
           window.location.href =
             "index.html";

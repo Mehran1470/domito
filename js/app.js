@@ -1053,6 +1053,104 @@ export async function createRoom() {
 
 
 // ============================================================
+// رای‌گیری سرتاسری
+// هر ۶۰ ثانیه یک «دور» است و هر دور یک اتاق معمولی با کد GL… دارد.
+// همه با ساعت سرور هم‌زمان می‌شوند؛ آخر دور بازی برنده برای همه اجرا می‌شود.
+// ============================================================
+
+export const GLOBAL_SLOT_MS = 60000;
+export const GLOBAL_MIN_PLAYERS = 2;
+
+let _clockOffset = 0;
+let _clockReady = false;
+let _clockWaiters = [];
+
+onValue(ref(db, ".info/serverTimeOffset"), (snap) => {
+  _clockOffset = Number(snap.val()) || 0;
+  _clockReady = true;
+  _clockWaiters.forEach((f) => f());
+  _clockWaiters = [];
+});
+
+export function whenClockReady() {
+  if (_clockReady) return Promise.resolve();
+  return new Promise((resolve) => {
+    _clockWaiters.push(resolve);
+    setTimeout(resolve, 4000);
+  });
+}
+
+export function serverNow() {
+  return Date.now() + _clockOffset;
+}
+
+export function isGlobalRoom(code) {
+  return /^GL[0-9A-Z]{5,}$/.test(String(code || "").trim().toUpperCase());
+}
+
+function slotInfo(slot) {
+  return {
+    slot,
+    code: "GL" + slot.toString(36).toUpperCase(),
+    startsAt: slot * GLOBAL_SLOT_MS,
+    endsAt: (slot + 1) * GLOBAL_SLOT_MS
+  };
+}
+
+export function globalSlotInfo(now = serverNow()) {
+  return slotInfo(Math.floor(now / GLOBAL_SLOT_MS));
+}
+
+export function globalSlotFromCode(code) {
+  return slotInfo(parseInt(String(code).trim().slice(2), 36));
+}
+
+export async function ensureGlobalRoom(code) {
+  const snap = await get(roomRef(code, "meta"));
+  if (snap.exists()) return;
+
+  try {
+    await set(roomRef(code, "meta"), {
+      createdAt: serverTimestamp(),
+      ownerUid: currentUid(),
+      ownerName: getSavedName()
+    });
+  } catch (error) {
+    // شاید همزمان کس دیگری ساخته باشد
+    const again = await get(roomRef(code, "meta"));
+    if (!again.exists()) throw error;
+  }
+}
+
+// وارد دور فعلی (یا دور بعد، اگر کمتر از ۶ ثانیه مانده) می‌شود و کدش را ذخیره می‌کند.
+export async function enterGlobalRoom() {
+  await whenClockReady();
+
+  let info = globalSlotInfo();
+  if (info.endsAt - serverNow() < 6000) {
+    info = globalSlotInfo(info.endsAt + 1);
+  }
+
+  const current = getSavedRoom();
+  if (current && !isGlobalRoom(current)) {
+    localStorage.setItem("domito_room_private", current);
+  }
+
+  await ensureGlobalRoom(info.code);
+  saveRoom(info.code);
+  return info.code;
+}
+
+// بعد از خروج از رای‌گیری سرتاسری، اتاق شخصی قبلی (اگر بود) برمی‌گردد.
+export function leaveGlobalRoomState() {
+  const priv = localStorage.getItem("domito_room_private");
+  localStorage.removeItem("domito_room_private");
+  if (priv) saveRoom(priv);
+  else clearRoom();
+}
+
+
+// ============================================================
 // اطلاعات اتاق
 // ============================================================
 
