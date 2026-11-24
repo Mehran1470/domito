@@ -1,7 +1,7 @@
 /* ویجت‌های صفحه اصلی: رای‌گیری زنده + دوستان آنلاین (مثل Widget Stack آیفون) */
-.wstack{position:relative;height:268px;margin:0 0 46px;touch-action:pan-y;-webkit-user-select:none;user-select:none;outline:none}
+.wstack{position:relative;height:312px;margin:0 0 46px;touch-action:pan-y;-webkit-user-select:none;user-select:none;outline:none}
 .wcard{
-  position:absolute;top:0;left:0;right:0;height:240px;border-radius:28px;padding:16px 16px 14px;
+  position:absolute;top:0;left:0;right:0;height:284px;border-radius:28px;padding:16px 16px 14px;
   display:flex;flex-direction:column;gap:10px;overflow:hidden;
   border:1px solid rgba(255,255,255,.14);
   box-shadow:0 20px 44px -20px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.1);
@@ -42,15 +42,8 @@
 @media (prefers-reduced-motion:reduce){.wcard{transition:none}.w-pulse{animation:none}}
 #homeContent{overflow-x:clip}
 
-/* حالت‌های رای‌گیری: اتاق شخصی / سرتاسری */
-.modes{display:grid;grid-template-columns:1fr;gap:12px;margin:0 0 20px}
-.mode-card{border-radius:26px;padding:16px;border:1px solid rgba(255,255,255,.14);box-shadow:0 16px 36px -22px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.08)}
-.mode-card.m-private{background:linear-gradient(155deg,rgba(124,92,255,.32),rgba(26,20,72,.8))}
-.mode-card.m-global{background:linear-gradient(155deg,rgba(255,77,141,.3),rgba(30,17,66,.85))}
-.mode-card .m-ic{font-size:26px;margin-bottom:6px}
-.mode-card h3{margin:0 0 4px;font-size:16px;font-weight:900}
-.mode-card p{margin:0 0 10px;font-size:12.5px;line-height:1.9;color:#d6d0ff}
-.m-live{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin:0 0 12px;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.1)}
-.m-btns{display:flex;gap:8px}
-.m-btns button{flex:1;height:42px;padding:0 12px;border-radius:16px;font-size:13.5px;font-weight:800}
-.m-btns button.ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);box-shadow:none}
+/* سوییچ حالت رای‌گیری داخل ویجت */
+.w-seg{display:flex;gap:4px;padding:3px;border-radius:100px;background:rgba(255,255,255,.1);flex:none}
+.w-seg button{flex:1;padding:7px 4px;font-size:12.5px;font-weight:800;border-radius:100px;background:transparent;color:#d6d0ff;border:0;box-shadow:none;font-family:inherit}
+.w-seg button.on{background:rgba(255,255,255,.24);color:#fff}
+.m-live{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;margin:8px 0 0;padding:8px 12px;border-radius:14px;background:rgba(255,255,255,.12)}

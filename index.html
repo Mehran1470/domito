@@ -282,6 +282,10 @@
           <span class="w-title"><i class="w-pulse"></i>رای‌گیری زنده</span>
           <span class="w-chip" id="voteRoomCode" style="display:none;"></span>
         </div>
+        <div class="w-seg" id="voteSeg">
+          <button type="button" data-m="private" class="on">🏠 اتاق شخصی</button>
+          <button type="button" data-m="global">🌍 سرتاسری</button>
+        </div>
         <div class="w-body" id="voteBody"></div>
         <div class="w-actions" id="voteActions"></div>
       </section>
@@ -306,28 +310,6 @@
         <button type="button" class="wdot" aria-label="دوستان آنلاین"></button>
       </div>
       <p class="w-hint" id="wHint">بکش تا «دوستان آنلاین» رو ببینی ↔</p>
-    </div>
-
-    <!-- حالت‌های رای‌گیری -->
-    <div class="modes" id="modeCards">
-      <section class="mode-card m-private">
-        <div class="m-ic">🏠</div>
-        <h3>اتاق شخصی</h3>
-        <p>با دوستات تو یه اتاق دو‌نفره یا بیشتر؛ خودتون بازی رو انتخاب می‌کنید.</p>
-        <div class="m-btns">
-          <button type="button" id="modeCreate">ساخت اتاق</button>
-          <button type="button" class="ghost" id="modeJoin">ورود با کد</button>
-        </div>
-      </section>
-      <section class="mode-card m-global">
-        <div class="m-ic">🌍</div>
-        <h3>رای‌گیری سرتاسری</h3>
-        <p>همه‌ی بازیکنان با هم یه بازی رو انتخاب می‌کنن و هم‌زمان وارد اون بازی می‌شن.</p>
-        <div class="m-live"><i class="w-pulse"></i><span id="globalLive">در حال اتصال...</span></div>
-        <div class="m-btns">
-          <button type="button" id="enterGlobalBtn">ورود به رای‌گیری ←</button>
-        </div>
-      </section>
     </div>
 
     <!-- INVITES -->
@@ -487,6 +469,7 @@ import {
   roomRef,
   onValue,
   enterGlobalRoom,
+  isGlobalRoom,
   globalSlotInfo,
   whenClockReady,
   serverNow,
@@ -730,6 +713,24 @@ function startVoteWidget() {
   const chip = document.getElementById("voteRoomCode");
   const code = getSavedRoom();
 
+  document.querySelectorAll("#voteSeg button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.m === voteMode);
+    b.onclick = () => { if (b.dataset.m !== voteMode) setVoteMode(b.dataset.m); };
+  });
+
+  if (voteMode === "global") {
+    chip.style.display = "none";
+    body.innerHTML = '<div class="w-sub">همه‌ی بازیکنان با هم یه بازی رو انتخاب می‌کنن و هم‌زمان وارد می‌شن.</div><div class="m-live"><i class="w-pulse"></i><span id="globalLive">در حال اتصال...</span></div>';
+    actions.innerHTML = "";
+    const g = document.createElement("button");
+    g.type = "button"; g.className = "w-btn"; g.textContent = "ورود به رای‌گیری سرتاسری ←";
+    g.addEventListener("click", () => goGlobal(g));
+    actions.appendChild(g);
+    startGlobalWatch();
+    return;
+  }
+  stopGlobalWatch();
+
   function showEmpty(msg) {
     chip.style.display = "none";
     body.innerHTML = '<p class="w-note"></p>';
@@ -747,8 +748,8 @@ function startVoteWidget() {
     actions.append(a, b);
   }
 
-  if (!code) {
-    showEmpty("الان توی هیچ اتاقی نیستی. اتاق بساز یا با کد وارد شو تا رای‌گیری زنده شروع بشه.");
+  if (!code || isGlobalRoom(code)) {
+    showEmpty("الان توی هیچ اتاق شخصی‌ای نیستی. اتاق بساز یا با کد وارد شو تا رای‌گیری زنده شروع بشه.");
     return;
   }
 
@@ -807,38 +808,47 @@ function startVoteWidget() {
   draw();
 }
 
-/* رای‌گیری سرتاسری */
+/* رای‌گیری سرتاسری (داخل ویجت رای‌گیری زنده) */
+let voteMode = (isGlobalRoom(getSavedRoom()) ? "global" : "private");
 let globalTimer = null;
-function startGlobalCard() {
-  const live = document.getElementById("globalLive");
+let globalCode = "", globalUnsub = null, globalCount = 0;
+
+function globalLiveText() {
   const fa = (n) => Number(n).toLocaleString("fa-IR");
-  let curCode = "";
-  let unsub = null;
-  let count = 0;
+  const info = globalSlotInfo();
+  const left = Math.max(0, Math.ceil((info.endsAt - serverNow()) / 1000));
+  return globalCount >= GLOBAL_MIN_PLAYERS
+    ? fa(globalCount) + " نفر منتظرند · شروع تا " + fa(left) + " ثانیه"
+    : (globalCount ? fa(globalCount) + " نفر منتظرند · دور بعد تا " + fa(left) + " ثانیه" : "الان کسی منتظر نیست · اولین نفر باش");
+}
 
-  function tick() {
-    const info = globalSlotInfo();
-    if (info.code !== curCode) {
-      if (unsub) { try { unsub(); } catch (e) {} }
-      curCode = info.code;
-      count = 0;
-      unsub = onValue(roomRef(curCode, "players"), (s) => { count = s.exists() ? Object.keys(s.val()).length : 0; tick(); }, () => {});
-    }
-    const left = Math.max(0, Math.ceil((info.endsAt - serverNow()) / 1000));
-    live.textContent = count >= GLOBAL_MIN_PLAYERS
-      ? fa(count) + " نفر منتظرند · شروع تا " + fa(left) + " ثانیه"
-      : (count ? fa(count) + " نفر منتظرند · دور بعد تا " + fa(left) + " ثانیه" : "الان کسی منتظر نیست · اولین نفر باش");
-  }
+function stopGlobalWatch() {
+  if (globalTimer) { clearInterval(globalTimer); globalTimer = null; }
+  if (globalUnsub) { try { globalUnsub(); } catch (e) {} globalUnsub = null; }
+  globalCode = "";
+}
 
+function startGlobalWatch() {
+  stopGlobalWatch();
   whenClockReady().then(() => {
+    if (voteMode !== "global") return;
+    const tick = () => {
+      const el = document.getElementById("globalLive");
+      const info = globalSlotInfo();
+      if (info.code !== globalCode) {
+        if (globalUnsub) { try { globalUnsub(); } catch (e) {} }
+        globalCode = info.code;
+        globalCount = 0;
+        globalUnsub = onValue(roomRef(globalCode, "players"), (sn) => { globalCount = sn.exists() ? Object.keys(sn.val()).length : 0; tick(); }, () => {});
+      }
+      if (el) el.textContent = globalLiveText();
+    };
     tick();
-    if (globalTimer) clearInterval(globalTimer);
     globalTimer = setInterval(tick, 1000);
   });
 }
 
-document.getElementById("enterGlobalBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("enterGlobalBtn");
+async function goGlobal(btn) {
   btn.disabled = true;
   btn.textContent = "در حال ورود...";
   try {
@@ -847,12 +857,15 @@ document.getElementById("enterGlobalBtn").addEventListener("click", async () => 
   } catch (error) {
     console.error(error);
     btn.disabled = false;
-    btn.textContent = "ورود به رای‌گیری ←";
+    btn.textContent = "ورود به رای‌گیری سرتاسری ←";
     alert("ورود به رای‌گیری سرتاسری انجام نشد. اینترنت را بررسی کن و دوباره امتحان کن.");
   }
-});
-document.getElementById("modeCreate").addEventListener("click", () => document.getElementById("createRoomBtn").click());
-document.getElementById("modeJoin").addEventListener("click", () => document.getElementById("openJoinRoomBtn").click());
+}
+
+function setVoteMode(m) {
+  voteMode = m;
+  startVoteWidget();
+}
 
 /* HOME */
 function showHome() {
@@ -868,7 +881,6 @@ function showHome() {
   renderLeaderboard();
   initWidgetStack();
   startVoteWidget();
-  startGlobalCard();
 
   /* Wallet */
   listenProfile(myName, (p) => {

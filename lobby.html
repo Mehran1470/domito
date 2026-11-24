@@ -23,6 +23,11 @@
       <span class="live-chip"><i></i>زنده</span>
     </header>
 
+    <div class="pg-tabs" id="modeSeg" style="margin-bottom:12px">
+      <button type="button" data-m="private">🏠 اتاق شخصی</button>
+      <button type="button" data-m="global">🌍 سرتاسری</button>
+    </div>
+
     <section class="glass ring-card">
       <div class="ring">
         <svg viewBox="0 0 120 120">
@@ -139,6 +144,23 @@
 
 
     const isGlobal = isGlobalRoom(code);
+
+    document.querySelectorAll("#modeSeg button").forEach((b) => {
+      b.classList.toggle("on", (b.dataset.m === "global") === isGlobal);
+      b.addEventListener("click", async () => {
+        if ((b.dataset.m === "global") === isGlobal) return;
+        b.disabled = true;
+        try { await leaveLobby(); } catch (e) { console.warn(e); }
+        try {
+          if (b.dataset.m === "global") {
+            await enterGlobalRoom();
+          } else {
+            leaveGlobalRoomState();
+          }
+        } catch (e) { console.error(e); }
+        window.location.href = getSavedRoom() ? "lobby.html" : "index.html";
+      });
+    });
 
     if (isGlobal) {
       document.getElementById("pgTitle").textContent = "رای‌گیری سرتاسری";
