@@ -1,0 +1,124 @@
+/* ظاهر مشترک صفحه‌های لابی، دوستان و پروفایل (هم‌خانوادهٔ صفحهٔ اصلی) */
+body.pg{justify-content:flex-start; padding:18px 16px 120px;}
+body.pg .wrap{max-width:480px;}
+
+/* ---- سربرگ ---- */
+.pg-head{display:flex; align-items:center; gap:10px; margin:2px 0 16px; min-height:44px;}
+.pg-head h1{flex:1; margin:0; font-size:20px; font-weight:900;}
+.pg-back,.pg-ico{
+  width:42px; height:42px; border-radius:50%; flex:none; padding:0;
+  display:inline-flex; align-items:center; justify-content:center; color:var(--text); text-decoration:none;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); box-shadow:none;
+}
+.pg-back svg,.pg-ico svg{width:20px; height:20px;}
+.pg-ico.hot{background:linear-gradient(135deg,var(--accent),var(--violet)); border-color:transparent;}
+.live-chip{display:inline-flex; align-items:center; gap:6px; background:rgba(255,77,141,.16); border:1px solid rgba(255,77,141,.35); color:#ff9cbf; font-size:12px; font-weight:800; padding:6px 12px; border-radius:100px;}
+.live-chip i{width:8px; height:8px; border-radius:50%; background:#ff4d8d; animation:pgPulse 1.4s infinite;}
+@keyframes pgPulse{0%,100%{opacity:1; transform:scale(1)}50%{opacity:.4; transform:scale(.7)}}
+
+.glass{background:linear-gradient(160deg,rgba(124,92,255,.2),rgba(26,20,72,.7)); border:1px solid rgba(255,255,255,.12); border-radius:24px; padding:16px; box-shadow:0 16px 36px -22px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(10px);}
+.sec-title{display:flex; align-items:center; justify-content:space-between; margin:22px 2px 10px;}
+.sec-title h3{margin:0; font-size:15.5px; font-weight:900;}
+.sec-title span{font-size:12px; color:var(--text-dim);}
+.empty{text-align:center; color:var(--text-dim); font-size:13px; padding:22px 8px;}
+
+.mini{padding:8px 16px; font-size:13px; border-radius:100px;}
+
+/* ---- لابی: حلقهٔ رای ---- */
+.ring-card{text-align:center; padding:20px 16px 18px; margin-bottom:6px;}
+.ring{position:relative; width:128px; height:128px; margin:2px auto 12px;}
+.ring svg{width:100%; height:100%; transform:rotate(-90deg);}
+.ring .bg{fill:none; stroke:rgba(255,255,255,.1); stroke-width:9;}
+.ring .fg{fill:none; stroke:url(#pgRing); stroke-width:9; stroke-linecap:round; stroke-dasharray:326.7; stroke-dashoffset:326.7; transition:stroke-dashoffset .6s cubic-bezier(.2,.9,.25,1);}
+.ring-in{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.ring-in b{font-size:38px; font-weight:900; line-height:1;}
+.ring-in span{font-size:11px; color:var(--text-dim); margin-top:4px;}
+.ring-card h2{margin:0 0 4px; font-size:17px; font-weight:900;}
+.ring-card .status-line{margin:0 0 12px;}
+.ring-meta{display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;}
+.ring-meta .room-code-badge{margin:0;}
+
+.vlist{display:flex; flex-direction:column; gap:9px;}
+.vrow{display:flex; align-items:center; gap:12px; padding:10px; border-radius:20px; cursor:pointer;
+  background:rgba(255,255,255,.05); border:1.5px solid rgba(255,255,255,.09); transition:transform .1s, border-color .15s, background .15s;}
+.vrow:active{transform:scale(.985);}
+.vrow.voted{border-color:var(--accent); background:linear-gradient(135deg,rgba(124,92,255,.28),rgba(255,77,141,.12)); box-shadow:0 0 0 3px rgba(124,92,255,.14);}
+.v-art{width:56px; height:56px; border-radius:16px; overflow:hidden; flex:none; background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-size:26px;}
+.v-art svg{width:100%; height:100%;}
+.v-body{flex:1; min-width:0;}
+.v-top{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;}
+.v-top .name{font-weight:800; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.v-top .votes{font-size:12px; color:var(--gold); font-weight:800; flex:none;}
+.v-bar{height:6px; border-radius:100px; background:rgba(255,255,255,.1); overflow:hidden;}
+.v-bar i{display:block; height:100%; border-radius:100px; background:linear-gradient(90deg,var(--accent),var(--violet)); transition:width .4s ease;}
+
+.plist{display:flex; flex-direction:column; gap:8px;}
+.plist .room-player{display:flex; align-items:center; gap:12px; text-align:right; padding:10px 12px; border-radius:18px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);}
+.plist .room-avatar{margin:0; width:42px; height:42px; border-radius:50%; font-size:17px; flex:none;}
+.plist .pinfo{flex:1; min-width:0;}
+.plist .pname{font-size:14px; font-weight:800;}
+.plist .pinfo small{display:block; font-size:11px; color:var(--text-dim); margin-top:1px;}
+.plist .ready-badge{position:static; font-size:11px; padding:4px 11px; background:rgba(63,224,160,.16); color:var(--success); border:1px solid rgba(63,224,160,.35);}
+.plist .wait-badge{font-size:11px; padding:4px 11px; border-radius:100px; background:rgba(255,255,255,.07); color:var(--text-dim);}
+.leave{margin-top:22px;}
+
+/* ---- دوستان ---- */
+.pg-tabs{display:flex; gap:4px; padding:4px; border-radius:100px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); margin-bottom:6px;}
+.pg-tabs button{flex:1; padding:10px 6px; font-size:13px; border-radius:100px; background:transparent; color:var(--text-dim); box-shadow:none; position:relative;}
+.pg-tabs button.on{background:linear-gradient(135deg,var(--accent),var(--violet)); color:#fff; box-shadow:0 8px 18px -8px rgba(124,92,255,.7);}
+.pg-tabs .cnt{display:inline-block; min-width:18px; margin-inline-start:5px; padding:0 6px; border-radius:100px; background:rgba(255,255,255,.18); font-size:11px; line-height:18px;}
+.frow{display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:20px; margin-bottom:8px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);}
+.frow.off{opacity:.72;}
+.f-av{position:relative; width:46px; height:46px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:18px; background:linear-gradient(145deg,var(--accent),var(--violet));}
+.f-av::after{content:''; position:absolute; bottom:-1px; right:-1px; width:13px; height:13px; border-radius:50%; background:#5a5680; border:2px solid #1a1448;}
+.frow.on .f-av::after{background:var(--success);}
+.f-info{flex:1; min-width:0;}
+.f-info a{display:block; color:var(--text); text-decoration:none; font-weight:800; font-size:14px;}
+.f-info small{display:block; font-size:11.5px; color:var(--text-dim); margin-top:2px;}
+.frow.on .f-info small{color:var(--success);}
+.f-act{display:flex; gap:8px; flex:none;}
+.f-act .mini{padding:8px 14px; font-size:12.5px;}
+.rbtn{width:38px; height:38px; padding:0; border-radius:50%; font-size:16px; box-shadow:none;}
+.rbtn.ok{background:rgba(63,224,160,.18); color:var(--success); border:1px solid rgba(63,224,160,.4);}
+.rbtn.no{background:rgba(255,107,129,.16); color:var(--danger); border:1px solid rgba(255,107,129,.38);}
+.add-box input{margin-bottom:0;}
+.add-box .btn-full{margin-top:12px;}
+.friend-check{border-radius:14px; padding:12px; margin-top:10px; font-size:13px; background:rgba(255,255,255,.06);}
+.friend-check.friend{background:rgba(76,217,123,.12); border:1px solid rgba(76,217,123,.25);}
+.friend-check.pending{background:rgba(255,200,69,.12); border:1px solid rgba(255,200,69,.25);}
+
+/* ---- پروفایل ---- */
+.p-hero{position:relative; border-radius:28px; overflow:hidden; margin-bottom:14px; border:1px solid rgba(255,255,255,.12); background:linear-gradient(180deg,#2a0f5e,#1a1448);}
+.p-cover{height:150px; position:relative;}
+.p-cover svg{width:100%; height:100%; display:block;}
+.p-cover::after{content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(13,10,36,.1),rgba(26,20,72,.95));}
+.p-top{position:absolute; top:12px; right:12px; left:12px; display:flex; justify-content:space-between; z-index:2;}
+.p-who{position:relative; margin-top:-54px; padding:0 16px 18px; text-align:center; z-index:1;}
+.p-who .avatar{width:84px; height:84px; border-radius:50%; margin:0 auto 8px; font-size:34px; border:4px solid #1a1448; box-shadow:0 10px 26px -8px rgba(124,92,255,.7);}
+.p-who #nameText{font-weight:900; font-size:20px;}
+.p-who .muted{margin-top:2px;}
+.p-who .profile-presence{margin-top:4px; font-size:12px;}
+.p-level{margin:14px 6px 0; text-align:right;}
+.p-level .lv-top{display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+.p-level .lv-top b{color:var(--gold);}
+.p-level .progress-bar{margin:0;}
+.p-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(70px,1fr)); gap:8px; margin-bottom:6px;}
+.p-stats .stat-box{padding:14px 4px; border-radius:18px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);}
+.p-stats .stat-box .num{font-size:21px;}
+.p-stats a.stat-box{text-decoration:none; color:inherit;}
+.pgrow{display:flex; align-items:center; gap:12px; padding:10px; border-radius:18px; margin-bottom:8px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);}
+.pgrow .v-art{width:48px; height:48px; border-radius:14px;}
+.pgrow .v-top{margin-bottom:7px;}
+.pgrow .v-top .votes{color:var(--text-dim);}
+.pgrow .v-top .votes b{color:var(--gold);}
+.badges{display:flex; gap:9px; overflow-x:auto; padding:2px 0 6px; scrollbar-width:none;}
+.badges::-webkit-scrollbar{display:none;}
+.badge{flex:0 0 86px; text-align:center; padding:12px 6px; border-radius:20px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);}
+.badge .bi{font-size:28px; margin-bottom:5px;}
+.badge .bt{font-size:11px; font-weight:800;}
+.badge.lock{opacity:.38; filter:grayscale(1);}
+.badge.got{border-color:rgba(255,209,102,.5); background:linear-gradient(160deg,rgba(255,209,102,.16),rgba(255,255,255,.04));}
+
+/* دکمهٔ چت لابی بالای نوار پایین */
+body:has(#dnNav) .chat-toggle{bottom:96px;}
+body:has(#dnNav) .chat-panel{bottom:160px;}

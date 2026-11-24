@@ -8,6 +8,7 @@
 <title>پروفایل | دومیتو</title>
 
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
 
 <style>
 .profile-presence {
@@ -165,110 +166,70 @@
 </style>
 </head>
 
-<body>
+<body class="pg">
 
 <div class="wrap">
 
-  <!-- BRAND -->
-  <div class="brand">
-    <div class="brand-mark">🁢</div>
-    <h1 id="pageTitle">پروفایل</h1>
-  </div>
-
-  <!-- NOT LOGGED IN -->
-  <div class="card" id="noNameCard" style="display:none">
+  <div class="glass" id="noNameCard" style="display:none">
     <p class="status-line">هنوز وارد نشدی.</p>
     <a href="index.html" class="btn btn-full">ورود</a>
   </div>
 
-  <!-- NOT FOUND -->
-  <div class="card" id="notFoundCard" style="display:none">
+  <div class="glass" id="notFoundCard" style="display:none">
     <p class="status-line">همچین کاربری پیدا نشد.</p>
+    <a href="index.html" class="btn btn-full btn-ghost">بازگشت</a>
   </div>
 
-  <!-- PROFILE -->
   <div id="profileContent" style="display:none">
 
-    <!-- MAIN PROFILE -->
-    <div class="card">
-
-      <div class="profile-header">
+    <section class="p-hero">
+      <div class="p-cover" id="pCover"></div>
+      <div class="p-top">
+        <a class="pg-back" href="index.html" aria-label="بازگشت">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg>
+        </a>
+        <span class="live-chip" id="pageTitle" style="background:rgba(13,10,36,.55);border-color:rgba(255,255,255,.18);color:#fff">پروفایل</span>
+      </div>
+      <div class="p-who">
         <div class="avatar" id="avatarBox"></div>
-
-        <div>
-          <div
-            style="font-weight:900;font-size:18px;"
-            id="nameText"
-          ></div>
-
-          <div class="muted" id="joinedGamesText"></div>
-
-          <div id="presenceText" class="profile-presence"></div>
-
-          <div
-            id="lastLoginText"
-            class="profile-presence presence-offline"
-          ></div>
+        <div id="nameText"></div>
+        <div class="muted" id="joinedGamesText"></div>
+        <div id="presenceText" class="profile-presence"></div>
+        <div id="lastLoginText" class="profile-presence presence-offline"></div>
+        <div class="p-level">
+          <div class="lv-top"><b id="lvText">سطح ۱</b><span id="lvNext"></span></div>
+          <div class="progress-bar"><div class="progress-fill" id="lvFill" style="width:0%"></div></div>
         </div>
+        <div id="coinBadgeWrap" style="display:none"></div>
       </div>
+    </section>
 
-      <!-- COINS -->
-      <div id="coinBadgeWrap" style="margin-top:10px;"></div>
-
-      <!-- STATS -->
-      <div class="stat-grid">
-
-        <div class="stat-box">
-          <div class="num" id="winsNum">0</div>
-          <div class="lbl">برد</div>
-        </div>
-
-        <div class="stat-box">
-          <div class="num" id="lossesNum">0</div>
-          <div class="lbl">باخت</div>
-        </div>
-
-        <div class="stat-box">
-          <div class="num" id="playedNum">0</div>
-          <div class="lbl">کل بازی‌ها</div>
-        </div>
-
-      </div>
-
-      <!-- FRIEND ACTION -->
-      <div id="addFriendWrap" style="display:none;">
-
-        <button id="addFriendFromProfileBtn" class="btn-full">
-          ➕ ارسال درخواست دوستی
-        </button>
-
-        <div
-          id="friendState"
-          class="friend-state"
-          style="display:none;"
-        ></div>
-
-        <p class="status-line" id="friendReqStatus"></p>
-
-      </div>
-
+    <div class="p-stats">
+      <div class="stat-box"><div class="num" id="winsNum">0</div><div class="lbl">برد</div></div>
+      <div class="stat-box"><div class="num" id="lossesNum">0</div><div class="lbl">باخت</div></div>
+      <div class="stat-box"><div class="num" id="playedNum">0</div><div class="lbl">بازی</div></div>
+      <a class="stat-box" id="coinTile" href="wallet.html" style="display:none"><div class="num" id="coinsNum">0</div><div class="lbl">سکه</div></a>
     </div>
 
-    <!-- GAME STATS -->
-    <div class="card">
-      <h2>امتیاز به تفکیک بازی</h2>
-      <div class="score-board" id="perGameBoard"></div>
+    <!-- FRIEND ACTION -->
+    <div id="addFriendWrap" style="display:none; margin-top:12px;">
+      <button id="addFriendFromProfileBtn" class="btn-full" type="button">➕ ارسال درخواست دوستی</button>
+      <div id="friendState" class="friend-state" style="display:none;"></div>
+      <p class="status-line" id="friendReqStatus"></p>
     </div>
 
-    <!-- ASSISTANT PRIVACY -->
-    <div class="card" id="assistantPrivacyCard" style="display:none;">
-      <h2>🤖 حریم خصوصی دستیار</h2>
+    <div class="sec-title"><h3>امتیاز هر بازی</h3></div>
+    <div id="perGameBoard"></div>
 
+    <div class="sec-title"><h3>نشان‌ها</h3><span id="badgeCount"></span></div>
+    <div class="badges" id="badgeRow"></div>
+
+    <div class="glass" id="assistantPrivacyCard" style="display:none; margin-top:16px;">
+      <h2 style="margin:0 0 6px; font-size:16px;">🤖 حریم خصوصی دستیار</h2>
       <p class="muted priv-description">
         مشخص کن دستیار دومیتو درباره‌ی تو به دوستانت چه چیزهایی بگوید.
         هر دو تیک به‌صورت پیش‌فرض خاموش است.
       </p>
-
       <label class="priv-row">
         <input type="checkbox" id="privShare">
         <span>
@@ -276,7 +237,6 @@
           <small>اسم، ظاهر (تم و قاب)، برد و باخت و آخرین حضور؛ فقط به دوستانم گفته می‌شود.</small>
         </span>
       </label>
-
       <label class="priv-row">
         <input type="checkbox" id="privCoins">
         <span>
@@ -284,49 +244,19 @@
           <small>موجودی سکه‌ام هم گفته شود؛ فقط وقتی تیک بالا روشن باشد کار می‌کند.</small>
         </span>
       </label>
-
       <p class="status-line" id="privStatus"></p>
     </div>
 
-    <!-- MAIN SHOP -->
-    <div class="card" id="fullShopLinkCard" style="display:none;">
-      <h2>🛍️ فروشگاه دومیتو</h2>
-
-      <p class="muted main-shop-description">
-        آیتم‌های فروشگاه را ببین و خریدهایت را انجام بده.
-      </p>
-
-      <a
-        href="shop.html"
-        class="btn btn-full main-shop-link"
-      >
-        ورود به فروشگاه 🛒
-      </a>
+    <div class="glass" id="fullShopLinkCard" style="display:none; margin-top:12px;">
+      <h2 style="margin:0 0 6px; font-size:16px;">🛍️ فروشگاه دومیتو</h2>
+      <p class="muted main-shop-description">آیتم‌های فروشگاه را ببین و خریدهایت را انجام بده.</p>
+      <a href="shop.html" class="btn btn-full main-shop-link">ورود به فروشگاه 🛒</a>
     </div>
 
-    <!-- CHANGE PASSWORD -->
-    <button
-      id="pwBtn"
-      class="btn-full btn-ghost"
-      style="display:none;margin-bottom:10px;"
-    >
-      🔑 تغییر رمز عبور
-    </button>
-
-    <!-- LOGOUT -->
-    <button
-      id="logoutBtn"
-      class="btn-full btn-ghost"
-      style="display:none;"
-    >
-      خروج از حساب
-    </button>
+    <button id="pwBtn" class="btn-full btn-ghost" style="display:none;margin-top:12px;" type="button">🔑 تغییر رمز عبور</button>
+    <button id="logoutBtn" class="btn-full btn-ghost" style="display:none;margin-top:10px;" type="button">خروج از حساب</button>
 
   </div>
-
-  <!-- BACK -->
-  <a href="index.html" class="link-back">← بازگشت</a>
-
 </div>
 
 <!-- LOGOUT MODAL -->
@@ -396,6 +326,7 @@ import {
   setAssistantPrivacy
 } from "./js/app.js";
 
+import { sceneSVG, hasScene } from "./js/scenes.js";
 import {
   injectCosmeticStyles,
   renderNameBlock,
@@ -472,6 +403,7 @@ waitForUser().then(async (user) => {
   }
 
   // SHOW PROFILE
+  document.getElementById("pCover").innerHTML = sceneSVG("race", "0 40 360 130", "");
   document.getElementById("profileContent").style.display = "block";
   document.getElementById("nameText").textContent = targetName;
 
@@ -721,6 +653,8 @@ waitForUser().then(async (user) => {
 
     // WALLET LINK
     if (isOwnProfile) {
+      document.getElementById("coinTile").style.display = "";
+      document.getElementById("coinsNum").textContent = Number(p.coins || 0);
       document.getElementById("coinBadgeWrap").innerHTML = `
         <a href="wallet.html" class="coin-badge" style="text-decoration:none;">
           🪙 ${Number(p.coins || 0)} سکه ←
@@ -757,30 +691,49 @@ waitForUser().then(async (user) => {
 
     GAMES.forEach((g) => {
 
-      const stats = (p.byGame && p.byGame[g.id]) || {
-        wins: 0,
-        plays: 0
-      };
+      const stats = (p.byGame && p.byGame[g.id]) || { wins: 0, plays: 0 };
+      const w = Number(stats.wins || 0);
+      const pl = Number(stats.plays || 0);
+      const pct = pl ? Math.round((w / pl) * 100) : 0;
 
       const row = document.createElement("div");
-      row.className = "score-row";
-
-      const gameName = document.createElement("span");
-      gameName.textContent = g.name;
-
-      const plays = document.createElement("span");
-      plays.className = "muted";
-      plays.style.fontSize = "12px";
-      plays.textContent = `${Number(stats.plays || 0)} بازی`;
-
-      const wins = document.createElement("span");
-      wins.className = "points";
-      wins.textContent = `${Number(stats.wins || 0)} برد`;
-
-      row.append(gameName, plays, wins);
+      row.className = "pgrow";
+      row.innerHTML = `
+        <div class="v-art">${hasScene(g.id) ? sceneSVG(g.id, "90 40 180 180", g.name) : (g.icon || "🎮")}</div>
+        <div class="v-body">
+          <div class="v-top">
+            <span class="name"></span>
+            <span class="votes"><b>${w}</b> برد · ${pl} بازی</span>
+          </div>
+          <div class="v-bar"><i style="width:${pct}%"></i></div>
+        </div>`;
+      row.querySelector(".name").textContent = g.name;
       board.appendChild(row);
 
     });
+
+    // سطح (از روی تعداد بازی‌ها) و نشان‌ها
+    const fa = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+    const played = Number(p.gamesPlayed || 0);
+    const wins = Number(p.wins || 0);
+    const level = 1 + Math.floor(played / 5);
+    const into = played % 5;
+    document.getElementById("lvText").textContent = `سطح ${fa(level)}`;
+    document.getElementById("lvNext").textContent = `${fa(5 - into)} بازی تا سطح ${fa(level + 1)}`;
+    document.getElementById("lvFill").style.width = `${into * 20}%`;
+
+    const badges = [
+      ["🏁", "اولین بازی", played >= 1],
+      ["🥇", "اولین برد", wins >= 1],
+      ["🎮", "۱۰ بازی", played >= 10],
+      ["🔥", "۵ برد", wins >= 5],
+      ["🏆", "۵۰ بازی", played >= 50],
+      ["👑", "۲۵ برد", wins >= 25]
+    ];
+    const row = document.getElementById("badgeRow");
+    row.innerHTML = badges.map(([i, t, ok]) =>
+      `<div class="badge ${ok ? "got" : "lock"}"><div class="bi">${i}</div><div class="bt">${t}</div></div>`).join("");
+    document.getElementById("badgeCount").textContent = `${fa(badges.filter((b) => b[2]).length)} از ${fa(badges.length)}`;
 
   });
 
@@ -875,6 +828,7 @@ function formatDate(date) {
 </script>
 
 <script type="module" src="./js/notifications.js"></script>
+
 <script src="./js/nav.js" defer></script>
 </body>
 </html>

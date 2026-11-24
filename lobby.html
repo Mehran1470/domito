@@ -8,111 +8,57 @@
   <title>اتاق بازی | دومیتو</title>
 
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pages.css">
 </head>
 
-<body>
+<body class="pg">
 
   <div class="wrap">
 
-    <!-- عنوان اتاق -->
-    <div class="brand">
+    <header class="pg-head">
+      <a class="pg-back" href="index.html" aria-label="خانه">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6l-6 6"/></svg>
+      </a>
+      <h1>لابی دومیتو</h1>
+      <span class="live-chip"><i></i>زنده</span>
+    </header>
 
-      <img src="logo.png" alt="دومیتو" class="brand-mark" style="object-fit:contain; padding:8px;">
+    <section class="glass ring-card">
+      <div class="ring">
+        <svg viewBox="0 0 120 120">
+          <defs>
+            <linearGradient id="pgRing" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7c5cff"/>
+              <stop offset="1" stop-color="#ff4d8d"/>
+            </linearGradient>
+          </defs>
+          <circle class="bg" cx="60" cy="60" r="52"/>
+          <circle class="fg" id="ringFg" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="ring-in"><b id="ringNum">0</b><span>رای ثبت‌شده</span></div>
+      </div>
+      <h2>بازی بعدی را انتخاب کن</h2>
+      <p class="status-line" id="voteStatus">در انتظار رای‌ها...</p>
+      <div class="ring-meta">
+        <div class="room-code-badge" id="roomCodeText"></div>
+        <button id="inviteRoomBtn" class="mini" type="button">👥 دعوت دوست</button>
+      </div>
+    </section>
 
-      <h1>اتاق بازی</h1>
-
-      <div
-        class="room-code-badge"
-        id="roomCodeText"
-        style="margin-top:8px;"
-      ></div>
-
-    </div>
-
-
-    <!-- بازیکنان -->
-    <div class="card">
-
-      <h2>
-        👥 بازیکنان
-        (<span id="playerCount">0</span>)
-      </h2>
-
-      <div
-        class="room-players"
-        id="playerGrid"
-      ></div>
-
-
-      <!-- دعوت به اتاق -->
-      <button
-        id="inviteRoomBtn"
-        class="btn-full"
-        style="margin-top:14px;"
-      >
-        👥 دعوت به اتاق
-      </button>
-
-    </div>
-
-
-    <!-- انتخاب دوست برای دعوت -->
-    <div
-      class="card"
-      id="inviteCard"
-      style="display:none;"
-    >
-
-      <h2>
-        👥 دعوت از دوستان
-      </h2>
-
-      <p
-        class="muted"
-        style="margin-bottom:14px;"
-      >
-        یک دوست آنلاین را برای ورود به این اتاق انتخاب کن.
-      </p>
-
+    <div class="glass" id="inviteCard" style="display:none; margin-top:12px;">
+      <h2 style="margin:0 0 6px; font-size:16px;">دعوت از دوستان</h2>
+      <p class="muted" style="margin:0 0 12px;">یک دوست آنلاین را برای ورود به این اتاق انتخاب کن.</p>
       <div id="inviteFriendsList"></div>
-
-      <button
-        id="closeInviteBtn"
-        class="btn-full btn-ghost"
-        style="margin-top:12px;"
-      >
-        بستن
-      </button>
-
+      <button id="closeInviteBtn" class="btn-full btn-ghost" type="button" style="margin-top:10px;">بستن</button>
     </div>
 
+    <div class="sec-title"><h3>رای‌ها</h3></div>
+    <div class="vlist" id="gameOptions"></div>
 
-    <!-- رای دادن -->
-    <div class="card">
+    <div class="sec-title"><h3>بازیکنان آنلاین</h3><span><span id="playerCount">0</span> نفر</span></div>
+    <div class="plist" id="playerGrid"></div>
 
-      <h2>
-        رای بده به بازی بعدی
-      </h2>
-
-      <div id="gameOptions"></div>
-
-      <p
-        class="status-line"
-        id="voteStatus"
-      >
-        در انتظار رای‌ها...
-      </p>
-
-    </div>
-
-
-    <!-- خروج -->
-    <button
-      id="leaveBtn"
-      class="btn-full btn-ghost"
-    >
-      خروج از اتاق
-    </button>
+    <button id="leaveBtn" class="btn-full btn-ghost leave" type="button">خروج از اتاق</button>
 
   </div>
 
@@ -339,31 +285,12 @@
 
 
             el.innerHTML = `
-
-              ${
-                voted
-                  ? '<span class="ready-badge">رای داد</span>'
-                  : ""
-              }
-
-              <div class="room-avatar">
-                ${
-                  (p.name.trim()[0] || "?")
-                    .toUpperCase()
-                }
+              <div class="room-avatar">${(p.name.trim()[0] || "?").toUpperCase()}</div>
+              <div class="pinfo">
+                <div class="pname"></div>
+                <small>${voted ? "رای خودش را داد" : "در حال انتخاب..."}</small>
               </div>
-
-              <div class="pname">
-                
-
-                ${
-                  uid === myUid
-                    ? " (تو)"
-                    : ""
-                }
-
-              </div>
-
+              ${voted ? '<span class="ready-badge">رای داد</span>' : '<span class="wait-badge">در انتظار</span>'}
             `;
 
 
@@ -449,35 +376,20 @@
             game.id;
 
 
-          el.className =
-            "game-option" +
-            (
-              myVote
-                ? " voted"
-                : ""
-            );
+          el.className = "vrow" + (myVote ? " voted" : "");
 
+          const total = Object.keys(players).length || 1;
+          const pct = Math.round((counts[game.id] / total) * 100);
 
           el.innerHTML = `
-
-            ${hasScene(game.id) ? `<div class="go-art">${sceneSVG(game.id, "90 40 180 180", game.name)}</div>` : ""}
-
-            <div class="go-text">
-
-              <div class="name">
-                ${game.name}
+            <div class="v-art">${hasScene(game.id) ? sceneSVG(game.id, "90 40 180 180", game.name) : (game.icon || "🎮")}</div>
+            <div class="v-body">
+              <div class="v-top">
+                <span class="name">${game.name}</span>
+                <span class="votes">${counts[game.id]} رای</span>
               </div>
-
-              <div class="desc">
-                ${game.desc}
-              </div>
-
+              <div class="v-bar"><i style="width:${pct}%"></i></div>
             </div>
-
-            <div class="votes">
-              ${counts[game.id]}
-            </div>
-
           `;
 
 
@@ -524,7 +436,11 @@
 
 
       voteStatus.textContent =
-        `${validVotes} از ${totalPlayers} نفر رای دادند`;
+        `${validVotes} از ${totalPlayers} نفر رای دادند · وقتی همه رای بدهند بازی شروع می‌شود`;
+
+      document.getElementById("ringNum").textContent = validVotes;
+      document.getElementById("ringFg").style.strokeDashoffset =
+        String(326.7 * (1 - (totalPlayers ? validVotes / totalPlayers : 0)));
 
     }
 
@@ -1005,6 +921,7 @@
   </script>
 <script type="module" src="./js/invite-notification.js"></script>
 <script type="module" src="./js/notifications.js"></script>
+<script src="./js/nav.js" defer></script>
   
 </body>
 </html>
