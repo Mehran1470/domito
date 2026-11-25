@@ -636,11 +636,10 @@ function renderGameCards() {
     .slice(0, 3)
     .forEach((g, i) => {
       const a = document.createElement("a");
-      a.className = "pv-tcard";
+      a.className = "pv-gcard pv-tr";
       a.innerHTML =
-        '<div class="art">' + sceneSVG(g.id, "90 0 180 240", g.name) + '</div><div class="shade"></div>' +
-        '<div class="rk">' + faNum(i + 1) + '</div>' +
-        '<div class="in"><div class="nm"></div><div class="tg"></div></div>';
+        '<div class="art">' + sceneSVG(g.id, "60 20 240 150", g.name) + '<div class="rk">' + faNum(i + 1) + '</div></div>' +
+        '<div class="bd"><div class="nm"></div><span class="tg"></span></div>';
       a.querySelector(".nm").textContent = g.name;
       a.querySelector(".tg").textContent = gameTag(g);
       a.addEventListener("click", () => playGame(g));
@@ -657,11 +656,11 @@ function renderGameCards() {
   document.getElementById("gamesCount").textContent = faNum(list.length) + " بازی";
   list.forEach((g) => {
     const a = document.createElement("a");
-    a.className = "pv-tcard pv-gcard";
+    a.className = "pv-gcard";
     const art = hasScene(g.id)
-      ? '<div class="art">' + sceneSVG(g.id, "90 0 180 240", g.name) + "</div>"
+      ? '<div class="art">' + sceneSVG(g.id, "60 20 240 150", g.name) + "</div>"
       : '<div class="art fb">' + escapeHtml(g.icon || "🎮") + "</div>";
-    a.innerHTML = art + '<div class="shade"></div><div class="in"><div class="nm"></div><div class="tg"></div></div>';
+    a.innerHTML = art + '<div class="bd"><div class="nm"></div><span class="tg"></span></div>';
     a.querySelector(".nm").textContent = g.name;
     a.querySelector(".tg").textContent = gameTag(g);
     a.addEventListener("click", () => playGame(g));

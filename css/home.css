@@ -85,8 +85,10 @@ body.pvhome #dnBell{display:none!important}
 .pv-sec a,.pv-sec span{font-size:13px; color:#b3acdf; text-decoration:none;}
 
 /* ---- برگزیده‌ها ---- */
-.pv-trend{display:flex; gap:10px; margin:0 -16px; padding:0 16px 4px; overflow-x:auto; scrollbar-width:none;}
+.pv-trend{display:flex; align-items:flex-start; gap:10px; margin:0 -16px; padding:0 16px 4px; overflow-x:auto; scrollbar-width:none;}
 .pv-trend::-webkit-scrollbar{display:none;}
+.pv-gcard.pv-tr{flex:none; width:170px;}
+.pv-gcard .rk{position:absolute; top:4px; right:10px; font-size:38px; font-weight:800; color:transparent; -webkit-text-stroke:1.5px rgba(255,255,255,.8); line-height:1;}
 .pv-tcard{position:relative; display:block; flex:none; width:150px; height:208px; border-radius:26px; overflow:hidden; border:1px solid rgba(255,255,255,.14); cursor:pointer; color:inherit; text-decoration:none;}
 .pv-tcard .art{position:absolute; inset:0;}
 .pv-tcard .shade{position:absolute; inset:0; background:linear-gradient(180deg,rgba(13,10,36,0) 45%,rgba(13,10,36,.95) 100%);}
@@ -97,9 +99,13 @@ body.pvhome #dnBell{display:none!important}
 
 /* ---- همه بازی‌ها ---- */
 .pv-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
-.pv-grid .pv-tcard{width:auto; height:208px;}
-.pv-tcard .art svg{width:100%; height:100%; display:block;}
-.pv-tcard .art.fb{display:flex; align-items:center; justify-content:center; font-size:56px; background:linear-gradient(160deg,#2a1470,#6b1a5e);}
+.pv-gcard{display:block; border-radius:24px; overflow:hidden; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); cursor:pointer; color:inherit; text-decoration:none;}
+.pv-gcard .art{position:relative; height:112px; overflow:hidden;}
+.pv-gcard .art svg{width:100%; height:100%; display:block;}
+.pv-gcard .art.fb{display:flex; align-items:center; justify-content:center; font-size:42px; background:linear-gradient(160deg,#2a1470,#6b1a5e);}
+.pv-gcard .bd{padding:10px 12px 12px;}
+.pv-gcard .nm{font-size:15px; font-weight:800; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.pv-gcard .tg{display:inline-block; padding:3px 10px; border-radius:10px; font-size:12px; background:rgba(255,255,255,.12); color:#f4f1ff;}
 
 /* ---- فروشگاه ---- */
 .pv-shop{display:flex; align-items:center; gap:14px; margin-top:22px; padding:14px; border-radius:24px; background:linear-gradient(135deg,rgba(124,92,255,.5),rgba(255,77,141,.35)); border:1px solid rgba(255,255,255,.16); color:inherit; text-decoration:none;}
