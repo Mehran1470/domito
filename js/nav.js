@@ -41,7 +41,7 @@
     busy = true;
     mid.style.opacity = ".6";
     try {
-      const app = await import("./js/app.js");
+      const app = await import("./app.js");
       const user = await app.waitForUser();
       if (!user) { window.location.href = "./index.html"; return; }
 

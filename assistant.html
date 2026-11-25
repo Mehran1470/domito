@@ -522,17 +522,6 @@ textarea::placeholder{color:var(--muted)}
 header .brand{flex-direction:row}
 #chargeChip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;color:var(--gold,#ffd166);background:#ffffff14;border:1px solid #ffffff22;white-space:nowrap}
 #chargeChip[hidden]{display:none}
-#voiceCard{flex:none;margin:6px 14px 4px;padding:12px 14px 10px;border-radius:24px;text-align:center;
- background:linear-gradient(160deg,#7c5cff38,#1a144899);border:1px solid #ffffff22;box-shadow:0 16px 36px -22px #000c, inset 0 1px 0 #ffffff14}
-#voiceCard .vc-wave{display:flex;align-items:center;justify-content:center;gap:3px;height:30px;margin-bottom:8px}
-#voiceCard .vc-wave i{display:block;width:3px;border-radius:3px;background:linear-gradient(180deg,#7c5cff,#ff4d8d);animation:vcw 1.2s ease-in-out infinite}
-@keyframes vcw{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
-#vcCall{width:100%;min-height:44px;border-radius:14px;font-weight:800;font-size:14.5px;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;
- background:linear-gradient(135deg,#7c5cff,#ff4d8d);box-shadow:0 10px 22px -10px #7c5cffcc}
-#vcCall:active{transform:scale(.98)}
-#voiceCard small{display:block;margin-top:7px;font-size:11px;color:var(--muted)}
-body.kb #voiceCard{display:none}
-body.kb #dnNav{display:none!important}
 :root:not([data-theme="light"]) #personas{background:transparent;border-bottom:0;padding:6px 14px}
 #personas button{font-weight:700}
 :root:not([data-theme="light"]) footer{background:transparent;border-top:0;backdrop-filter:none;padding-bottom:calc(8px + env(safe-area-inset-bottom) + var(--bo,0px))}
@@ -568,12 +557,6 @@ form{border-radius:22px;background:#ffffff12;border-color:#ffffff22}
   <button class="icon" id="settingsBtn" title="تنظیمات">⚙️</button>
  </div>
 </header>
-
-<div id="voiceCard">
- <div class="vc-wave" aria-hidden="true"></div>
- <button type="button" id="vcCall">📞 تماس صوتی زنده</button>
- <small>هر ۱ سکه = ۳ شارژ · هر ۱ کلمه = ۱ شارژ</small>
-</div>
 
 <div id="personas"></div>
 
@@ -3281,9 +3264,6 @@ initializeDomitoAccount();
 <script>
 // کارت تماس صوتی، موج صدا و نوار پایین
 (function(){
- var w=document.querySelector("#voiceCard .vc-wave");
- for(var i=0;i<27;i++){var b=document.createElement("i");b.style.height=(8+Math.abs(Math.sin(i*.7))*20)+"px";b.style.animationDelay=(i*0.06)+"s";w.appendChild(b);}
- document.getElementById("vcCall").addEventListener("click",function(){document.getElementById("live").click();});
  var inp=document.getElementById("input");
  inp.addEventListener("focus",function(){document.body.classList.add("kb");});
  inp.addEventListener("blur",function(){document.body.classList.remove("kb");});
