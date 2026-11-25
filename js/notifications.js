@@ -125,6 +125,7 @@ async function boot() {
   css.textContent = `
   #dnBell{position:fixed;top:12px;left:12px;z-index:99990;width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(15,20,36,.92);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);padding:0}
   #dnBell.ring{animation:dnring .9s ease 2}
+  #dnBell{display:none!important}
   @keyframes dnring{0%,100%{transform:rotate(0)}20%{transform:rotate(18deg)}40%{transform:rotate(-16deg)}60%{transform:rotate(10deg)}80%{transform:rotate(-6deg)}}
   #dnBadge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#ff3b4e;color:#fff;font:800 11px/20px Vazirmatn,Tahoma,sans-serif;text-align:center;padding:0 5px;display:none}
   #dnPanel{color:#fff;font-family:Vazirmatn,Tahoma,sans-serif;direction:rtl;display:none}

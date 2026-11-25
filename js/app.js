@@ -218,13 +218,15 @@ export async function ensureOwnerLinks(
 
   }
 
-  await set(
-    ref(
-      db,
-      `uidToName/${uid}`
-    ),
-    username
-  );
+  // قانون دیتابیس اجازهٔ بازنویسی uidToName را نمی‌دهد؛ فقط اگر نبود می‌نویسیم
+  try {
+    const nameSnap = await get(ref(db, `uidToName/${uid}`));
+    if (!nameSnap.exists()) {
+      await set(ref(db, `uidToName/${uid}`), username);
+    }
+  } catch (e) {
+    console.warn("uidToName:", e);
+  }
 
   await ensureProfile(
     username

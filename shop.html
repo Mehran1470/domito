@@ -4,9 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0f111a">
+  <meta name="theme-color" content="#0d0a24">
   <title>فروشگاه دومیتو 🛍️</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pages.css">
 
   <style>
     :root {
@@ -272,10 +273,34 @@
     @media (prefers-reduced-motion: reduce) {
       .shop-item { transition: none; }
     }
+
+    /* ---- ظاهر جدید دومیتو ---- */
+    :root { --shop-gold: #ff7ab0; --shop-muted: #b3acdf; --shop-border: rgba(255,255,255,.12); }
+    body { background: none; }
+    .shop-wrap { width: 100%; max-width: 480px; padding: 0; margin: 0 auto; }
+    .shop-logo { border-radius: 50%; background: linear-gradient(135deg,#7c5cff,#ff4d8d); border: 0; }
+    .shop-title { font-size: 20px; }
+    .shop-wallet { border-radius: 100px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #ffd166; }
+    .shop-me { border-radius: 24px; background: linear-gradient(160deg,rgba(124,92,255,.22),rgba(26,20,72,.75)); }
+    .shop-me-avatar { border-radius: 50%; background: linear-gradient(135deg,#7c5cff,#ff4d8d); }
+    .shop-tab { border-radius: 100px; background: rgba(255,255,255,.07); }
+    .shop-tab[aria-selected="true"] { background: linear-gradient(135deg,#7c5cff,#ff4d8d); border-color: transparent; color: #fff; }
+    .shop-tab[aria-selected="true"] .tab-count { color: #ffe3f0; }
+    .shop-chip[aria-pressed="true"] { color: #fff; border-color: transparent; background: rgba(124,92,255,.45); }
+    .shop-item { border-radius: 24px; background: rgba(255,255,255,.06); }
+    .shop-item.equipped { border-color: #ff7ab0; background: rgba(255,77,141,.1); }
+    .cos-preview { border-radius: 18px; background: linear-gradient(160deg,#2a1470,#4a1a68); }
+    .cos-sample-avatar { background: linear-gradient(135deg,#7c5cff,#ff4d8d); }
+    .shop-item-price { color: #ffd166; }
+    .shop-action { background: linear-gradient(135deg,#7c5cff,#ff4d8d); color: #fff; border-radius: 100px; }
+    .shop-action.secondary { background: rgba(255,255,255,.1); }
+    .shop-action.confirm { background: #ff8b5e; }
+    .shop-wallet-link { background: linear-gradient(135deg,#7c5cff,#ff4d8d); color: #fff; }
+    .shop-links { margin-bottom: 10px; }
   </style>
 </head>
 
-<body>
+<body class="pg">
   <main class="shop-wrap">
 
     <header class="shop-header">
@@ -324,6 +349,7 @@
 
   </main>
 
+  <script src="./js/nav.js" defer></script>
   <script type="module">
     import {
       getSavedName,
