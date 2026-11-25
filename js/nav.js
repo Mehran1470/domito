@@ -12,7 +12,7 @@
   const items = [
     ["index.html", "خانه", "home", ["index.html", ""]],
     ["friends.html", "دوستان", "users", ["friends.html"]],
-    ["index.html#gamesSection", "بازی", "pad", [], true],
+    ["lobby.html", "رای‌گیری سرتاسری", "pad", [], true],
     ["assistant.html", "دستیار", "bot", ["assistant.html"]],
     ["profile.html", "پروفایل", "user", ["profile.html"]]
   ];
@@ -32,9 +32,32 @@
     const sync = () => { nav.style.display = auth.style.display === "none" ? "flex" : "none"; };
     sync(); setInterval(sync, 400);
   }
-  // کلیک روی «بازی» در صفحهٔ اصلی: اسکرول نرم به لیست بازی‌ها
-  nav.querySelector(".mid").addEventListener("click", (e) => {
-    const t = document.getElementById("gamesSection");
-    if (t) { e.preventDefault(); t.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  // دکمهٔ وسط: مستقیم وارد رای‌گیری سرتاسری می‌شود
+  const mid = nav.querySelector(".mid");
+  let busy = false;
+  mid.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    mid.style.opacity = ".6";
+    try {
+      const app = await import("./js/app.js");
+      const user = await app.waitForUser();
+      if (!user) { window.location.href = "./index.html"; return; }
+
+      const cur = app.getSavedRoom();
+      if (cur && app.isGlobalRoom(cur) && /lobby\.html$/.test(location.pathname)) {
+        busy = false; mid.style.opacity = ""; return;   // همین‌جا هستیم
+      }
+      if (cur && !app.isGlobalRoom(cur)) {
+        try { await app.leaveLobby(); } catch (err) { console.warn(err); }
+      }
+      await app.enterGlobalRoom();
+      window.location.href = "./lobby.html";
+    } catch (err) {
+      console.error(err);
+      busy = false; mid.style.opacity = "";
+      alert("ورود به رای‌گیری سرتاسری انجام نشد. اینترنت را بررسی کن و دوباره امتحان کن.");
+    }
   });
 })();
