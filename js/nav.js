@@ -24,6 +24,28 @@
     return '<a href="./' + href + '" class="' + (mid ? "mid" : on.trim()) + '" aria-label="' + label + '">' + ic(I[icon]) + (mid ? "" : "<span>" + label + "</span>") + "</a>";
   }).join("");
   document.body.appendChild(nav);
+
+  // مرورگرهای بدون View Transition: محو/ورود نرم با خود صفحه
+  const vt = "onpagereveal" in window;
+  if (!vt && document.body.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.body.animate(
+      [{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "none" }],
+      { duration: 320, easing: "cubic-bezier(.2,.9,.25,1)" }
+    );
+    nav.querySelectorAll("a:not(.mid)").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        if (a.classList.contains("on") || e.metaKey || e.ctrlKey) return;
+        e.preventDefault();
+        const href = a.href;
+        const anim = document.body.animate(
+          [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(-8px)" }],
+          { duration: 180, easing: "ease-in", fill: "forwards" }
+        );
+        anim.onfinish = () => { window.location.href = href; };
+        setTimeout(() => { window.location.href = href; }, 400);
+      });
+    });
+  }
   document.body.style.paddingBottom = "110px";
 
   // وقتی صفحهٔ ورود/ثبت‌نام باز است نوار پایین نشان داده نشود

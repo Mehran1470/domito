@@ -505,3 +505,18 @@ button, .btn{
 #dnNav a.mid{width:58px; height:58px; border-radius:50%; margin-top:-36px; color:#fff; justify-content:center; background:linear-gradient(135deg,var(--accent),var(--violet)); border:3px solid var(--bg); box-shadow:0 10px 28px rgba(255,77,141,.55);}
 #dnNav a.mid::after{display:none;}
 #dnNav a.mid svg{width:26px; height:26px;}
+
+/* انیمیشن نرم جابه‌جایی بین صفحه‌ها */
+@view-transition{navigation:auto}
+#dnNav{view-transition-name:dnnav}
+::view-transition-old(root){animation:dnOut .2s ease both}
+::view-transition-new(root){animation:dnIn .34s cubic-bezier(.2,.9,.25,1) both}
+@keyframes dnOut{to{opacity:0;transform:translateY(-8px) scale(.99)}}
+@keyframes dnIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#dnNav a{transition:transform .18s ease,color .2s ease}
+#dnNav a:active{transform:scale(.88)}
+#dnNav a.on::after{animation:dnBar .4s cubic-bezier(.2,.9,.25,1) .08s both}
+@keyframes dnBar{from{transform:scaleX(0);opacity:0}to{transform:none;opacity:1}}
+#dnNav a.on svg{animation:dnPop .45s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes dnPop{from{transform:translateY(5px) scale(.8)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation:none}}
