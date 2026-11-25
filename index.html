@@ -696,7 +696,11 @@ function initWidgetStack() {
     hint.textContent = "بکش تا «" + names[order[1]] + "» رو ببینی ↔";
   }
 
+  let flinging = false;
+
   function flingTo(dir) {
+    if (flinging) return;
+    flinging = true;
     const front = cards[order[0]];
     front.style.transition =
       "transform .32s cubic-bezier(.4,.1,.6,1), opacity .28s ease";
@@ -709,6 +713,7 @@ function initWidgetStack() {
       apply();
       void front.offsetWidth;
       front.style.transition = "";
+      flinging = false;
     }, 300);
   }
 
@@ -721,7 +726,7 @@ function initWidgetStack() {
 
   stack.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (e.target.closest(".wdot")) return;
+    if (e.target.closest(".wdot") || flinging) return;
     active = true; moved = false;
     sx = e.clientX; sy = e.clientY; dx = 0; t0 = performance.now();
     cards[order[0]].classList.add("dragging");
@@ -782,7 +787,7 @@ function initWidgetStack() {
 
 /* رای‌گیری زنده روی صفحه اصلی: اتاق فعلی کاربر */
 let voteUnsubs = [];
-let voteMode = (isGlobalRoom(getSavedRoom()) ? "global" : "private");
+let voteMode = "global";   // پیش‌فرض: رای‌گیری سرتاسری
 let globalTimer = null;
 let curSlot = null;     // برای حالت سرتاسری
 let slotPlayers = {};

@@ -1,5 +1,7 @@
 /* صفحه اصلی دومیتو — هم‌شکل پیش‌نمایش «خانه» */
-body.pvhome{padding:0 0 130px; align-items:stretch;}
+body.pvhome{padding:0 0 130px; align-items:stretch; overflow-x:hidden;}
+html:has(body.pvhome){overflow-x:hidden;}
+body.pvhome .wrap{overflow-x:clip;}
 body.pvhome .wrap{width:100%; max-width:430px; margin:0 auto; padding:22px 16px 0;}
 body.pvhome #dnBell{display:none!important}
 
