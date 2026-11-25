@@ -657,11 +657,11 @@ function renderGameCards() {
   document.getElementById("gamesCount").textContent = faNum(list.length) + " بازی";
   list.forEach((g) => {
     const a = document.createElement("a");
-    a.className = "pv-gcard";
+    a.className = "pv-tcard pv-gcard";
     const art = hasScene(g.id)
-      ? '<div class="art">' + sceneSVG(g.id, "60 20 240 150", g.name) + "</div>"
+      ? '<div class="art">' + sceneSVG(g.id, "90 0 180 240", g.name) + "</div>"
       : '<div class="art fb">' + escapeHtml(g.icon || "🎮") + "</div>";
-    a.innerHTML = art + '<div class="bd"><div class="nm"></div><span class="tg"></span></div>';
+    a.innerHTML = art + '<div class="shade"></div><div class="in"><div class="nm"></div><div class="tg"></div></div>';
     a.querySelector(".nm").textContent = g.name;
     a.querySelector(".tg").textContent = gameTag(g);
     a.addEventListener("click", () => playGame(g));
