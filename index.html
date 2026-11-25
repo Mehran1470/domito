@@ -144,7 +144,7 @@
 </style>
 </head>
 
-<body>
+<body class="pvhome">
 
 <div class="wrap">
 
@@ -209,99 +209,70 @@
   <!-- HOME -->
   <div id="homeContent" style="display:none;">
 
-    <!-- کیف پول و پروفایل؛ فروشگاه از صفحه اصلی حذف شده -->
-    <div class="top-wallet-bar">
-
-      <a href="wallet.html" class="coin-badge">
-        🪙
-        <span id="coinCount">0</span>
-        سکه ←
+    <header class="pv-top">
+      <a class="pv-me" href="profile.html">
+        <div class="pv-av"><b id="meLetter">م</b><i></i></div>
+        <div class="pv-hello"><small>خوش اومدی</small><b id="helloName"></b></div>
       </a>
-
-      <a
-        href="assistant.html"
-        class="btn-ghost"
-        style="
-          text-decoration:none;
-          padding:8px 14px;
-          font-size:12.5px;
-        "
-      >
-        🤖 دستیار
-      </a>
-
-      <a
-        href="profile.html"
-        class="btn-ghost"
-        style="
-          text-decoration:none;
-          padding:8px 14px;
-          font-size:12.5px;
-        "
-      >
-        👤 پروفایل من
-      </a>
-
-    </div>
+      <div class="pv-top-r">
+        <a class="pv-coin glassc" href="wallet.html" aria-label="سکه‌ها">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffd166" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0M14.8 9a2 2 0 0 0 -1.8 -1h-2a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-2a2 2 0 0 1 -1.8 -1M12 6v2M12 16v2"></path></svg>
+          <span id="coinCount">۰</span>
+        </a>
+        <button class="pv-bell glassc" id="pvBell" type="button" aria-label="اعلان‌ها">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6M9 17v1a3 3 0 0 0 6 0v-1"></path></svg>
+          <em id="pvBellBadge"></em>
+        </button>
+      </div>
+    </header>
 
     <!-- HERO -->
-    <div class="hero">
+    <section class="pv-hero" id="heroCard">
       <div class="hero-art" id="heroArt"></div>
-      <div class="hero-shade"></div>
-
-      <div class="hero-content">
-        <span class="hero-tag">🔥 سالن مینی‌گیم‌های آنلاین</span>
-
-        <h1>بازی کن. رقابت کن. لذت ببر.</h1>
-
-        <p>
-          خوش اومدی
-          <span
-            id="helloName"
-            style="color:var(--gold);font-weight:700;"
-          ></span>
-        </p>
-
-        <div class="hero-btns">
-          <button id="createRoomBtn">
-            ➕ ساخت اتاق جدید
-          </button>
-
-          <button id="openJoinRoomBtn" class="btn-ghost">
-            🔑 ورود با کد اتاق
-          </button>
+      <div class="pv-shade"></div>
+      <div class="pv-tags"><span class="t-new">جدید</span><span class="glassc">چندنفره</span></div>
+      <div class="pv-hero-info">
+        <h2 id="heroTitle"></h2>
+        <p id="heroDesc"></p>
+        <div class="pv-hero-row">
+          <div class="pv-avs" id="heroAvs"></div>
+          <a class="pv-play" id="heroPlay" href="#">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a1a6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13 -8z"></path></svg>بازی کن
+          </a>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- WIDGET STACK: رای‌گیری زنده (جلو) + دوستان آنلاین (پشت) — با کشیدن انگشت جابه‌جا می‌شوند -->
-    <div class="wstack" id="widgetStack" tabindex="0" role="group" aria-roledescription="کارت‌های قابل جابه‌جایی" aria-label="رای‌گیری زنده و دوستان آنلاین">
+    <!-- رای‌گیری زنده (جلو) + دوستان آنلاین (پشت) — هم‌اندازه؛ با کشیدن انگشت جابه‌جا می‌شوند -->
+    <div class="wstack" id="widgetStack" tabindex="0" role="group" aria-label="رای‌گیری زنده و دوستان آنلاین">
 
       <section class="wcard w-vote" data-pos="0" id="voteWidget" aria-label="رای‌گیری زنده">
-        <div class="w-head">
-          <span class="w-title"><i class="w-pulse"></i>رای‌گیری زنده</span>
-          <span class="w-chip" id="voteRoomCode" style="display:none;"></span>
+        <div class="w-ring">
+          <svg viewBox="0 0 60 60" aria-hidden="true">
+            <defs><linearGradient id="vRing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff4d8d"/></linearGradient></defs>
+            <circle class="bg" cx="30" cy="30" r="27"/>
+            <circle class="fg" id="voteRingFg" cx="30" cy="30" r="27"/>
+          </svg>
+          <div class="n" id="voteRingN">–</div>
+        </div>
+        <div class="w-info">
+          <div class="w-ttl"><span class="dot"></span><span class="t">رای‌گیری زنده</span></div>
+          <div class="w-sub" id="voteSub"></div>
+          <div class="w-bars empty" id="voteBars"></div>
+          <div class="w-mini" id="voteMini" style="display:none"></div>
         </div>
         <div class="w-seg" id="voteSeg">
-          <button type="button" data-m="private" class="on">🏠 اتاق شخصی</button>
-          <button type="button" data-m="global">🌍 سرتاسری</button>
+          <button type="button" data-m="private">شخصی</button>
+          <button type="button" data-m="global">سرتاسری</button>
         </div>
-        <div class="w-body" id="voteBody"></div>
-        <div class="w-actions" id="voteActions"></div>
       </section>
 
       <section class="wcard w-friends" data-pos="1" id="friendsWidget" aria-label="دوستان آنلاین">
-        <div class="w-head">
-          <span class="w-title">👥 دوستان آنلاین</span>
-          <span class="w-chip" id="friendsCount">۰</span>
-        </div>
-        <div class="w-scroll">
-          <div id="requestList"></div>
-          <div id="onlineFriendsList"></div>
-          <p class="muted" id="noFriendsMsg" style="display:none;">هنوز دوستی اضافه نکردی</p>
-        </div>
-        <div class="w-actions">
-          <a href="friends.html" class="w-btn ghost">مدیریت دوستان ←</a>
+        <div class="w-fcirc" id="friendsCount">۰</div>
+        <div class="w-info">
+          <div class="w-ttl"><span class="t">دوستان آنلاین</span></div>
+          <div class="w-sub" id="friendsSub">در حال بارگذاری...</div>
+          <div class="pv-avs" id="friendsAvs"></div>
         </div>
       </section>
 
@@ -309,7 +280,12 @@
         <button type="button" class="wdot on" aria-label="رای‌گیری زنده"></button>
         <button type="button" class="wdot" aria-label="دوستان آنلاین"></button>
       </div>
-      <p class="w-hint" id="wHint">بکش تا «دوستان آنلاین» رو ببینی ↔</p>
+      <p class="w-hint" id="wHint"></p>
+    </div>
+
+    <div class="glassc pv-card" id="requestsCard" style="display:none;">
+      <h2>🤝 درخواست‌های دوستی</h2>
+      <div id="requestList"></div>
     </div>
 
     <!-- INVITES -->
@@ -318,23 +294,32 @@
       <div id="inviteList"></div>
     </div>
 
-    <!-- SOLO GAMES -->
-    <div class="section-title" id="gamesSection">
-      <h2>🎮 بازی تک‌نفره — همین الان بازی کن</h2>
+    <!-- CHIPS -->
+    <div class="pv-chips" id="catChips"></div>
+
+    <div class="pv-sec"><h2>برگزیده‌ها</h2><span>بکش ↔</span></div>
+    <div class="pv-trend" id="trendRow"></div>
+
+    <div class="pv-sec" id="gamesSection"><h2>همه بازی‌ها</h2><span id="gamesCount"></span></div>
+    <div class="pv-grid" id="gameGrid"></div>
+
+    <a class="pv-shop" href="shop.html">
+      <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1 13h-14zM9 7a3 3 0 0 1 6 0"></path></svg></div>
+      <div class="tx"><b>فروشگاه دومیتو</b><small>تم، قاب، نشان، عنوان و افکت</small></div>
+      <div class="go">ورود</div>
+    </a>
+
+    <div class="pv-sec"><h2>دوستان آنلاین</h2><a href="friends.html">همه</a></div>
+    <div class="pv-friends glassc" id="onlineFriendsList"></div>
+
+    <div class="pv-sec"><h2>🏆 لیدربورد</h2></div>
+    <div class="leader-card glassc" id="leaderCard" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:24px;">
+      <p class="muted" id="leaderLoading">در حال بارگذاری...</p>
     </div>
 
-    <div class="game-scroll" id="gameScroll"></div>
-
-    <!-- LEADERBOARD -->
-    <div class="section-title">
-      <h2>🏆 لیدربورد</h2>
-    </div>
-
-    <div class="leader-card" id="leaderCard">
-      <p class="muted" id="leaderLoading">
-        در حال بارگذاری...
-      </p>
-    </div>
+    <!-- دکمه‌های قدیمی (برای ساخت و ورود به اتاق؛ از ویجت فراخوانی می‌شوند) -->
+    <button id="createRoomBtn" type="button" style="display:none"></button>
+    <button id="openJoinRoomBtn" type="button" style="display:none"></button>
 
   </div>
 </div>
@@ -473,7 +458,8 @@ import {
   globalSlotInfo,
   whenClockReady,
   serverNow,
-  GLOBAL_MIN_PLAYERS
+  GLOBAL_MIN_PLAYERS,
+  GLOBAL_SLOT_MS
 } from "./js/app.js";
 import { sceneSVG, hasScene } from "./js/scenes.js";
 
@@ -559,36 +545,92 @@ authBtn.addEventListener("click", async () => {
 });
 
 /* GAME CARDS */
+const faNum = (n) => Number(n).toLocaleString("fa-IR");
+
+/* دسته‌بندی بازی‌ها (برای نمایش و فیلتر) */
+const GAME_TAG = {
+  racing: ["مسابقه", "مسابقه"],
+  thousandfold: ["اکشن", "اکشن"],
+  cod: ["تیراندازی", "اکشن"],
+  astra: ["اکشن", "اکشن"],
+  math: ["مهارتی", "مهارتی"],
+  quiz: ["مهارتی", "مهارتی"],
+  reaction: ["مهارتی", "مهارتی"],
+  scramble: ["مهارتی", "مهارتی"],
+  snake: ["مهارتی", "مهارتی"],
+  memory: ["حافظه", "پازل"],
+  lightpuzzle: ["پازل", "پازل"],
+  minecraft: ["ساخت‌وساز", "ساخت‌وساز"]
+};
+const CATS = ["همه", "مسابقه", "اکشن", "مهارتی", "پازل", "ساخت‌وساز"];
+let curCat = "همه";
+
+function gameTag(g) { return (GAME_TAG[g.id] || ["بازی", "بازی"])[0]; }
+function gameCat(g) { return (GAME_TAG[g.id] || ["بازی", "بازی"])[1]; }
+function playGame(g) { window.location.href = "games/" + g.id + ".html?solo=1"; }
+
 function renderGameCards() {
-  const scroll = document.getElementById("gameScroll");
-  scroll.innerHTML = "";
+  /* hero: اپکس اُوردرایو */
+  const hero = GAMES.find((g) => g.id === "racing") || GAMES[0];
+  document.getElementById("heroArt").innerHTML = hasScene(hero.id)
+    ? sceneSVG(hero.id, "0 0 360 240", hero.name) : "";
+  document.getElementById("heroTitle").textContent = hero.name;
+  document.getElementById("heroDesc").textContent = hero.desc;
+  document.getElementById("heroPlay").onclick = (e) => { e.preventDefault(); playGame(hero); };
+  document.getElementById("heroCard").onclick = (e) => { if (!e.target.closest("a")) playGame(hero); };
 
-  GAMES.forEach((g) => {
-    const card = document.createElement("div");
-    card.className = "game-card";
+  /* چیپ‌ها */
+  const chips = document.getElementById("catChips");
+  chips.innerHTML = "";
+  CATS.forEach((c) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = c;
+    if (c === curCat) b.className = "on";
+    b.addEventListener("click", () => { curCat = c; renderGameCards(); });
+    chips.appendChild(b);
+  });
 
-    const art = hasScene(g.id)
-      ? sceneSVG(g.id, "60 20 240 150", g.name)
-      : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:40px">${g.icon}</div>`;
-
-    card.innerHTML = `
-      <div class="game-thumb">
-        ${art}
-        <span class="solo-badge">تک‌نفره</span>
-      </div>
-
-      <div class="game-body">
-        <div class="name">${g.name}</div>
-        <div class="meta">${g.desc}</div>
-      </div>
-    `;
-
-    card.addEventListener("click", () => {
-      window.location.href = `games/${g.id}.html?solo=1`;
+  /* برگزیده‌ها: سه بازی اول با صحنه */
+  const trend = document.getElementById("trendRow");
+  trend.innerHTML = "";
+  GAMES.filter((g) => hasScene(g.id))
+    .sort((a, b) => ["racing", "thousandfold", "math"].indexOf(a.id) < 0 ? 1 : -1)
+    .slice(0, 3)
+    .forEach((g, i) => {
+      const a = document.createElement("a");
+      a.className = "pv-tcard";
+      a.innerHTML =
+        '<div class="art">' + sceneSVG(g.id, "90 0 180 240", g.name) + '</div><div class="shade"></div>' +
+        '<div class="rk">' + faNum(i + 1) + '</div>' +
+        '<div class="in"><div class="nm"></div><div class="tg"></div></div>';
+      a.querySelector(".nm").textContent = g.name;
+      a.querySelector(".tg").textContent = gameTag(g);
+      a.addEventListener("click", () => playGame(g));
+      trend.appendChild(a);
     });
 
-    scroll.appendChild(card);
+  /* همه بازی‌ها */
+  const grid = document.getElementById("gameGrid");
+  grid.innerHTML = "";
+  const ORDER = ["math", "thousandfold", "cod", "minecraft", "quiz", "racing"];
+  const rank = (g) => { const i = ORDER.indexOf(g.id); return i < 0 ? 99 : i; };
+  const list = GAMES.filter((g) => curCat === "همه" || gameCat(g) === curCat)
+    .slice().sort((a, b) => rank(a) - rank(b));
+  document.getElementById("gamesCount").textContent = faNum(list.length) + " بازی";
+  list.forEach((g) => {
+    const a = document.createElement("a");
+    a.className = "pv-gcard";
+    const art = hasScene(g.id)
+      ? '<div class="art">' + sceneSVG(g.id, "60 20 240 150", g.name) + "</div>"
+      : '<div class="art fb">' + escapeHtml(g.icon || "🎮") + "</div>";
+    a.innerHTML = art + '<div class="bd"><div class="nm"></div><span class="tg"></span></div>';
+    a.querySelector(".nm").textContent = g.name;
+    a.querySelector(".tg").textContent = gameTag(g);
+    a.addEventListener("click", () => playGame(g));
+    grid.appendChild(a);
   });
+  if (!list.length) grid.innerHTML = '<p class="pv-empty" style="grid-column:1/-1">بازی‌ای در این دسته نیست</p>';
 }
 
 /* WIDGET STACK (مثل ویجت آیفون): کشیدن افقی، نقطه‌ها، کلیدهای جهت‌دار */
@@ -703,58 +745,102 @@ function initWidgetStack() {
 
 /* رای‌گیری زنده روی صفحه اصلی: اتاق فعلی کاربر */
 let voteUnsubs = [];
+let voteMode = (isGlobalRoom(getSavedRoom()) ? "global" : "private");
+let globalTimer = null;
+let curSlot = null;     // برای حالت سرتاسری
+let slotPlayers = {};
+let slotVotes = {};
 
-function startVoteWidget() {
+function setVoteCard(o) {
+  document.getElementById("voteRingN").textContent = o.center;
+  document.getElementById("voteRingFg").style.strokeDashoffset = String(169.6 * (1 - Math.min(1, Math.max(0, o.progress || 0))));
+  document.getElementById("voteSub").textContent = o.sub;
+  const bars = document.getElementById("voteBars");
+  const mini = document.getElementById("voteMini");
+  if (o.mini) {
+    bars.style.display = "none";
+    mini.style.display = "flex";
+  } else {
+    mini.style.display = "none";
+    bars.style.display = "flex";
+    bars.innerHTML = "";
+    const top = (o.top || []).filter((x) => x.n > 0);
+    bars.className = "w-bars" + (top.length ? "" : " empty");
+    top.forEach((x) => {
+      const i = document.createElement("i");
+      i.style.flex = String(x.n);
+      bars.appendChild(i);
+    });
+  }
+}
+
+function tallyVotes(players, votes) {
+  const counts = {};
+  GAMES.forEach((g) => { counts[g.id] = 0; });
+  let voted = 0;
+  Object.entries(votes || {}).forEach(([uid, v]) => {
+    if (players[uid] && v && counts[v.gameId] !== undefined) { counts[v.gameId]++; voted++; }
+  });
+  const top = GAMES.map((g) => ({ g, n: counts[g.id] })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n).slice(0, 3);
+  return { voted, top };
+}
+
+function leaderText(t, players) {
+  if (t.top.length) return t.top[0].g.name + " با " + faNum(t.top[0].n) + " رای جلوئه";
+  return faNum(Object.keys(players).length) + " بازیکن آنلاین · هنوز رأیی ثبت نشده";
+}
+
+function setupMini(buttons) {
+  const mini = document.getElementById("voteMini");
+  mini.innerHTML = "";
+  buttons.forEach(([label, ghost, fn]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label;
+    if (ghost) b.className = "ghost";
+    b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+    mini.appendChild(b);
+  });
+}
+
+function stopVoteWatch() {
   voteUnsubs.forEach((f) => { try { f(); } catch (e) {} });
   voteUnsubs = [];
+  if (globalTimer) { clearInterval(globalTimer); globalTimer = null; }
+}
 
-  const body = document.getElementById("voteBody");
-  const actions = document.getElementById("voteActions");
-  const chip = document.getElementById("voteRoomCode");
-  const code = getSavedRoom();
+async function goGlobal() {
+  try {
+    await enterGlobalRoom();
+    window.location.href = "lobby.html";
+  } catch (error) {
+    console.error(error);
+    alert("ورود به رای‌گیری سرتاسری انجام نشد. اینترنت را بررسی کن و دوباره امتحان کن.");
+  }
+}
 
+function startVoteWidget() {
+  stopVoteWatch();
+
+  const card = document.getElementById("voteWidget");
   document.querySelectorAll("#voteSeg button").forEach((b) => {
     b.classList.toggle("on", b.dataset.m === voteMode);
-    b.onclick = () => { if (b.dataset.m !== voteMode) setVoteMode(b.dataset.m); };
+    b.onclick = (e) => { e.stopPropagation(); if (b.dataset.m !== voteMode) { voteMode = b.dataset.m; startVoteWidget(); } };
   });
 
-  if (voteMode === "global") {
-    chip.style.display = "none";
-    body.innerHTML = '<div class="w-sub">همه‌ی بازیکنان با هم یه بازی رو انتخاب می‌کنن و هم‌زمان وارد می‌شن.</div><div class="m-live"><i class="w-pulse"></i><span id="globalLive">در حال اتصال...</span></div>';
-    actions.innerHTML = "";
-    const g = document.createElement("button");
-    g.type = "button"; g.className = "w-btn"; g.textContent = "ورود به رای‌گیری سرتاسری ←";
-    g.addEventListener("click", () => goGlobal(g));
-    actions.appendChild(g);
-    startGlobalWatch();
-    return;
-  }
-  stopGlobalWatch();
+  if (voteMode === "global") { startGlobalWatch(card); return; }
 
-  function showEmpty(msg) {
-    chip.style.display = "none";
-    body.innerHTML = '<p class="w-note"></p>';
-    body.firstChild.textContent = msg;
-    actions.innerHTML = "";
+  const code = getSavedRoom();
 
-    const a = document.createElement("button");
-    a.type = "button"; a.className = "w-btn"; a.textContent = "➕ ساخت اتاق";
-    a.addEventListener("click", () => document.getElementById("createRoomBtn").click());
-
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "w-btn ghost"; b.textContent = "🔑 ورود با کد";
-    b.addEventListener("click", () => document.getElementById("openJoinRoomBtn").click());
-
-    actions.append(a, b);
+  function noRoom(msg) {
+    setVoteCard({ center: "–", progress: 0, sub: msg, mini: true });
+    setupMini([
+      ["➕ ساخت اتاق", false, () => document.getElementById("createRoomBtn").click()],
+      ["🔑 ورود با کد", true, () => document.getElementById("openJoinRoomBtn").click()]
+    ]);
+    card.onclick = null;
   }
 
-  if (!code || isGlobalRoom(code)) {
-    showEmpty("الان توی هیچ اتاق شخصی‌ای نیستی. اتاق بساز یا با کد وارد شو تا رای‌گیری زنده شروع بشه.");
-    return;
-  }
-
-  chip.style.display = "";
-  chip.textContent = code;
+  if (!code || isGlobalRoom(code)) { noRoom("توی هیچ اتاق شخصی‌ای نیستی"); return; }
 
   let players = {};
   let votes = {};
@@ -762,45 +848,14 @@ function startVoteWidget() {
 
   function draw() {
     if (gone) return;
-    const uids = Object.keys(players);
-    const counts = {};
-    GAMES.forEach((g) => { counts[g.id] = 0; });
-    let voted = 0;
-
-    Object.entries(votes).forEach(([uid, v]) => {
-      if (players[uid] && v && counts[v.gameId] !== undefined) {
-        counts[v.gameId]++;
-        voted++;
-      }
-    });
-
-    const top = GAMES
-      .map((g) => ({ g, n: counts[g.id] }))
-      .filter((x) => x.n > 0)
-      .sort((a, b) => b.n - a.n)
-      .slice(0, 3);
-
-    const fa = (n) => Number(n).toLocaleString("fa-IR");
-    let html = '<div class="w-sub">' + fa(uids.length) + " بازیکن در اتاق · " + fa(voted) + " رای ثبت شده</div>";
-
-    if (top.length === 0) {
-      html += '<p class="w-note">هنوز کسی رای نداده. وارد لابی شو و بازی بعدی رو انتخاب کن.</p>';
-    } else {
-      const max = top[0].n;
-      top.forEach((x) => {
-        html +=
-          '<div class="w-vrow"><span class="ic">' + x.g.icon + '</span>' +
-          '<span class="nm">' + escapeHtml(x.g.name) + '</span>' +
-          '<span class="bar"><i style="width:' + Math.round((x.n / max) * 100) + '%"></i></span>' +
-          '<span class="ct">' + fa(x.n) + '</span></div>';
-      });
-    }
-
-    body.innerHTML = html;
-    actions.innerHTML = '<a href="lobby.html" class="w-btn">ورود به لابی و رای دادن ←</a>';
+    const total = Object.keys(players).length;
+    const t = tallyVotes(players, votes);
+    setVoteCard({ center: faNum(t.voted), progress: total ? t.voted / total : 0, sub: leaderText(t, players), top: t.top });
   }
 
-  const fail = () => { gone = true; showEmpty("اتاق قبلی پیدا نشد. یه اتاق جدید بساز یا با کد وارد شو."); };
+  card.onclick = () => { window.location.href = "lobby.html"; };
+
+  const fail = () => { gone = true; noRoom("اتاق قبلی پیدا نشد"); };
 
   voteUnsubs.push(onValue(roomRef(code, "meta"), (s) => { if (!s.exists()) fail(); }, fail));
   voteUnsubs.push(onValue(roomRef(code, "players"), (s) => { players = s.val() || {}; draw(); }, fail));
@@ -808,63 +863,40 @@ function startVoteWidget() {
   draw();
 }
 
-/* رای‌گیری سرتاسری (داخل ویجت رای‌گیری زنده) */
-let voteMode = (isGlobalRoom(getSavedRoom()) ? "global" : "private");
-let globalTimer = null;
-let globalCode = "", globalUnsub = null, globalCount = 0;
+function startGlobalWatch(card) {
+  card.onclick = () => goGlobal();
+  setVoteCard({ center: "…", progress: 0, sub: "در حال اتصال به رای‌گیری سرتاسری", top: [] });
 
-function globalLiveText() {
-  const fa = (n) => Number(n).toLocaleString("fa-IR");
-  const info = globalSlotInfo();
-  const left = Math.max(0, Math.ceil((info.endsAt - serverNow()) / 1000));
-  return globalCount >= GLOBAL_MIN_PLAYERS
-    ? fa(globalCount) + " نفر منتظرند · شروع تا " + fa(left) + " ثانیه"
-    : (globalCount ? fa(globalCount) + " نفر منتظرند · دور بعد تا " + fa(left) + " ثانیه" : "الان کسی منتظر نیست · اولین نفر باش");
-}
-
-function stopGlobalWatch() {
-  if (globalTimer) { clearInterval(globalTimer); globalTimer = null; }
-  if (globalUnsub) { try { globalUnsub(); } catch (e) {} globalUnsub = null; }
-  globalCode = "";
-}
-
-function startGlobalWatch() {
-  stopGlobalWatch();
   whenClockReady().then(() => {
     if (voteMode !== "global") return;
+
+    let watching = "";
+    let unsubs = [];
+
     const tick = () => {
-      const el = document.getElementById("globalLive");
       const info = globalSlotInfo();
-      if (info.code !== globalCode) {
-        if (globalUnsub) { try { globalUnsub(); } catch (e) {} }
-        globalCode = info.code;
-        globalCount = 0;
-        globalUnsub = onValue(roomRef(globalCode, "players"), (sn) => { globalCount = sn.exists() ? Object.keys(sn.val()).length : 0; tick(); }, () => {});
+      if (info.code !== watching) {
+        unsubs.forEach((f) => { try { f(); } catch (e) {} });
+        unsubs = [];
+        watching = info.code;
+        slotPlayers = {}; slotVotes = {};
+        unsubs.push(onValue(roomRef(watching, "players"), (s) => { slotPlayers = s.val() || {}; tick(); }, () => {}));
+        unsubs.push(onValue(roomRef(watching, "votes"), (s) => { slotVotes = s.val() || {}; tick(); }, () => {}));
       }
-      if (el) el.textContent = globalLiveText();
+      const left = Math.max(0, Math.ceil((info.endsAt - serverNow()) / 1000));
+      const t = tallyVotes(slotPlayers, slotVotes);
+      const n = Object.keys(slotPlayers).length;
+      let sub;
+      if (t.top.length) sub = leaderText(t, slotPlayers);
+      else if (n >= GLOBAL_MIN_PLAYERS) sub = faNum(n) + " نفر منتظرند · همه با هم شروع می‌کنیم";
+      else sub = n ? faNum(n) + " نفر منتظرند · حداقل ۲ نفر لازم است" : "همه‌ی بازیکنان · اولین نفر باش";
+      setVoteCard({ center: faNum(left), progress: 1 - left * 1000 / GLOBAL_SLOT_MS, sub, top: t.top });
     };
+
     tick();
     globalTimer = setInterval(tick, 1000);
+    voteUnsubs.push(() => unsubs.forEach((f) => { try { f(); } catch (e) {} }));
   });
-}
-
-async function goGlobal(btn) {
-  btn.disabled = true;
-  btn.textContent = "در حال ورود...";
-  try {
-    await enterGlobalRoom();
-    window.location.href = "lobby.html";
-  } catch (error) {
-    console.error(error);
-    btn.disabled = false;
-    btn.textContent = "ورود به رای‌گیری سرتاسری ←";
-    alert("ورود به رای‌گیری سرتاسری انجام نشد. اینترنت را بررسی کن و دوباره امتحان کن.");
-  }
-}
-
-function setVoteMode(m) {
-  voteMode = m;
-  startVoteWidget();
 }
 
 /* HOME */
@@ -875,8 +907,25 @@ function showHome() {
   const myName = getSavedName();
 
   document.getElementById("helloName").textContent = myName;
+  document.getElementById("meLetter").textContent = (myName.trim()[0] || "?").toUpperCase();
 
-  document.getElementById("heroArt").innerHTML = sceneSVG("race", "0 0 360 240", "");
+  const brand = document.querySelector(".brand");
+  if (brand) brand.style.display = "none";
+
+  /* زنگ اعلان‌ها: همان پنل قبلی، با نشان تعداد */
+  document.getElementById("pvBell").onclick = () => {
+    const b = document.getElementById("dnBell");
+    if (b) b.click();
+  };
+  setInterval(() => {
+    const src = document.getElementById("dnBadge");
+    const dst = document.getElementById("pvBellBadge");
+    const txt = src ? src.textContent.trim() : "";
+    const shown = txt && src.style.display !== "none";
+    dst.textContent = shown ? txt : "";
+    dst.style.display = shown ? "flex" : "none";
+  }, 800);
+
   renderGameCards();
   renderLeaderboard();
   initWidgetStack();
@@ -885,12 +934,13 @@ function showHome() {
   /* Wallet */
   listenProfile(myName, (p) => {
     document.getElementById("coinCount").textContent =
-      (p && p.coins) || 0;
+      Number((p && p.coins) || 0).toLocaleString("fa-IR");
   });
 
   /* FRIEND REQUESTS */
   listenFriendRequests(myName, (requesters) => {
     const list = document.getElementById("requestList");
+    document.getElementById("requestsCard").style.display = requesters.length ? "block" : "none";
     list.innerHTML = "";
 
     requesters.forEach((fromName) => {
@@ -906,27 +956,17 @@ function showHome() {
 
       const acceptBtn = document.createElement("button");
       acceptBtn.textContent = "قبول";
-
       acceptBtn.addEventListener("click", async () => {
-        try {
-          await acceptFriendRequest(myName, fromName);
-        } catch (e) {
-          console.error(e);
-          alert("قبول درخواست انجام نشد.");
-        }
+        try { await acceptFriendRequest(myName, fromName); }
+        catch (e) { console.error(e); alert("قبول درخواست انجام نشد."); }
       });
 
       const rejectBtn = document.createElement("button");
       rejectBtn.textContent = "رد";
       rejectBtn.className = "btn-ghost";
-
       rejectBtn.addEventListener("click", async () => {
-        try {
-          await rejectFriendRequest(myName, fromName);
-        } catch (e) {
-          console.error(e);
-          alert("رد درخواست انجام نشد.");
-        }
+        try { await rejectFriendRequest(myName, fromName); }
+        catch (e) { console.error(e); alert("رد درخواست انجام نشد."); }
       });
 
       actions.append(acceptBtn, rejectBtn);
@@ -936,46 +976,61 @@ function showHome() {
   });
 
   /* ONLINE FRIENDS */
+  const COLORS = ["#ff8fb0", "#3fe0c8", "#ffd166", "#b9a6ff", "#8fd3ff"];
+  const avatar = (name, i, small) => {
+    const d = document.createElement("div");
+    d.className = "pv-av" + (small ? " sm" : "");
+    d.innerHTML = "<b></b>";
+    d.firstChild.textContent = (name.trim()[0] || "?").toUpperCase();
+    d.firstChild.style.background = COLORS[i % COLORS.length];
+    return d;
+  };
+
   listenFriends(myName, (friends) => {
-    const listEl = document.getElementById("onlineFriendsList");
-    const noMsg = document.getElementById("noFriendsMsg");
-
     const online = friends.filter((f) => f.online === true);
-    document.getElementById("friendsCount").textContent =
-      online.length.toLocaleString("fa-IR");
+    const fa = (n) => Number(n).toLocaleString("fa-IR");
 
-    if (friends.length === 0) {
-      noMsg.style.display = "block";
-      noMsg.textContent = "هنوز دوستی اضافه نکردی";
-      listEl.innerHTML = "";
-      return;
-    }
+    /* کارت ویجت (پشت رای‌گیری) */
+    document.getElementById("friendsCount").textContent = fa(online.length);
+    document.getElementById("friendsSub").textContent =
+      friends.length === 0 ? "هنوز دوستی اضافه نکردی"
+      : online.length === 0 ? "الان هیچ‌کدوم از دوستات آنلاین نیستن"
+      : online.slice(0, 3).map((f) => f.name).join("، ") + (online.length > 3 ? " و …" : "") + " آنلاین";
+    const wAvs = document.getElementById("friendsAvs");
+    wAvs.innerHTML = "";
+    online.slice(0, 5).forEach((f, i) => wAvs.appendChild(avatar(f.name, i, true)));
+    document.getElementById("widgetStack").dataset.friends = String(online.length);
+    document.getElementById("friendsWidget").onclick = () => { window.location.href = "friends.html"; };
 
-    if (online.length === 0) {
-      noMsg.style.display = "block";
-      noMsg.textContent = "😴 الان هیچ‌کدوم از دوستات آنلاین نیستن";
-      listEl.innerHTML = "";
-      return;
-    }
+    /* کارت بالا (hero) */
+    const hAvs = document.getElementById("heroAvs");
+    hAvs.innerHTML = "";
+    online.slice(0, 3).forEach((f, i) => hAvs.appendChild(avatar(f.name, i, true)));
+    const hs = document.createElement("span");
+    hs.textContent = online.length ? fa(online.length) + " دوست آنلاین" : "دوستی آنلاین نیست";
+    hAvs.appendChild(hs);
 
-    noMsg.style.display = "none";
+    /* ردیف پایین */
+    const listEl = document.getElementById("onlineFriendsList");
     listEl.innerHTML = "";
-
-    online.forEach((f) => {
-      const row = document.createElement("div");
-      row.className = "friend-row";
-
-      const nameLink = document.createElement("a");
-      nameLink.href = `profile.html?user=${encodeURIComponent(f.name)}`;
-      nameLink.className = "friend-name-link";
-      nameLink.textContent = f.name;
-
-      const dot = document.createElement("span");
-      dot.className = "fdot";
-      dot.title = "آنلاین";
-
-      row.append(nameLink, dot);
-      listEl.appendChild(row);
+    if (online.length === 0) {
+      const p = document.createElement("p");
+      p.className = "pv-empty";
+      p.textContent = friends.length === 0 ? "هنوز دوستی اضافه نکردی" : "😴 الان هیچ‌کدوم از دوستات آنلاین نیستن";
+      listEl.appendChild(p);
+      return;
+    }
+    online.slice(0, 5).forEach((f, i) => {
+      const a = document.createElement("a");
+      a.className = "pv-fi";
+      a.href = "profile.html?user=" + encodeURIComponent(f.name);
+      const av = avatar(f.name, i, false);
+      av.insertAdjacentHTML("beforeend", "<i></i>");
+      const nm = document.createElement("div");
+      nm.className = "nm";
+      nm.textContent = f.name;
+      a.append(av, nm);
+      listEl.appendChild(a);
     });
   });
 
