@@ -1151,6 +1151,45 @@ export function leaveGlobalRoomState() {
 
 
 // ============================================================
+// چه کسی الان چه بازی‌ای می‌کند (برای کارت بزرگ صفحه اصلی)
+// مسیر: playing/{gameId}/{uid}
+// ============================================================
+
+export async function markPlaying(gameId) {
+  const uid = currentUid();
+  if (!uid || !gameId) return;
+
+  const r = ref(db, `playing/${gameId}/${uid}`);
+
+  try {
+    await set(r, { name: getSavedName(), at: serverTimestamp() });
+    await onDisconnect(r).remove();
+  } catch (error) {
+    console.warn("playing presence failed:", error);
+    return;
+  }
+
+  window.addEventListener("pagehide", () => { remove(r).catch(() => {}); });
+}
+
+export function listenPlayingCounts(callback) {
+  return onValue(
+    ref(db, "playing"),
+    (snap) => {
+      const counts = {};
+      const val = snap.val() || {};
+      Object.keys(val).forEach((gameId) => {
+        const n = Object.keys(val[gameId] || {}).length;
+        if (n > 0) counts[gameId] = n;
+      });
+      callback(counts);
+    },
+    () => callback({})
+  );
+}
+
+
+// ============================================================
 // اطلاعات اتاق
 // ============================================================
 

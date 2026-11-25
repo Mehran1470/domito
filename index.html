@@ -230,7 +230,7 @@
     <section class="pv-hero" id="heroCard">
       <div class="hero-art" id="heroArt"></div>
       <div class="pv-shade"></div>
-      <div class="pv-tags"><span class="t-new">جدید</span><span class="glassc">چندنفره</span></div>
+      <div class="pv-tags"><span class="t-new" id="heroNew">جدید</span><span class="glassc">چندنفره</span></div>
       <div class="pv-hero-info">
         <h2 id="heroTitle"></h2>
         <p id="heroDesc"></p>
@@ -459,7 +459,8 @@ import {
   whenClockReady,
   serverNow,
   GLOBAL_MIN_PLAYERS,
-  GLOBAL_SLOT_MS
+  GLOBAL_SLOT_MS,
+  listenPlayingCounts
 } from "./js/app.js";
 import { sceneSVG, hasScene } from "./js/scenes.js";
 
@@ -569,16 +570,52 @@ function gameTag(g) { return (GAME_TAG[g.id] || ["بازی", "بازی"])[0]; }
 function gameCat(g) { return (GAME_TAG[g.id] || ["بازی", "بازی"])[1]; }
 function playGame(g) { window.location.href = "games/" + g.id + ".html?solo=1"; }
 
-function renderGameCards() {
-  /* hero: اپکس اُوردرایو */
-  const hero = GAMES.find((g) => g.id === "racing") || GAMES[0];
-  document.getElementById("heroArt").innerHTML = hasScene(hero.id)
-    ? sceneSVG(hero.id, "0 0 360 240", hero.name) : "";
-  document.getElementById("heroTitle").textContent = hero.name;
-  document.getElementById("heroDesc").textContent = hero.desc;
-  document.getElementById("heroPlay").onclick = (e) => { e.preventDefault(); playGame(hero); };
-  document.getElementById("heroCard").onclick = (e) => { if (!e.target.closest("a")) playGame(hero); };
+let heroId = "";
+let playingCounts = {};
 
+/* کارت بزرگ: بازیِ پرطرفدارتر (بیشترین بازیکن در حال بازی)، وگرنه پیش‌فرض */
+function pickHero() {
+  let best = null;
+  GAMES.forEach((g) => {
+    const n = playingCounts[g.id] || 0;
+    if (n > 0 && (!best || n > (playingCounts[best.id] || 0))) best = g;
+  });
+  return best || GAMES.find((g) => g.id === "racing") || GAMES[0];
+}
+
+function updateHero() {
+  const g = pickHero();
+  const n = playingCounts[g.id] || 0;
+  const card = document.getElementById("heroCard");
+
+  const tag = document.getElementById("heroNew");
+  tag.textContent = n > 0 ? "🔥 " + faNum(n) + " نفر در حال بازی" : "جدید";
+
+  if (g.id === heroId) return;
+  heroId = g.id;
+
+  const swap = () => {
+    document.getElementById("heroArt").innerHTML = hasScene(g.id)
+      ? sceneSVG(g.id, "0 0 360 240", g.name)
+      : '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:96px;background:linear-gradient(160deg,#2a1470,#6b1a5e)">' + escapeHtml(g.icon || "🎮") + "</div>";
+    document.getElementById("heroTitle").textContent = g.name;
+    document.getElementById("heroDesc").textContent = g.desc;
+    document.getElementById("heroPlay").onclick = (e) => { e.preventDefault(); playGame(g); };
+    card.onclick = (e) => { if (!e.target.closest("a")) playGame(g); };
+    card.style.opacity = "1";
+  };
+
+  if (card.dataset.ready === "1") {
+    card.style.transition = "opacity .25s ease";
+    card.style.opacity = "0";
+    setTimeout(swap, 250);
+  } else {
+    card.dataset.ready = "1";
+    swap();
+  }
+}
+
+function renderGameCards() {
   /* چیپ‌ها */
   const chips = document.getElementById("catChips");
   chips.innerHTML = "";
@@ -927,6 +964,8 @@ function showHome() {
   }, 800);
 
   renderGameCards();
+  updateHero();
+  listenPlayingCounts((c) => { playingCounts = c; updateHero(); });
   renderLeaderboard();
   initWidgetStack();
   startVoteWidget();
