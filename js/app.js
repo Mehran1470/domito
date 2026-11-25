@@ -1045,6 +1045,7 @@ export async function createRoom() {
 
 
   saveRoom(code);
+  trackRoom(code);
 
 
   return code;
@@ -1138,6 +1139,7 @@ export async function enterGlobalRoom() {
 
   await ensureGlobalRoom(info.code);
   saveRoom(info.code);
+  trackRoom(info.code);
   return info.code;
 }
 
@@ -1319,6 +1321,7 @@ export async function joinRoomByCode(
 
 
   saveRoom(code);
+  trackRoom(code);
 
 
   return {
@@ -1652,6 +1655,8 @@ export async function leaveLobby() {
       `results/${uid}`
     )
   );
+
+  await deleteRoomIfEmpty(code);
 
 }
 
@@ -5089,4 +5094,58 @@ export async function spendLiveCharge(words) {
   const spend = Math.max(0, Math.min(5000, Math.floor(Number(words) || 0)));
   const tx = await runTransaction(profileRef(username, "liveCharge"), cur => Math.max(0, liveSafeCharge(cur) - spend));
   return liveSafeCharge(tx.snapshot.val());
+}
+
+
+// ============================================================
+// پاک‌سازی خودکار اتاق‌ها (از طرف کلاینت)
+// اتاق فقط وقتی پاک می‌شود که هیچ بازیکنی در آن نباشد؛
+// قانون دیتابیس هم همین را تضمین می‌کند، پس رقابت دو نفره بی‌خطر است.
+// ============================================================
+
+const MY_ROOMS_KEY = "domito_my_rooms";
+
+function readMyRooms() {
+  try { return JSON.parse(localStorage.getItem(MY_ROOMS_KEY) || "[]"); }
+  catch (e) { return []; }
+}
+
+export function trackRoom(code) {
+  code = String(code || "").trim().toUpperCase();
+  if (!code) return;
+  const list = readMyRooms().filter((c) => c !== code);
+  list.push(code);
+  try { localStorage.setItem(MY_ROOMS_KEY, JSON.stringify(list.slice(-30))); } catch (e) {}
+}
+
+function untrackRoom(code) {
+  code = String(code || "").trim().toUpperCase();
+  try {
+    localStorage.setItem(MY_ROOMS_KEY, JSON.stringify(readMyRooms().filter((c) => c !== code)));
+  } catch (e) {}
+}
+
+export async function deleteRoomIfEmpty(code) {
+  code = String(code || "").trim().toUpperCase();
+  if (!code || !currentUid()) return false;
+  try {
+    const snap = await get(roomRef(code, "players"));
+    if (snap.exists() && snap.numChildren() > 0) return false;
+    await remove(roomRef(code));
+    untrackRoom(code);
+    return true;
+  } catch (e) {
+    // اتاق از قبل پاک شده، یا قانون اجازه نداد (کسی داخل آن است)
+    return false;
+  }
+}
+
+// اتاق‌هایی که این دستگاه ساخته یا واردشان شده و خالی مانده‌اند را پاک می‌کند.
+export async function sweepMyRooms() {
+  const keep = getSavedRoom();
+  const priv = localStorage.getItem("domito_room_private");
+  for (const code of readMyRooms()) {
+    if (code === keep || code === priv) continue;
+    await deleteRoomIfEmpty(code);
+  }
 }

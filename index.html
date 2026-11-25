@@ -460,7 +460,8 @@ import {
   serverNow,
   GLOBAL_MIN_PLAYERS,
   GLOBAL_SLOT_MS,
-  listenPlayingCounts
+  listenPlayingCounts,
+  sweepMyRooms
 } from "./js/app.js";
 import { sceneSVG, hasScene } from "./js/scenes.js";
 
@@ -1263,6 +1264,7 @@ waitForUser()
   .then((user) => {
     if (user) {
       showHome();
+      setTimeout(() => { sweepMyRooms().catch(() => {}); }, 4000);
     }
   })
   .catch((e) => {
