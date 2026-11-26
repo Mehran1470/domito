@@ -54,8 +54,25 @@
     credit.id = "dnCredit";
     credit.textContent = "Domito by Claude & Mehran";
     credit.setAttribute("dir", "ltr");
-    credit.style.cssText = "text-align:center;font-size:11px;letter-spacing:.4px;opacity:.35;margin:18px 0 0;padding:0 12px;pointer-events:none;user-select:none;color:inherit";
+    credit.style.cssText = "text-align:center;font-size:11px;letter-spacing:.4px;opacity:.35;margin:18px 0 0;padding:0 12px;user-select:none;-webkit-tap-highlight-color:transparent;cursor:default;color:inherit";
     document.body.appendChild(credit);
+
+    // ۷ بار پشت‌سرهم روی امضا بزنی → پنل دستورات
+    let taps = 0, tapTimer = null;
+    const label = "Domito by Claude & Mehran";
+    credit.addEventListener("click", () => {
+      taps++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => { taps = 0; credit.textContent = label; }, 3000);
+      if (taps >= 7) {
+        taps = 0;
+        clearTimeout(tapTimer);
+        credit.textContent = "✨ پنل دستورات";
+        setTimeout(() => { window.location.href = "./command.html"; }, 400);
+      } else if (taps >= 3) {
+        credit.textContent = (7 - taps) + " بار دیگر";
+      }
+    });
   }
 
   // وقتی صفحهٔ ورود/ثبت‌نام باز است نوار پایین نشان داده نشود
