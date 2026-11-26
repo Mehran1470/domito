@@ -349,6 +349,25 @@
 
   </main>
 
+  <script>
+    // عیب‌یابی: هر خطای بارگذاری/اجرا را روی صفحه نشان می‌دهد
+    window.__shopV = "2026-11-26-2";
+    (function () {
+      function show(msg) {
+        var el = document.getElementById("shopStatus");
+        if (el) { el.textContent = "⚠️ " + msg; el.style.color = "#ff8b8b"; }
+      }
+      window.addEventListener("error", function (e) {
+        show("خطا: " + (e.message || "بارگذاری اسکریپت ناموفق") + (e.filename ? " (" + String(e.filename).split("/").pop() + ")" : ""));
+      }, true);
+      window.addEventListener("unhandledrejection", function (e) {
+        var r = e.reason; show("خطا: " + ((r && (r.message || r.code)) || r));
+      });
+      setTimeout(function () {
+        if (!window.__shopStarted) show("اسکریپت فروشگاه اجرا نشد (احتمالاً بارگذاری Firebase/gstatic ناموفق بود). نسخه صفحه: " + window.__shopV);
+      }, 7000);
+    })();
+  </script>
   <script src="./js/nav.js" defer></script>
   <script type="module">
     import {
@@ -762,8 +781,13 @@
     }
 
     async function startShop() {
+      window.__shopStarted = true;
+      setStatus("نسخه " + window.__shopV + " — در حال ورود به حساب…");
       try {
-        const user = await waitForUser();
+        const user = await Promise.race([
+          waitForUser(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error("ورود به حساب (Auth) جواب نداد؛ اینترنت/VPN را چک کن")), 10000))
+        ]);
         myName = getSavedName();
 
         if (!user || !myName) {
