@@ -364,7 +364,10 @@
       unequipCategory,
       toggleFavorite,
       migrateShop,
-      waitForUser
+      waitForUser,
+      db,
+      ref,
+      get
     } from "./js/app.js";
 
     import {
@@ -641,6 +644,123 @@
       grid.appendChild(message);
     }
 
+    // ---------- اتصال و دریافت موجودی ----------
+
+    let loaded = false;
+    let unsubProfile = null;
+    let connWatchStarted = false;
+    let slowTimer = null;
+    let fallbackTimer = null;
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.className = "shop-chip";
+    retryBtn.textContent = "🔄 تلاش دوباره";
+    retryBtn.hidden = true;
+    statusEl.after(retryBtn);
+    retryBtn.style.display = "block";
+    retryBtn.style.margin = "0 auto 12px";
+
+    const cacheKey = () => "domito_shop_coins_" + myName;
+
+    function readCachedCoins() {
+      try {
+        const v = localStorage.getItem(cacheKey());
+        return v === null ? null : Number(v);
+      } catch (e) { return null; }
+    }
+
+    function writeCachedCoins(v) {
+      try { localStorage.setItem(cacheKey(), String(Number(v) || 0)); } catch (e) {}
+    }
+
+    function errorText(error) {
+      const code = String((error && (error.code || error.message)) || "");
+      if (/permission/i.test(code)) return "دسترسی به اطلاعات حساب داده نشد (permission denied). از دومیتو خارج و دوباره وارد شو.";
+      if (/network|unavailable|offline|disconnect/i.test(code)) return "اتصال به سرور برقرار نیست. اینترنت یا VPN رو چک کن.";
+      return "دریافت اطلاعات حساب انجام نشد. اینترنت رو چک کن و دوباره امتحان کن.";
+    }
+
+    function applyProfile(value) {
+      loaded = true;
+      clearTimeout(slowTimer);
+      clearTimeout(fallbackTimer);
+      retryBtn.hidden = true;
+      currentProfile = value || {};
+      coinsEl.textContent = faNumber(currentProfile.coins || 0);
+      writeCachedCoins(currentProfile.coins || 0);
+      if (statusEl.dataset.conn === "1") { statusEl.dataset.conn = ""; setStatus(""); }
+      try {
+        shop = readShop(currentProfile);
+        setCosmeticsCache(myName, shop.equipped);
+        renderMe();
+        renderShop();
+      } catch (error) {
+        console.error("Shop render failed:", error);
+        setStatus("نمایش فروشگاه با خطا مواجه شد. صفحه را دوباره باز کن.", true);
+      }
+    }
+
+    function showConnProblem(text) {
+      if (loaded) return;
+      statusEl.dataset.conn = "1";
+      setStatus(text, true);
+      retryBtn.hidden = false;
+      if (grid.children.length <= 1) showMessage("هنوز به سرور وصل نشدیم…");
+    }
+
+    function subscribeProfile() {
+      try { if (unsubProfile) unsubProfile(); } catch (e) {}
+      loaded = false;
+      retryBtn.hidden = true;
+      statusEl.dataset.conn = "1";
+      setStatus("در حال اتصال به سرور…");
+
+      unsubProfile = onValue(profileRef(myName), (snapshot) => {
+        applyProfile(snapshot.val());
+      }, (error) => {
+        console.error("Profile listener failed:", error);
+        showConnProblem(errorText(error));
+      });
+
+      // اگر بعد از چند ثانیه جواب نیامد: وضعیت اتصال را نشان بده و یک بار مستقیم بخوان.
+      clearTimeout(slowTimer);
+      clearTimeout(fallbackTimer);
+      slowTimer = setTimeout(() => {
+        if (!loaded) showConnProblem("اتصال کند است یا برقرار نیست؛ در حال تلاش دوباره…");
+      }, 6000);
+      fallbackTimer = setTimeout(async () => {
+        if (loaded) return;
+        try {
+          const snap = await get(profileRef(myName));
+          if (!loaded) applyProfile(snap.val());
+        } catch (error) {
+          console.error("Profile fallback read failed:", error);
+          showConnProblem(errorText(error));
+        }
+      }, 9000);
+    }
+
+    retryBtn.addEventListener("click", () => {
+      clearConfirm();
+      subscribeProfile();
+    });
+
+    function watchConnection() {
+      if (connWatchStarted) return;
+      connWatchStarted = true;
+      try {
+        onValue(ref(db, ".info/connected"), (snap) => {
+          if (snap.val() === true) {
+            // دوباره وصل شد: اگر قبلاً چیزی نیامده بود، دوباره بخوان
+            if (!loaded) subscribeProfile();
+          } else if (loaded) {
+            setStatus("اتصال قطع شد؛ موجودی ممکنه قدیمی باشه.", true);
+            statusEl.dataset.conn = "1";
+          }
+        });
+      } catch (e) { /* اختیاری */ }
+    }
+
     async function startShop() {
       try {
         const user = await waitForUser();
@@ -653,26 +773,22 @@
           return;
         }
 
+        // تا رسیدن جواب سرور، آخرین موجودی ذخیره‌شده نمایش داده شود
+        const cached = readCachedCoins();
+        if (cached !== null) coinsEl.textContent = faNumber(cached);
+
         // انتقال بی‌خطر خریدهای قبلی به ساختار جدید (داده قدیمی پاک نمی‌شود)
         migrateShop(myName).catch((error) => {
           console.warn("Shop migration skipped:", error);
         });
 
-        onValue(profileRef(myName), (snapshot) => {
-          currentProfile = snapshot.val() || {};
-          shop = readShop(currentProfile);
-          setCosmeticsCache(myName, shop.equipped);
-          coinsEl.textContent = faNumber(currentProfile.coins || 0);
-          renderMe();
-          renderShop();
-        }, (error) => {
-          console.error("Profile listener failed:", error);
-          setStatus("دریافت اطلاعات حساب انجام نشد.", true);
-        });
+        subscribeProfile();
+        watchConnection();
       } catch (error) {
         console.error("Shop initialization failed:", error);
         showMessage("بارگذاری فروشگاه ناموفق بود. صفحه را دوباره باز کن.");
         setStatus("خطا در اتصال به حساب کاربری.", true);
+        retryBtn.hidden = false;
       }
     }
 
