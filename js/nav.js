@@ -48,6 +48,16 @@
   }
   document.body.style.paddingBottom = "110px";
 
+  // امضای کمرنگ پایین صفحه
+  if (!document.getElementById("dnCredit")) {
+    const credit = document.createElement("div");
+    credit.id = "dnCredit";
+    credit.textContent = "Domito by Claude & Mehran";
+    credit.setAttribute("dir", "ltr");
+    credit.style.cssText = "text-align:center;font-size:11px;letter-spacing:.4px;opacity:.35;margin:18px 0 0;padding:0 12px;pointer-events:none;user-select:none;color:inherit";
+    document.body.appendChild(credit);
+  }
+
   // وقتی صفحهٔ ورود/ثبت‌نام باز است نوار پایین نشان داده نشود
   const auth = document.getElementById("authCard");
   if (auth) {
