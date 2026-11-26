@@ -521,7 +521,7 @@
       rarity.className = "shop-rarity";
       rarity.textContent = RARITY_LABELS[item.rarity] || "";
 
-      const preview = preview(item);
+      const previewEl = preview(item);
 
       const name = document.createElement("div");
       name.className = "shop-item-name";
@@ -595,7 +595,7 @@
         });
       });
 
-      card.append(fav, rarity, preview, name, price, state, button);
+      card.append(fav, rarity, previewEl, name, price, state, button);
       return card;
     }
 
