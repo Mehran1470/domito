@@ -463,6 +463,7 @@ import {
   listenPlayingCounts,
   sweepMyRooms
 } from "./js/app.js";
+import { injectCosmeticStyles, fetchCosmetics, renderNameBlock, applyAvatarStyle } from "./js/cosmetics.js";
 import { sceneSVG, hasScene } from "./js/scenes.js";
 
 const authCard = document.getElementById("authCard");
@@ -950,6 +951,24 @@ function showHome() {
 
   document.getElementById("helloName").textContent = myName;
   document.getElementById("meLetter").textContent = (myName.trim()[0] || "?").toUpperCase();
+
+  /* ظاهر خریدشده از فروشگاه: تم/قاب آواتار، نشان، عنوان و افکت نام */
+  (async () => {
+    try {
+      injectCosmeticStyles();
+      const eq = await fetchCosmetics(myName, { force: true });
+      const letter = document.getElementById("meLetter");
+      const ring = letter.parentElement;
+      applyAvatarStyle(letter, eq);
+      if (eq && (eq.theme || eq.frame)) {
+        ring.style.background = "none";
+        ring.style.padding = "0";
+      }
+      renderNameBlock(document.getElementById("helloName"), myName, eq);
+    } catch (e) {
+      console.warn("home cosmetics failed:", e);
+    }
+  })();
 
   const brand = document.querySelector(".brand");
   if (brand) brand.style.display = "none";
