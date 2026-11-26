@@ -351,7 +351,7 @@
 
   <script>
     // عیب‌یابی: هر خطای بارگذاری/اجرا را روی صفحه نشان می‌دهد
-    window.__shopV = "2026-11-26-2";
+    window.__shopV = "2026-11-26-4";
     (function () {
       function show(msg) {
         var el = document.getElementById("shopStatus");
@@ -370,34 +370,45 @@
   </script>
   <script src="./js/nav.js" defer></script>
   <script type="module">
-    import {
-      getSavedName,
-      profileRef,
-      onValue,
-      SHOP_ITEMS,
-      SHOP_CATEGORIES,
-      RARITY_LABELS,
-      readShop,
-      buyItem,
-      equipItem,
-      unequipCategory,
-      toggleFavorite,
-      migrateShop,
-      waitForUser,
-      db,
-      ref,
-      get
-    } from "./js/app.js";
 
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, get, onValue, runTransaction, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { firebaseConfig } from "./js/firebase-config.js";
     import {
-      injectCosmeticStyles,
-      createItemPreview,
-      renderNameBlock,
-      applyAvatarStyle,
-      setCosmeticsCache
-    } from "./js/cosmetics.js";
+      SHOP_ITEMS, SHOP_CATEGORIES, RARITY_LABELS, readShop,
+      applyPurchase, applyEquip, applyUnequip, applyFavorite
+    } from "./js/shop-core.js";
 
-    injectCosmeticStyles();
+    // فروشگاه عمداً مستقل از js/app.js نوشته شده تا خرابی جای دیگر جلوی بارگذاری آن را نگیرد.
+    const fbApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const auth = getAuth(fbApp);
+    const db = getDatabase(fbApp);
+
+    const getSavedName = () => (localStorage.getItem("domito_name") || "").trim();
+    const profileRef = (name) => ref(db, "profiles/" + encodeURIComponent(String(name || "")));
+
+    // ظاهرسازی (پیش‌نمایش/نام) اختیاری است؛ اگر بارگذاری نشد، نسخهٔ ساده نشان داده می‌شود.
+    let cos = null;
+    import("./js/cosmetics.js").then((m) => {
+      cos = m;
+      try { m.injectCosmeticStyles(); } catch (e) {}
+      if (loaded) { try { renderMe(); renderShop(); } catch (e) {} }
+    }).catch((e) => console.warn("cosmetics unavailable:", e));
+
+    function preview(item) {
+      if (cos) { try { return cos.createItemPreview(item); } catch (e) {} }
+      const d = document.createElement("div");
+      d.style.cssText = "height:56px;display:grid;place-items:center;font-size:28px;font-weight:800";
+      if (item.emoji) d.textContent = item.emoji;
+      else if (item.text) { d.textContent = item.text; d.style.color = item.color; d.style.fontSize = "15px"; }
+      else if (item.colors) {
+        const c = document.createElement("div");
+        c.style.cssText = "width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg," + item.colors.join(",") + ")";
+        d.appendChild(c);
+      } else d.textContent = "✨";
+      return d;
+    }
 
     // خریدهای گران‌تر از این مقدار قبل از کسر سکه یک بار تأیید می‌خواهند.
     const CONFIRM_FROM_PRICE = 500;
@@ -443,8 +454,8 @@
     function renderMe() {
       meBox.hidden = false;
       meAvatar.textContent = myName.trim()[0]?.toUpperCase() || "?";
-      applyAvatarStyle(meAvatar, shop.equipped);
-      renderNameBlock(meName, myName, shop.equipped);
+      if (cos) { cos.applyAvatarStyle(meAvatar, shop.equipped); cos.renderNameBlock(meName, myName, shop.equipped); }
+      else meName.textContent = myName;
     }
 
     function renderTabs() {
@@ -503,14 +514,14 @@
       fav.disabled = busy;
       fav.addEventListener("click", async () => {
         if (busyItems.has(item.id)) return;
-        await runAction(item, () => toggleFavorite(myName, item.id), () => "");
+        await runAction(item, () => act(applyFavorite, item.id), () => "");
       });
 
       const rarity = document.createElement("div");
       rarity.className = "shop-rarity";
       rarity.textContent = RARITY_LABELS[item.rarity] || "";
 
-      const preview = createItemPreview(item);
+      const preview = preview(item);
 
       const name = document.createElement("div");
       name.className = "shop-item-name";
@@ -555,13 +566,13 @@
         if (busyItems.has(item.id)) return;
 
         if (equipped) {
-          await runAction(item, () => unequipCategory(myName, item.category),
+          await runAction(item, () => act(applyUnequip, item.category),
             () => `«${item.name}» برداشته شد.`);
           return;
         }
 
         if (owned) {
-          await runAction(item, () => equipItem(myName, item.id),
+          await runAction(item, () => act(applyEquip, item.id),
             (r) => r.ok ? `✨ «${item.name}» فعال شد!` : "فعال‌کردن انجام نشد.");
           return;
         }
@@ -576,7 +587,7 @@
         }
 
         clearConfirm();
-        await runAction(item, () => buyItem(myName, item.id), (r) => {
+        await runAction(item, () => buy(item), (r) => {
           if (r.ok) return `🎉 «${item.name}» خریداری شد!`;
           if (r.reason === "insufficient") return "سکه‌هات کافی نیست. 🪙";
           if (r.reason === "owned") return "این آیتم از قبل خریداری شده است.";
@@ -663,6 +674,48 @@
       grid.appendChild(message);
     }
 
+
+    // ---------- عملیات (خرید/فعال‌سازی/علاقه‌مندی) ----------
+
+    async function tx(operation) {
+      let result = { ok: false, reason: "unknown" };
+      await runTransaction(profileRef(myName), (curr) => {
+        const outcome = operation(curr || { coins: 0 });
+        result = outcome.result;
+        return outcome.profile;
+      });
+      return result;
+    }
+
+    const act = (fn, arg) => tx((curr) => fn(curr, arg));
+
+    async function buyAllowed() {
+      const uid = auth.currentUser && auth.currentUser.uid;
+      try {
+        const adm = (await get(ref(db, "admins/" + uid))).val();
+        if (adm === true || adm === "true") return true;
+      } catch (e) {}
+      try {
+        const raw = (await get(ref(db, "adminAccess/" + encodeURIComponent(myName)))).val() || {};
+        const until = Number(raw.blockedUntil);
+        if (raw.buy === false) return false;
+        if (Number.isFinite(until) && until > Date.now()) return false;
+      } catch (e) {}
+      return true;
+    }
+
+    async function buy(item) {
+      if (!(await buyAllowed())) return { ok: false, reason: "no-access" };
+      const result = await tx((curr) => applyPurchase(curr, item.id));
+      if (result.ok) {
+        try {
+          await push(ref(db, "profiles/" + encodeURIComponent(myName) + "/transactions"),
+            { type: "purchase", amount: -item.price, note: "خرید " + item.name, at: Date.now() });
+        } catch (e) { console.warn("transaction log failed:", e); }
+      }
+      return result;
+    }
+
     // ---------- اتصال و دریافت موجودی ----------
 
     let loaded = false;
@@ -674,9 +727,8 @@
     retryBtn.type = "button";
     retryBtn.className = "shop-chip";
     retryBtn.textContent = "🔄 تلاش دوباره";
-    retryBtn.hidden = true;
+    retryBtn.style.display = "none";
     statusEl.after(retryBtn);
-    retryBtn.style.display = "block";
     retryBtn.style.margin = "0 auto 12px";
 
     const cacheKey = () => "domito_shop_coins_" + myName;
@@ -703,14 +755,14 @@
       loaded = true;
       clearTimeout(slowTimer);
       clearTimeout(fallbackTimer);
-      retryBtn.hidden = true;
+      retryBtn.style.display = "none";
       currentProfile = value || {};
       coinsEl.textContent = faNumber(currentProfile.coins || 0);
       writeCachedCoins(currentProfile.coins || 0);
       if (statusEl.dataset.conn === "1") { statusEl.dataset.conn = ""; setStatus(""); }
       try {
         shop = readShop(currentProfile);
-        setCosmeticsCache(myName, shop.equipped);
+        if (cos) { try { cos.setCosmeticsCache(myName, shop.equipped); } catch (e) {} }
         renderMe();
         renderShop();
       } catch (error) {
@@ -723,14 +775,14 @@
       if (loaded) return;
       statusEl.dataset.conn = "1";
       setStatus(text, true);
-      retryBtn.hidden = false;
+      retryBtn.style.display = "block";
       if (grid.children.length <= 1) showMessage("هنوز به سرور وصل نشدیم…");
     }
 
     function subscribeProfile() {
       try { if (unsubProfile) unsubProfile(); } catch (e) {}
       loaded = false;
-      retryBtn.hidden = true;
+      retryBtn.style.display = "none";
       statusEl.dataset.conn = "1";
       setStatus("در حال اتصال به سرور…");
 
@@ -780,15 +832,32 @@
       } catch (e) { /* اختیاری */ }
     }
 
+    function waitForUser() {
+      return new Promise((resolve) => {
+        const t = setTimeout(() => resolve(undefined), 10000);
+        const un = onAuthStateChanged(auth, (u) => { clearTimeout(t); try { un(); } catch (e) {} resolve(u); });
+      });
+    }
+
     async function startShop() {
       window.__shopStarted = true;
       setStatus("نسخه " + window.__shopV + " — در حال ورود به حساب…");
       try {
-        const user = await Promise.race([
-          waitForUser(),
-          new Promise((_, rej) => setTimeout(() => rej(new Error("ورود به حساب (Auth) جواب نداد؛ اینترنت/VPN را چک کن")), 10000))
-        ]);
+        const user = await waitForUser();
+        if (user === undefined) {
+          showMessage("ورود به حساب جواب نداد.");
+          setStatus("ورود (Auth) جواب نداد؛ اینترنت/VPN را چک کن و «تلاش دوباره» را بزن.", true);
+          retryBtn.style.display = "block";
+          retryBtn.onclick = () => location.reload();
+          return;
+        }
         myName = getSavedName();
+        if (user && !myName) {
+          try {
+            const v = (await get(ref(db, "uidToName/" + user.uid))).val();
+            if (v) { myName = String(v).trim(); localStorage.setItem("domito_name", myName); }
+          } catch (e) { console.warn("uidToName failed:", e); }
+        }
 
         if (!user || !myName) {
           showMessage("برای استفاده از فروشگاه، ابتدا وارد دومیتو شو.");
@@ -797,22 +866,16 @@
           return;
         }
 
-        // تا رسیدن جواب سرور، آخرین موجودی ذخیره‌شده نمایش داده شود
         const cached = readCachedCoins();
         if (cached !== null) coinsEl.textContent = faNumber(cached);
-
-        // انتقال بی‌خطر خریدهای قبلی به ساختار جدید (داده قدیمی پاک نمی‌شود)
-        migrateShop(myName).catch((error) => {
-          console.warn("Shop migration skipped:", error);
-        });
 
         subscribeProfile();
         watchConnection();
       } catch (error) {
         console.error("Shop initialization failed:", error);
-        showMessage("بارگذاری فروشگاه ناموفق بود. صفحه را دوباره باز کن.");
-        setStatus("خطا در اتصال به حساب کاربری.", true);
-        retryBtn.hidden = false;
+        showMessage("بارگذاری فروشگاه ناموفق بود.");
+        setStatus("خطا: " + ((error && (error.code || error.message)) || error), true);
+        retryBtn.style.display = "block";
       }
     }
 
