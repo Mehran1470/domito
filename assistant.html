@@ -1171,8 +1171,10 @@ async function refreshShop(){
   info.textContent = "سکه‌ات: " + toFa(s.coins) + " • امروز " + toFa(s.bought) + " از " + toFa(s.max) + " خرید";
   btn.textContent = "خرید ۱ سؤال · " + toFa(s.price) + " 🪙";
   btn.disabled = s.bought >= s.max || s.coins < s.price;
+  if(s.quotaOk === false) info.textContent += " • (سهمیهٔ امروز خوانده نشد)";
  }catch(e){
-  info.textContent = "خواندن سکه‌ها ممکن نشد.";
+  console.error("refreshShop failed:", e);
+  info.textContent = "خواندن سکه‌ها ممکن نشد (" + ((e && (e.code || e.message)) || "نامشخص") + ").";
  }
 }
 
@@ -2106,7 +2108,8 @@ async function refreshLiveCharge(){
   const cur = Number(sel.value);
   btn.disabled = !cur || cur > s.coins || s.charge + cur * s.perCoin > s.max;
  }catch(e){
-  info.textContent = "خواندن شارژ ممکن نشد.";
+  console.error("refreshLiveCharge failed:", e);
+  info.textContent = "خواندن شارژ ممکن نشد (" + ((e && (e.code || e.message)) || "نامشخص") + ").";
  }
 }
 

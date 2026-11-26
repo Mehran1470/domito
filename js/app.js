@@ -4894,14 +4894,16 @@ export async function getAIShopInfo() {
   const username = getSavedName();
   const base = { coins: 0, bought: 0, price: AI_QUESTION_COIN_PRICE, max: MAX_COIN_BUY };
   if (!currentUid() || !username) return base;
+  // موجودی سکه مستقل از سهمیه خوانده می‌شود تا خطای سهمیه جلوی نمایش سکه‌ها را نگیرد.
   const [coinsSnap, quota] = await Promise.all([
     get(profileRef(username, "coins")),
-    getAIQuota()
+    getAIQuota().catch((e) => { console.warn("AI quota read failed:", e); return null; })
   ]);
   return {
     ...base,
     coins: Math.max(0, Math.floor(Number(coinsSnap.val()) || 0)),
-    bought: aiSafeInt(quota.bought, 0, MAX_COIN_BUY)
+    bought: quota ? aiSafeInt(quota.bought, 0, MAX_COIN_BUY) : 0,
+    quotaOk: !!quota
   };
 }
 
